@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Minus, Plus, Trash2 } from 'lucide-react';
+import { Minus, Plus, Trash2, UtensilsCrossed } from 'lucide-react';
 import { CartItem as CartItemType } from '@/types';
 import { useCartStore } from '@/store/useCartStore';
 import { useI18n } from '@/lib/i18nContext';
@@ -18,17 +18,21 @@ export function CartItem({ item }: CartItemProps) {
 
   return (
     <div className="flex items-center gap-3.5 p-3 rounded-xl bg-[#14141a] border border-white/5 hover:border-white/10 transition-colors">
-      {/* Фото або стильна іконка для додатків */}
+      {/* Фото або стильна іконка для додатків / страв без фото */}
       {item.product.categoryId === 'dodatki' ? (
         <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-[#1a1a24] border border-white/10 flex items-center justify-center text-[#e50914] shrink-0 font-bold text-xs uppercase tracking-wider">
           +
         </div>
-      ) : (
+      ) : item.product.image ? (
         <img
           src={item.product.image}
           alt={item.product.name[locale]}
           className="w-16 h-16 sm:w-18 sm:h-18 rounded-lg object-cover bg-zinc-900 shrink-0"
         />
+      ) : (
+        <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-lg bg-zinc-900 border border-white/10 flex items-center justify-center text-zinc-600 shrink-0">
+          <UtensilsCrossed className="w-6 h-6" />
+        </div>
       )}
 
       {/* Опис та ціна */}

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Montserrat, Knewave, Unbounded } from 'next/font/google';
+import { Montserrat, Knewave, Unbounded, Dela_Gothic_One } from 'next/font/google';
 import localFont from 'next/font/local';
 import './globals.css';
 
@@ -14,6 +14,13 @@ const knewave = Knewave({
   subsets: ['latin'],
   weight: ['400'],
   variable: '--font-knewave',
+  display: 'swap',
+});
+
+const delaGothicOne = Dela_Gothic_One({
+  subsets: ['latin', 'cyrillic'],
+  weight: ['400'],
+  variable: '--font-dela-gothic',
   display: 'swap',
 });
 
@@ -57,7 +64,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pl" suppressHydrationWarning className={`${montserrat.variable} ${knewave.variable} ${unbounded.variable} ${edoSZ.variable} dark antialiased`}>
+    <html lang="pl" suppressHydrationWarning className={`${montserrat.variable} ${knewave.variable} ${delaGothicOne.variable} ${unbounded.variable} ${edoSZ.variable} dark antialiased`}>
       <head>
         <script
           dangerouslySetInnerHTML={{

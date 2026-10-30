@@ -7,20 +7,20 @@ export function HeroBanner() {
   const { locale } = useI18n();
 
   const scrollToMenu = () => {
-    // Завжди повертаємо каталог до початкового стану (сітка з папками/зображеннями категорій)
+    // Скидаємо каталог до початкової першої категорії (Міні Макі)
     window.dispatchEvent(new CustomEvent('reset-to-initial-catalog'));
 
-    // Невеликий тайймаут щоб стан у MenuCatalog встиг оновитися і відрендерити categories-folders-grid
     setTimeout(() => {
-      const el = document.getElementById('categories-folders-grid') || document.querySelector('section');
+      const el = document.getElementById('catalog-active-category') || document.querySelector('section');
       if (el) {
         const headerEl = document.querySelector('header');
-        const totalStickyHeight = (headerEl?.offsetHeight || 105) + 15;
+        const stickyNavEl = document.querySelector('.sticky.z-30') as HTMLElement | null;
+        const totalStickyHeight = (headerEl?.offsetHeight || 105) + (stickyNavEl?.offsetHeight || 56);
 
         const bodyRect = document.body.getBoundingClientRect().top;
         const elementRect = el.getBoundingClientRect().top;
         const elementPosition = elementRect - bodyRect;
-        const offsetPosition = Math.max(0, elementPosition - totalStickyHeight);
+        const offsetPosition = Math.max(0, elementPosition - totalStickyHeight - 16);
 
         window.scrollTo({
           top: offsetPosition,
@@ -36,7 +36,9 @@ export function HeroBanner() {
       <div className="absolute inset-0 z-0">
         <img
           src="/images/hero_sushi_bg.jpg"
-          alt="Najlepsze Sushi w Świdnicy"
+          alt={locale === 'pl' ? 'Najlepsze Sushi w Świdnicy — Maks Sushi dostawa i odbiór' : 'Найкращі Суші у Свідниці — Maks Sushi доставка та самовивіз'}
+          fetchPriority="high"
+          decoding="async"
           className="w-full h-full object-cover object-left sm:object-center"
         />
         {/* Збалансоване затемнення: м'яка радіальна та вертикальна віньєтка, що забезпечує ідеальну контрастність тексту по центру */}
@@ -48,14 +50,16 @@ export function HeroBanner() {
       {/* Верхня частина з заголовком — відцентрована */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full pt-4 sm:pt-6">
         <div className="max-w-5xl mx-auto text-center px-2">
-          {/* Заголовок у чистому, бездоганно читабельному Montserrat з повною підтримкою Ś, ę, ą, та кирилиці */}
+          {/* Заголовок: для польської мови використовується Knewave, а для української — автентичний японський display-шрифт Dela Gothic One */}
           <h1 
             style={{ 
-              fontFamily: 'var(--font-knewave), "Knewave", cursive, sans-serif',
+              fontFamily: locale === 'pl'
+                ? 'var(--font-knewave), "Knewave", cursive, sans-serif'
+                : 'var(--font-dela-gothic), "Dela Gothic One", var(--font-unbounded), sans-serif',
               WebkitTextStroke: '0.4px #09090b',
               paintOrder: 'stroke fill',
             }}
-            className="text-[2.65rem] xs:text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-normal text-[#fdf8f4] tracking-wide leading-[1.12] drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)] max-w-full break-normal"
+            className="text-3xl xs:text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-normal text-[#fdf8f4] tracking-wide leading-[1.15] drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)] max-w-full break-words"
           >
             {locale === 'pl' ? (
               <>
@@ -75,9 +79,12 @@ export function HeroBanner() {
                 </span>
               </>
             ) : (
-              <span className="whitespace-nowrap inline-block">
-                Найкращі Суші у Свідниці
-              </span>
+              <>
+                Найкращі Суші у{' '}
+                <span className="whitespace-nowrap inline-block">
+                  Свідниці
+                </span>
+              </>
             )}
           </h1>
         </div>

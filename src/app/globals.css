@@ -1,11 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@700;800;900&family=Montserrat:wght@400;500;600;700;800;900&family=Knewave&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@700;800;900&family=Montserrat:wght@400;500;600;700;800;900&family=Knewave&family=Dela+Gothic+One&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: var(--font-montserrat), 'Montserrat', sans-serif;
   --font-brand: var(--font-edo), 'Edo SZ', cursive, sans-serif;
   --font-knewave: var(--font-knewave), 'Knewave', cursive, sans-serif;
-  --font-hero: var(--font-knewave), 'Knewave', var(--font-unbounded), 'Unbounded', sans-serif;
+  --font-dela-gothic: var(--font-dela-gothic), 'Dela Gothic One', sans-serif;
+  --font-hero: var(--font-knewave), 'Knewave', var(--font-dela-gothic), 'Dela Gothic One', var(--font-unbounded), 'Unbounded', sans-serif;
 }
 
 :root {

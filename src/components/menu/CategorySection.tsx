@@ -35,8 +35,18 @@ export function CategorySection({ category, products }: CategorySectionProps) {
         </span>
       </div>
 
-      {/* Сітка меню: 4 колонки на великих моніторах, 3 на лептопах, 2 на планшетах, 1 на смартфонах */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+      {/* Сітка меню: якщо позицій менше 4 — центруємо відображення */}
+      <div
+        className={
+          products.length === 1
+            ? 'grid grid-cols-1 max-w-sm mx-auto gap-4 sm:gap-5'
+            : products.length === 2
+            ? 'grid grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto gap-4 sm:gap-5'
+            : products.length === 3
+            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto gap-4 sm:gap-5'
+            : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5'
+        }
+      >
         {products.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}

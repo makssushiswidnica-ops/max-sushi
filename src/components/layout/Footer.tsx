@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useI18n } from '@/lib/i18nContext';
 import { brandTheme } from '@/config/theme';
 import { Phone, MapPin, Clock, Heart } from 'lucide-react';
@@ -31,13 +32,12 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-10 border-b border-white/5">
           {/* Бренд */}
           <div className="space-y-3">
-            <button
-              onClick={() => {
-                window.dispatchEvent(new CustomEvent('reset-to-initial-catalog'));
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
+            {/* Клік по логотипу у футері відкриває адмін-панель */}
+            <Link
+              href="/admin"
               className="flex items-center gap-2.5 text-left cursor-pointer group"
-              aria-label="Strona główna Maks Sushi"
+              title="Панель керування"
+              aria-label="Панель керування Maks Sushi"
             >
               <div className="relative w-8 h-8 rounded-full overflow-hidden border border-[#e50914] bg-black shrink-0 group-hover:scale-105 transition-transform">
                 <img
@@ -50,7 +50,7 @@ export function Footer() {
                 <span className="text-xl text-[#e50914] leading-none">MAKS</span>
                 <span className="text-xl text-white group-hover:text-zinc-200 transition-colors leading-none">SUSHI</span>
               </div>
-            </button>
+            </Link>
             <p className="text-zinc-400 leading-relaxed text-xs">
               {t.footer.about}
             </p>

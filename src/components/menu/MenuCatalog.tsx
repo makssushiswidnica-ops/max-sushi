@@ -2,39 +2,106 @@
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { categories, products } from '@/lib/mockData';
+import { categories as defaultCategories, products as defaultProducts } from '@/lib/mockData';
+import { fetchMenuData } from '@/lib/menuService';
+import { Category, Product } from '@/types';
 import { StickyNav } from '@/components/layout/StickyNav';
 import { useI18n } from '@/lib/i18nContext';
 import { ProductCard } from '@/components/menu/ProductCard';
 import { CategorySection } from '@/components/menu/CategorySection';
 
+// Допоміжна функція для центрування сітки, коли позицій у категорії менше 4
+function getProductGridClasses(count: number): string {
+  if (count === 1) {
+    return 'grid grid-cols-1 max-w-sm mx-auto gap-4 sm:gap-5';
+  }
+  if (count === 2) {
+    return 'grid grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto gap-4 sm:gap-5';
+  }
+  if (count === 3) {
+    return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto gap-4 sm:gap-5';
+  }
+  return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5';
+}
+
 export function MenuCatalog() {
   const { locale } = useI18n();
-  const [selectedCategory, setSelectedCategory] = useState<string>(categories[0]?.id || 'mini-maki');
-  const [isInsideCategory, setIsInsideCategory] = useState<boolean>(false);
+
+  // Динамічний стан меню з Supabase (з надійним резервним fallback на mockData)
+  const [categoriesList, setCategoriesList] = useState<Category[]>(defaultCategories);
+  const [productsList, setProductsList] = useState<Product[]>(defaultProducts);
+
+  // Завантаження меню з бази даних при ініціалізації
+  useEffect(() => {
+    let isMounted = true;
+    fetchMenuData().then((data) => {
+      if (isMounted) {
+        if (data.categories?.length > 0) {
+          setCategoriesList(data.categories);
+        }
+        if (data.products?.length > 0) {
+          // Показуємо відвідувачам сайту тільки доступні позиції
+          setProductsList(data.products.filter((p) => p.isAvailable !== false));
+        }
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // За замовчуванням одразу відкривається перший розділ категорій (Міні Макі)
+  const [selectedCategory, setSelectedCategory] = useState<string>(categoriesList[0]?.id || 'mini-maki');
   const [isAllCategories, setIsAllCategories] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState('');
   const catalogContentRef = useRef<HTMLDivElement>(null);
 
-  // Підрахунок кількості товарів та мінімальної ціни у кожній категорії
-  const { categoryCounts, categoryMinPrices } = useMemo(() => {
-    const counts: Record<string, number> = {};
-    const minPrices: Record<string, number> = {};
-    for (const cat of categories) {
-      const catProducts = products.filter((p) => p.categoryId === cat.id);
-      counts[cat.id] = catProducts.length;
-      if (catProducts.length > 0) {
-        minPrices[cat.id] = Math.min(...catProducts.map((p) => p.price));
+  // Знаходимо поточну категорію та сусідні для кнопок пагінації "Попередня / Наступна"
+  const currentIndex = categoriesList.findIndex((c) => c.id === selectedCategory);
+  const activeCategoryObj = categoriesList[currentIndex] || categoriesList[0];
+  const prevCategory = currentIndex > 0 ? categoriesList[currentIndex - 1] : null;
+  const nextCategory = currentIndex < categoriesList.length - 1 ? categoriesList[currentIndex + 1] : null;
+
+  // Обробка жестів свайпу вліво/вправо на екрані для перемикання категорій
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const touchStartTime = useRef<number>(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (isAllCategories || isFiltering) return;
+    const touch = e.touches[0];
+    touchStartX.current = touch.clientX;
+    touchStartY.current = touch.clientY;
+    touchStartTime.current = Date.now();
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    if (isAllCategories || isFiltering) return;
+
+    const touch = e.changedTouches[0];
+    const deltaX = touch.clientX - touchStartX.current;
+    const deltaY = touch.clientY - touchStartY.current;
+    const duration = Date.now() - touchStartTime.current;
+
+    touchStartX.current = null;
+    touchStartY.current = null;
+
+    // Свайп: швидкий (< 600ms), довжина > 50px, та чітко горизонтальний (горизонталь переважає вертикаль у 1.4 рази)
+    if (duration < 600 && Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.4) {
+      if (deltaX < 0) {
+        // Свайп пальцем вліво (<-) -> перехід до наступної категорії
+        if (nextCategory) {
+          handleSelectCategory(nextCategory.id);
+        }
+      } else {
+        // Свайп пальцем вправо (->) -> перехід до попередньої категорії
+        if (prevCategory) {
+          handleSelectCategory(prevCategory.id);
+        }
       }
     }
-    return { categoryCounts: counts, categoryMinPrices: minPrices };
-  }, []);
-
-  // Знаходимо поточну категорію та сусідні для кнопок "Попередня / Наступна"
-  const currentIndex = categories.findIndex((c) => c.id === selectedCategory);
-  const activeCategoryObj = categories[currentIndex] || categories[0];
-  const prevCategory = currentIndex > 0 ? categories[currentIndex - 1] : null;
-  const nextCategory = currentIndex < categories.length - 1 ? categories[currentIndex + 1] : null;
+  };
 
   const scrollToCatalogTop = useCallback(() => {
     if (catalogContentRef.current) {
@@ -49,14 +116,13 @@ export function MenuCatalog() {
 
       window.scrollTo({
         top: targetPosition,
-        behavior: 'instant',
+        behavior: 'smooth',
       });
     }
   }, []);
 
-  // Відкриття конкретної категорії (вхід всередину каталогу страв)
+  // Перемикання сторінки категорії
   const handleSelectCategory = useCallback((catId: string) => {
-    setIsInsideCategory(true);
     setIsAllCategories(false);
     setSelectedCategory(catId);
     setSearchQuery('');
@@ -65,27 +131,8 @@ export function MenuCatalog() {
     }, 50);
   }, [scrollToCatalogTop]);
 
-  // Повернення до сітки папок-категорій
-  const handleBackToFolders = useCallback(() => {
-    setIsInsideCategory(false);
-    setIsAllCategories(false);
-    setSearchQuery('');
-    const el = document.getElementById('categories-folders-grid');
-    if (el) {
-      const headerEl = document.querySelector('header') as HTMLElement | null;
-      const totalStickyHeight = (headerEl?.offsetHeight || 105) + 16;
-      const bodyRect = document.body.getBoundingClientRect().top;
-      const elementRect = el.getBoundingClientRect().top;
-      const elementPosition = elementRect - bodyRect;
-      window.scrollTo({
-        top: Math.max(0, elementPosition - totalStickyHeight),
-        behavior: 'smooth',
-      });
-    }
-  }, []);
-
+  // Показати всі страви меню разом
   const handleShowAll = useCallback(() => {
-    setIsInsideCategory(true);
     setIsAllCategories(true);
     setSearchQuery('');
     setTimeout(() => {
@@ -93,153 +140,70 @@ export function MenuCatalog() {
     }, 50);
   }, [scrollToCatalogTop]);
 
-  // Слухач глобальної події скидання каталогу до початкового стану (наприклад, при кліку на логотип)
+  // Згорнути перегляд всього меню назад до поточної категорії
+  const handleCollapseToPages = useCallback(() => {
+    setIsAllCategories(false);
+    setSearchQuery('');
+    setTimeout(() => {
+      scrollToCatalogTop();
+    }, 50);
+  }, [scrollToCatalogTop]);
+
+  // Слухач глобальної події скидання каталогу до початкового стану (при кліку на логотип або кнопку Hero)
   useEffect(() => {
     const handleReset = () => {
-      setIsInsideCategory(false);
       setIsAllCategories(false);
       setSearchQuery('');
-      setSelectedCategory('sets');
+      setSelectedCategory(categoriesList[0]?.id || 'mini-maki');
     };
     window.addEventListener('reset-to-initial-catalog', handleReset);
     return () => window.removeEventListener('reset-to-initial-catalog', handleReset);
-  }, []);
+  }, [categoriesList]);
 
   const handleSearchChange = useCallback((query: string) => {
     setSearchQuery(query);
-    if (query.trim()) {
-      setIsInsideCategory(true);
-    }
   }, []);
 
   const filteredProducts = useMemo(() => {
-    let result = products;
+    let result = productsList;
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       result = result.filter((p) => {
         const nameMatch = p.name[locale].toLowerCase().includes(query);
         const descMatch = p.description[locale].toLowerCase().includes(query);
-        const ingMatch = p.ingredients[locale].some((ing) => ing.toLowerCase().includes(query));
+        const ingMatch = p.ingredients[locale]?.some((ing) => ing.toLowerCase().includes(query));
         return nameMatch || descMatch || ingMatch;
       });
     }
 
     return result;
-  }, [searchQuery, locale]);
+  }, [searchQuery, locale, productsList]);
 
   const isFiltering = searchQuery.trim().length > 0;
   const currentCategoryProducts = useMemo(() => {
-    return products.filter((p) => p.categoryId === selectedCategory);
-  }, [selectedCategory]);
+    return productsList.filter((p) => p.categoryId === selectedCategory);
+  }, [selectedCategory, productsList]);
 
   return (
     <div>
-      {/* Стікі панель показується лише коли ми всередині каталогу або під час пошуку */}
-      {(isInsideCategory || isFiltering) && (
-        <StickyNav
-          searchQuery={searchQuery}
-          onSearchChange={handleSearchChange}
-          selectedCategory={selectedCategory}
-          onSelectCategory={handleSelectCategory}
-          onBackToFolders={handleBackToFolders}
-          isInsideCategory={isInsideCategory}
-        />
-      )}
+      {/* Стікі-навігація завжди закріплена під херо: швидкий вибір розділів та зручний пошук */}
+      <StickyNav
+        searchQuery={searchQuery}
+        onSearchChange={handleSearchChange}
+        selectedCategory={selectedCategory}
+        onSelectCategory={handleSelectCategory}
+        categoriesList={categoriesList}
+      />
 
-      {/* Якщо користувач на головній і не вибрав категорію — показуємо соковиту сітку папок категорій */}
-      {!isInsideCategory && !isFiltering && (
-        <section id="categories-folders-grid" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
-          <div className="flex flex-col items-center text-center mb-8 sm:mb-12">
-            <h2 
-              style={{ 
-                fontFamily: 'var(--font-knewave), "Knewave", cursive, sans-serif',
-              }}
-              className="text-2xl sm:text-4xl md:text-5xl font-normal text-white uppercase tracking-wider mb-3"
-            >
-              {locale === 'pl' ? 'MENU' : 'МЕНЮ'}
-            </h2>
-            <p className="text-xs sm:text-sm text-zinc-400 max-w-md font-medium">
-              {locale === 'pl' 
-                ? 'Wybierz kategorię, aby odkryć wyjątkowe rolki i japońskie specjały' 
-                : 'Оберіть категорію, щоб переглянути наші фірмові роли та японські страви'}
-            </p>
-          </div>
-
-          {/* Сітка карток-папок категорій: 4 колонки десктоп, 3 планшет, 2 мобільні */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-6">
-            {categories.map((cat) => {
-              const count = categoryCounts[cat.id] || 0;
-              const minPrice = categoryMinPrices[cat.id];
-              return (
-                <div
-                  key={cat.id}
-                  onClick={() => handleSelectCategory(cat.id)}
-                  style={{
-                    clipPath: 'polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px)',
-                  }}
-                  className="group relative p-[1px] bg-white/10 hover:bg-[#e50914]/60 transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-[#e50914]/20 cursor-pointer select-none active:scale-[0.98]"
-                >
-                  <div
-                    style={{
-                      clipPath: 'polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)',
-                    }}
-                    className="relative w-full aspect-[4/3] bg-black overflow-hidden flex items-center justify-center transition-colors duration-300"
-                  >
-                    {/* Зображення категорії на чистішому глибокому чорному фоні */}
-                    {cat.image ? (
-                      <img
-                        src={cat.image}
-                        alt={cat.name[locale]}
-                        loading="lazy"
-                        className="w-full h-full object-contain p-2 sm:p-3 filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.95)] group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="text-3xl text-[#e50914] font-black">+</div>
-                    )}
-
-                    {/* Плашка кількості позицій у правому верхньому кутку */}
-                    <span className="absolute top-2.5 right-2.5 text-[10px] font-black text-white bg-black/80 backdrop-blur-md border border-white/10 px-2 py-0.5 shadow-sm z-10">
-                      {count} {locale === 'pl' ? 'poz.' : 'поз.'}
-                    </span>
-
-                    {/* Напівпрозорий плавний градієнт знизу для ідеальної читабельності */}
-                    <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/75 to-transparent pointer-events-none" />
-
-                    {/* Текстовий блок поверх зображення внизу: Назва категорії + Ціна "від ... zł" */}
-                    <div className="absolute inset-x-0 bottom-0 p-2.5 sm:p-3.5 z-10 text-left">
-                      <h3 className="text-xs sm:text-base font-black tracking-wide text-white group-hover:text-[#e50914] transition-colors leading-tight line-clamp-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                        {cat.name[locale]}
-                      </h3>
-                      {minPrice !== undefined && (
-                        <p className="text-[10px] sm:text-xs font-semibold text-zinc-300/90 mt-0.5 leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                          {locale === 'pl' ? `od ${minPrice.toFixed(0)} zł` : `від ${minPrice.toFixed(0)} zł`}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Кнопка "Переглянути все меню разом" під папками */}
-          <div className="mt-10 sm:mt-14 text-center">
-            <button
-              onClick={handleShowAll}
-              style={{
-                clipPath: 'polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)',
-              }}
-              className="px-8 sm:px-12 py-3.5 sm:py-4 bg-[#181824] hover:bg-[#202030] border border-white/15 hover:border-[#e50914] text-xs sm:text-sm font-black text-white uppercase tracking-wider transition-all duration-300 cursor-pointer shadow-lg hover:shadow-[#e50914]/20 active:scale-95 select-none"
-            >
-              <span>{locale === 'pl' ? 'ZOBACZ WSZYSTKIE POZYCJE (PEŁNE MENU)' : 'ПЕРЕГЛЯНУТИ ВСІ СТРАВИ (ПОВНЕ МЕНЮ)'}</span>
-            </button>
-          </div>
-        </section>
-      )}
-
-      <div ref={catalogContentRef} id="catalog-active-category" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
-        {/* Результати фільтрації або сторінка поточної вибраної категорії або повне меню */}
+      <div
+        ref={catalogContentRef}
+        id="catalog-active-category"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 touch-pan-y select-auto"
+      >
+        {/* 1. Результати швидкого пошуку */}
         {isFiltering ? (
           <div>
             <div className="flex items-center justify-between mb-6 pb-2 border-b border-white/5">
@@ -264,7 +228,7 @@ export function MenuCatalog() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+              <div className={getProductGridClasses(filteredProducts.length)}>
                 {filteredProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
@@ -272,6 +236,7 @@ export function MenuCatalog() {
             )}
           </div>
         ) : isAllCategories ? (
+          /* 2. Повний список усіх страв закладу разом */
           <div>
             <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8 pb-3 border-b border-white/10">
               <div className="flex items-center gap-2.5">
@@ -280,10 +245,16 @@ export function MenuCatalog() {
                   {locale === 'pl' ? 'Pełne menu' : 'Повне меню закладу'}
                 </h2>
               </div>
+              <button
+                onClick={handleCollapseToPages}
+                className="text-xs font-bold text-zinc-300 hover:text-white bg-[#16161f] hover:bg-[#20202d] border border-white/10 px-3 py-1.5 rounded-xl cursor-pointer transition-colors"
+              >
+                {locale === 'pl' ? 'Wróć do stron kategorii' : 'Повернутись до сторінок'}
+              </button>
             </div>
 
-            {categories.map((category) => {
-              const categoryProducts = products.filter(
+            {categoriesList.map((category) => {
+              const categoryProducts = productsList.filter(
                 (p) => p.categoryId === category.id
               );
               return (
@@ -295,9 +266,22 @@ export function MenuCatalog() {
                 </div>
               );
             })}
+
+            <div className="mt-12 text-center">
+              <button
+                onClick={handleCollapseToPages}
+                style={{
+                  clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
+                }}
+                className="px-6 sm:px-8 py-3 bg-[#13131b] hover:bg-[#1a1a26] border border-white/15 hover:border-[#e50914] text-xs sm:text-sm font-black text-white uppercase tracking-wider transition-all cursor-pointer shadow-md"
+              >
+                {locale === 'pl' ? 'ZWIŃ DO KATEGORII' : 'ЗГОРНУТИ ДО КАТЕГОРІЙ'}
+              </button>
+            </div>
           </div>
-        ) : isInsideCategory ? (
-          <div>
+        ) : (
+          /* 3. Одразу під херо: сторінка активного розділу категорій (Міні Макі, Роли тощо) з підтримкою свайпу */
+          <div key={selectedCategory} className="animate-in fade-in duration-300">
             {/* Заголовок поточної активної категорії */}
             <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8 pb-3 border-b border-white/10">
               <div className="flex items-center gap-2.5">
@@ -314,16 +298,16 @@ export function MenuCatalog() {
               </div>
             </div>
 
-            {/* Сітка товарів: 4 колонки на великих екранах, 3 на лептопах, 2 на планшетах, 1 на смартфонах */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+            {/* Сітка товарів вибраної категорії: якщо позицій менше 4 — центруємо */}
+            <div className={getProductGridClasses(currentCategoryProducts.length)}>
               {currentCategoryProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
 
-            {/* Блок переходу: Спочатку кнопка "Подивитися все меню" у формі клинка, а під нею номери сторінок */}
+            {/* Блок переходу: Кнопка "Переглянути все меню" та номери сторінок категорій */}
             <div className="mt-12 pt-6 border-t border-white/10 flex flex-col items-center gap-5">
-              {/* Кнопка "Подивитися все меню" разом у формі клинка (як у Hero) */}
+              {/* Кнопка "Подивитися все меню" разом у формі самурайського клинка */}
               <button
                 onClick={handleShowAll}
                 style={{
@@ -334,7 +318,7 @@ export function MenuCatalog() {
                 <span>{locale === 'pl' ? 'ZOBACZ CAŁE MENU' : 'ПЕРЕГЛЯНУТИ ВСЕ МЕНЮ'}</span>
               </button>
 
-              {/* Мінімалістична пагінація сторінок категорій < 1 2 3 ... N > */}
+              {/* Зручна пагінація сторінок категорій < 1 2 3 ... N > */}
               <div className="flex items-center justify-center gap-1 sm:gap-1.5 pt-1">
                 {/* Стрілочка назад < */}
                 <button
@@ -347,10 +331,10 @@ export function MenuCatalog() {
                 </button>
 
                 {/* Номери сторінок категорій */}
-                {categories.map((cat, idx) => {
+                {categoriesList.map((cat, idx) => {
                   const pageNum = idx + 1;
                   const isActive = cat.id === selectedCategory;
-                  const totalPages = categories.length;
+                  const totalPages = categoriesList.length;
 
                   // Показуємо першу, останню, поточну та сусідні навколо поточної
                   const showPage =
@@ -359,7 +343,6 @@ export function MenuCatalog() {
                     Math.abs(pageNum - (currentIndex + 1)) <= 1;
 
                   if (!showPage) {
-                    // Виводимо крапки "..." лише один раз для пропущених діапазонів
                     if (pageNum === 2 && currentIndex + 1 > 3) {
                       return (
                         <span key={`dots-${pageNum}`} className="w-5 sm:w-6 text-center text-zinc-600 font-bold select-none text-xs sm:text-sm">
@@ -406,7 +389,7 @@ export function MenuCatalog() {
               </div>
             </div>
           </div>
-        ) : null}
+        )}
       </div>
     </div>
   );

@@ -14,7 +14,10 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  UtensilsCrossed,
 } from 'lucide-react';
+import { ProductBadge } from '@/components/menu/ProductBadge';
+import { getProductZoom } from '@/lib/imageZoom';
 
 export function ProductModal() {
   const { locale, t } = useI18n();
@@ -38,9 +41,9 @@ export function ProductModal() {
 
   // Масив зображень для обраного ролу (підтримка як одного фото, так і повноцінної галереї)
   const productImages: string[] = selectedProduct
-    ? (selectedProduct.images && selectedProduct.images.length > 0
-        ? selectedProduct.images
-        : [selectedProduct.image])
+    ? (selectedProduct.images && selectedProduct.images.filter(Boolean).length > 0
+        ? selectedProduct.images.filter(Boolean)
+        : (selectedProduct.image ? [selectedProduct.image] : []))
     : [];
 
   const hasMultipleImages = productImages.length > 1;
@@ -234,15 +237,35 @@ export function ProductModal() {
               <div
                 onTouchStart={handlePhotoTouchStart}
                 onTouchEnd={handlePhotoTouchEnd}
-                className="relative w-full sm:w-1/2 aspect-[4/3] flex items-center justify-center bg-black border border-white/10 p-4 overflow-hidden flex-shrink-0 shadow-md shadow-black/80"
+                className="relative w-full sm:w-1/2 aspect-[4/3] flex items-center justify-center bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.08)_0%,_#07070b_70%)] border border-white/10 rounded-xl overflow-hidden flex-shrink-0 shadow-md shadow-black/80"
               >
+              {/* Маркетинговий бейдж (ВЕГАН, ХІТ тощо) */}
+              {selectedProduct.badge && (
+                <div className="absolute top-3 left-3 z-20 pointer-events-none">
+                  <ProductBadge badge={selectedProduct.badge} locale={locale} />
+                </div>
+              )}
               {/* Фото ролу з об'ємною тінню */}
-              <img
-                key={productImages[currentImageIndex]}
-                src={productImages[currentImageIndex]}
-                alt={selectedProduct.name[locale]}
-                className="w-full h-full object-contain filter drop-shadow-[0_8px_20px_rgba(0,0,0,0.95)] animate-in fade-in duration-200"
-              />
+              {productImages.length > 0 && productImages[currentImageIndex] ? (
+                <div
+                  className="w-full h-full flex items-center justify-center animate-in fade-in duration-200"
+                  style={{ transform: `scale(${getProductZoom(selectedProduct)})` }}
+                >
+                  <img
+                    key={productImages[currentImageIndex]}
+                    src={productImages[currentImageIndex]}
+                    alt={`${selectedProduct.name[locale]} — ${locale === 'pl' ? 'Maks Sushi Świdnica sushi na dowóz' : 'Maks Sushi Свідниця суші з доставкою'}`}
+                    title={`${selectedProduct.name[locale]} — Maks Sushi`}
+                    decoding="async"
+                    className="w-full h-full object-contain filter drop-shadow-[0_8px_20px_rgba(0,0,0,0.95)]"
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center text-zinc-600 gap-2 select-none">
+                  <UtensilsCrossed className="w-12 h-12 text-zinc-700" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">Maks Sushi</span>
+                </div>
+              )}
 
               {/* Стрілочки галереї на десктопі (тільки якщо у ролу > 1 фото) */}
               {hasMultipleImages && (
@@ -299,10 +322,15 @@ export function ProductModal() {
             {/* Колонка: Інформація, Інгредієнти, Кількість/Вага, Ціна та Замовлення */}
             <div className={`w-full ${selectedProduct.categoryId === 'dodatki' ? 'w-full' : 'sm:w-1/2'} flex flex-col gap-3 sm:gap-3.5`}>
               <div>
-                {/* Назва ролу капсом */}
-                <h2 className="text-base sm:text-xl font-black uppercase tracking-wide text-white leading-tight">
-                  {selectedProduct.name[locale]}
-                </h2>
+                {/* Назва ролу капсом та бейдж */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-base sm:text-xl font-black uppercase tracking-wide text-white leading-tight">
+                    {selectedProduct.name[locale]}
+                  </h2>
+                  {selectedProduct.badge && selectedProduct.categoryId === 'dodatki' && (
+                    <ProductBadge badge={selectedProduct.badge} locale={locale} />
+                  )}
+                </div>
 
                 {/* Короткий опис (якщо є) */}
                 {selectedProduct.description && (
