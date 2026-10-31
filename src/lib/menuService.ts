@@ -55,6 +55,20 @@ export async function fetchMenuData(): Promise<MenuData> {
       isAvailable: Boolean(prod.is_available),
     }));
 
+    // Впорядковуємо страви послідовно за категоріями меню (Міні-макі -> Футомакі -> Роли тощо)
+    const categoryOrderMap = new Map(categories.map((c, idx) => [c.id, idx]));
+    const defaultProductIndexMap = new Map(defaultProducts.map((p, idx) => [p.id, idx]));
+
+    products.sort((a, b) => {
+      const catA = categoryOrderMap.get(a.categoryId) ?? 999;
+      const catB = categoryOrderMap.get(b.categoryId) ?? 999;
+      if (catA !== catB) return catA - catB;
+
+      const idxA = defaultProductIndexMap.get(a.id) ?? 9999;
+      const idxB = defaultProductIndexMap.get(b.id) ?? 9999;
+      return idxA - idxB;
+    });
+
     return { categories, products };
   } catch (err) {
     console.warn('Error fetching menu from Supabase, falling back to mockData:', err);
@@ -193,12 +207,12 @@ async function compressImage(file: File, maxDimension: number = 1200, quality: n
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, width, height);
 
-      // Розумне кадрування: автоматично прибираємо зайвий пустий чорний простір
+      // Розумне кадрування: автоматично виявляємо їжу та прибираємо зайвий порожній простір
       const trimmedCanvas = autoTrimBlackBorders(canvas);
 
       trimmedCanvas.toBlob(
         (blob) => {
-          if (blob && blob.size < file.size) {
+          if (blob) {
             resolve(blob);
           } else {
             resolve(file);
@@ -337,4 +351,47 @@ export async function deleteProduct(id: string): Promise<{ success: boolean; err
     return { success: false, error: err.message };
   }
 }
+
+/**
+ * Створення нової категорії меню
+ */
+export async function createCategory(category: {
+  id: string;
+  name: { pl: string; uk: string };
+  icon?: string;
+  image?: string;
+  sort_order?: number;
+}): Promise<{ success: boolean; data?: Category; error?: string }> {
+  try {
+    const { data, error } = await supabase
+      .from('categories')
+      .insert({
+        id: category.id,
+        name: category.name,
+        icon: category.icon || 'CircleDot',
+        image: category.image || '',
+        sort_order: category.sort_order ?? 99,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return {
+      success: true,
+      data: {
+        id: data.id,
+        name: data.name,
+        icon: data.icon,
+        image: data.image || '',
+        sort_order: data.sort_order,
+      },
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
 

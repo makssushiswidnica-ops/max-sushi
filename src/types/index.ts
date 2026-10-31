@@ -40,6 +40,7 @@ export interface Category {
   name: LocalizedString;
   icon: string;
   image?: string;
+  sort_order?: number;
 }
 
 export interface CartItem {

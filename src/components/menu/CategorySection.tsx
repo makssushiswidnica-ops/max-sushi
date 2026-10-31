@@ -35,20 +35,15 @@ export function CategorySection({ category, products }: CategorySectionProps) {
         </span>
       </div>
 
-      {/* Сітка меню: якщо позицій менше 4 — центруємо відображення */}
-      <div
-        className={
-          products.length === 1
-            ? 'grid grid-cols-1 max-w-sm mx-auto gap-4 sm:gap-5'
-            : products.length === 2
-            ? 'grid grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto gap-4 sm:gap-5'
-            : products.length === 3
-            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto gap-4 sm:gap-5'
-            : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5'
-        }
-      >
+      {/* Сітка меню: неповні ряди автоматично центруються посередині */}
+      <div className="flex flex-wrap justify-center gap-4 sm:gap-5">
         {products.map((product) => (
-          <ProductCard key={product.id} product={product} />
+          <div
+            key={product.id}
+            className="w-full sm:w-[calc(50%-10px)] lg:w-[calc((100%-40px)/3)] xl:w-[calc(25%-15px)] max-w-sm sm:max-w-none flex"
+          >
+            <ProductCard product={product} />
+          </div>
         ))}
       </div>
     </section>

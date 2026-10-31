@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { CartItem, Product } from '@/types';
+import { CartItem, Product, Category } from '@/types';
 import { brandTheme } from '@/config/theme';
 
 interface CartState {
@@ -9,6 +9,12 @@ interface CartState {
   selectedProduct: Product | null;
   isCheckoutOpen: boolean;
   personsCount: number;
+
+  // Меню страв з бази даних Supabase для швидкого доступу та навігації в модалці
+  menuProducts: Product[];
+  setMenuProducts: (products: Product[]) => void;
+  menuCategories: Category[];
+  setMenuCategories: (categories: Category[]) => void;
 
   // Дії кошика
   addItem: (product: Product, quantity?: number) => void;
@@ -42,6 +48,10 @@ export const useCartStore = create<CartState>()(
       items: [],
       isOpen: false,
       selectedProduct: null,
+      menuProducts: [],
+      setMenuProducts: (products: Product[]) => set({ menuProducts: products }),
+      menuCategories: [],
+      setMenuCategories: (categories: Category[]) => set({ menuCategories: categories }),
       isCheckoutOpen: false,
       personsCount: 1,
       activeCardId: null,

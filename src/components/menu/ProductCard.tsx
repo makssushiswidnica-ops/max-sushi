@@ -81,7 +81,7 @@ export function ProductCard({ product }: ProductCardProps) {
       style={{
         clipPath: 'polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px)',
       }}
-      className="group relative p-[1px] bg-white/10 hover:bg-[#e50914]/50 transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-[#e50914]/15 cursor-pointer select-none"
+      className="group relative p-[1px] bg-white/10 hover:bg-[#e50914]/50 transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-[#e50914]/15 cursor-pointer select-none w-full h-full flex flex-col"
     >
       {/* Внутрішній блок картки з аналогічною самурайською формою */}
       <div
@@ -92,9 +92,9 @@ export function ProductCard({ product }: ProductCardProps) {
       >
       {/* Верхня частина: Прямокутне зображення майже на всю ширину картки, назва, грамовка та склад */}
       <div className="flex flex-col text-left">
-        {/* Просте прямокутне зображення страви з м'яким студійним світлом */}
+        {/* Просте прямокутне зображення страви з гострими кутами та м'яким студійним світлом */}
         {!isDodatki ? (
-          <div className="relative w-full aspect-[4/3] overflow-hidden bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.08)_0%,_#07070b_70%)] border border-white/10 group-hover:border-[#e50914]/50 flex items-center justify-center mb-3 transition-colors duration-300 shadow-md shadow-black/80 rounded-xl">
+          <div className="relative w-full aspect-[4/3] overflow-hidden bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.08)_0%,_#07070b_70%)] border border-white/10 group-hover:border-[#e50914]/50 flex items-center justify-center mb-3 transition-colors duration-300 shadow-md shadow-black/80 rounded-none">
             {/* Маркетинговий бейдж (ВЕГАН, ХІТ тощо) */}
             {product.badge && (
               <div className="absolute top-2 left-2 z-20 pointer-events-none">
@@ -102,18 +102,20 @@ export function ProductCard({ product }: ProductCardProps) {
               </div>
             )}
             {product.image ? (
-              <div
-                className="w-full h-full flex items-center justify-center transition-transform duration-500 ease-out group-hover:scale-105"
-                style={{ transform: `scale(${getProductZoom(product)})` }}
-              >
-                <img
-                  src={product.image}
-                  alt={`${product.name[locale]} — ${locale === 'pl' ? 'Maks Sushi Świdnica dostawa' : 'Maks Sushi Свідниця доставка'}`}
-                  title={`${product.name[locale]} — ${product.price} zł`}
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-contain filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.95)]"
-                />
+              <div className="w-full h-full flex items-center justify-center transition-transform duration-500 ease-out group-hover:scale-105">
+                <div
+                  className="w-full h-full flex items-center justify-center"
+                  style={{ transform: `scale(${getProductZoom(product)})` }}
+                >
+                  <img
+                    src={product.image}
+                    alt={`${product.name[locale]} — ${locale === 'pl' ? 'Maks Sushi Świdnica dostawa' : 'Maks Sushi Свідниця доставка'}`}
+                    title={`${product.name[locale]} — ${product.price} zł`}
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-contain filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.95)]"
+                  />
+                </div>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center text-zinc-600 gap-1.5 select-none py-4">
@@ -123,7 +125,7 @@ export function ProductCard({ product }: ProductCardProps) {
             )}
           </div>
         ) : (
-          <div className="relative w-full aspect-[16/9] bg-[#181824] border border-white/10 flex items-center justify-center text-[#e50914] font-black text-2xl mb-3 shadow-inner">
+          <div className="relative w-full aspect-[16/9] bg-[#181824] border border-white/10 flex items-center justify-center text-[#e50914] font-black text-2xl mb-3 shadow-inner rounded-none">
             {product.badge && (
               <div className="absolute top-2 left-2 z-20 pointer-events-none">
                 <ProductBadge badge={product.badge} locale={locale} />
@@ -133,8 +135,8 @@ export function ProductCard({ product }: ProductCardProps) {
           </div>
         )}
 
-        {/* Назва ролу або додатку */}
-        <h3 className="text-base sm:text-lg font-black tracking-wide text-white group-hover:text-[#e50914] transition-colors leading-tight mb-1.5 line-clamp-1">
+        {/* Назва ролу або додатку: 2 рядки для повного читання довгих назв, фіксована висота для ідеальної геометрії сітки */}
+        <h3 className="text-sm sm:text-base lg:text-[17px] font-black tracking-wide text-white group-hover:text-[#e50914] transition-colors leading-snug mb-1.5 min-h-[2.5rem] sm:min-h-[2.85rem] flex items-start line-clamp-2">
           {product.name[locale]}
         </h3>
 

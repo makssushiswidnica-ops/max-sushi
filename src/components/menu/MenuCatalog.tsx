@@ -7,25 +7,19 @@ import { fetchMenuData } from '@/lib/menuService';
 import { Category, Product } from '@/types';
 import { StickyNav } from '@/components/layout/StickyNav';
 import { useI18n } from '@/lib/i18nContext';
+import { useCartStore } from '@/store/useCartStore';
 import { ProductCard } from '@/components/menu/ProductCard';
 import { CategorySection } from '@/components/menu/CategorySection';
 
 // Допоміжна функція для центрування сітки, коли позицій у категорії менше 4
-function getProductGridClasses(count: number): string {
-  if (count === 1) {
-    return 'grid grid-cols-1 max-w-sm mx-auto gap-4 sm:gap-5';
-  }
-  if (count === 2) {
-    return 'grid grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto gap-4 sm:gap-5';
-  }
-  if (count === 3) {
-    return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto gap-4 sm:gap-5';
-  }
-  return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5';
-}
+// Класи для адаптивної сітки страв із центруванням неповного останнього ряду
+const PRODUCT_CONTAINER_CLASS = 'flex flex-wrap justify-center gap-4 sm:gap-5';
+const PRODUCT_ITEM_CLASS = 'w-full sm:w-[calc(50%-10px)] lg:w-[calc((100%-40px)/3)] xl:w-[calc(25%-15px)] max-w-sm sm:max-w-none flex';
 
 export function MenuCatalog() {
   const { locale } = useI18n();
+  const setMenuProducts = useCartStore((s) => s.setMenuProducts);
+  const setMenuCategories = useCartStore((s) => s.setMenuCategories);
 
   // Динамічний стан меню з Supabase (з надійним резервним fallback на mockData)
   const [categoriesList, setCategoriesList] = useState<Category[]>(defaultCategories);
@@ -38,17 +32,20 @@ export function MenuCatalog() {
       if (isMounted) {
         if (data.categories?.length > 0) {
           setCategoriesList(data.categories);
+          setMenuCategories(data.categories);
         }
         if (data.products?.length > 0) {
           // Показуємо відвідувачам сайту тільки доступні позиції
-          setProductsList(data.products.filter((p) => p.isAvailable !== false));
+          const available = data.products.filter((p) => p.isAvailable !== false);
+          setProductsList(available);
+          setMenuProducts(available);
         }
       }
     });
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [setMenuProducts, setMenuCategories]);
 
   // За замовчуванням одразу відкривається перший розділ категорій (Міні Макі)
   const [selectedCategory, setSelectedCategory] = useState<string>(categoriesList[0]?.id || 'mini-maki');
@@ -228,9 +225,11 @@ export function MenuCatalog() {
                 </button>
               </div>
             ) : (
-              <div className={getProductGridClasses(filteredProducts.length)}>
+              <div className={PRODUCT_CONTAINER_CLASS}>
                 {filteredProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                  <div key={product.id} className={PRODUCT_ITEM_CLASS}>
+                    <ProductCard product={product} />
+                  </div>
                 ))}
               </div>
             )}
@@ -298,10 +297,12 @@ export function MenuCatalog() {
               </div>
             </div>
 
-            {/* Сітка товарів вибраної категорії: якщо позицій менше 4 — центруємо */}
-            <div className={getProductGridClasses(currentCategoryProducts.length)}>
+            {/* Сітка товарів вибраної категорії: неповні ряди автоматично центруються */}
+            <div className={PRODUCT_CONTAINER_CLASS}>
               {currentCategoryProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <div key={product.id} className={PRODUCT_ITEM_CLASS}>
+                  <ProductCard product={product} />
+                </div>
               ))}
             </div>
 

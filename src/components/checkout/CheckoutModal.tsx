@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { createZodResolver } from '@/lib/zodResolver';
 import * as z from 'zod';
 import confetti from 'canvas-confetti';
 import {
@@ -44,13 +44,24 @@ const checkoutSchema = z.object({
 }).refine(
   (data) => {
     if (data.deliveryMethod === 'delivery') {
-      return Boolean(data.street && data.street.trim().length > 0 && data.house && data.house.trim().length > 0);
+      return Boolean(data.street && data.street.trim().length > 0);
     }
     return true;
   },
   {
-    message: 'Для доставки обовʼязково вкажіть вулицю та номер будинку',
+    message: 'Вкажіть вулицю доставки',
     path: ['street'],
+  }
+).refine(
+  (data) => {
+    if (data.deliveryMethod === 'delivery') {
+      return Boolean(data.house && data.house.trim().length > 0);
+    }
+    return true;
+  },
+  {
+    message: 'Вкажіть номер будинку',
+    path: ['house'],
   }
 );
 
@@ -81,7 +92,7 @@ export function CheckoutModal() {
     reset,
     formState: { errors },
   } = useForm<CheckoutFormValues>({
-    resolver: zodResolver(checkoutSchema),
+    resolver: createZodResolver(checkoutSchema),
     defaultValues: {
       name: '',
       phone: '',

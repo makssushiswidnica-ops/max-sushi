@@ -8,7 +8,7 @@ export const categories: Category[] = [
       uk: 'Міні Макі',
     },
     icon: 'CircleDot',
-    image: '/images/mini-maki/maki-awokado.jpg',
+    image: '',
   },
   {
     id: 'futomaki',
@@ -17,7 +17,7 @@ export const categories: Category[] = [
       uk: 'Футомакі',
     },
     icon: 'CircleDot',
-    image: '/images/futomaki/futomaki-bangkok.jpg',
+    image: '',
   },
   {
     id: 'rolki',
@@ -26,7 +26,7 @@ export const categories: Category[] = [
       uk: 'Роли',
     },
     icon: 'Fish',
-    image: '/images/rolki/bonito.jpg',
+    image: '',
   },
   {
     id: 'lux-rolki',
@@ -35,7 +35,7 @@ export const categories: Category[] = [
       uk: 'Люкс Роли',
     },
     icon: 'Sparkles',
-    image: '/images/lux-rolki/azuma.jpg',
+    image: '',
   },
   {
     id: 'pieczone-rolki',
@@ -44,7 +44,7 @@ export const categories: Category[] = [
       uk: 'Запечені Роли',
     },
     icon: 'Flame',
-    image: '/images/pieczone-rolki/japonia.jpg',
+    image: '',
   },
   {
     id: 'rolki-tempura',
@@ -53,7 +53,7 @@ export const categories: Category[] = [
       uk: 'Роли в Темпурі',
     },
     icon: 'Zap',
-    image: '/images/rolki-tempura/aloha-nami-roll.jpg',
+    image: '',
   },
   {
     id: 'zupy',
@@ -62,7 +62,7 @@ export const categories: Category[] = [
       uk: 'Супи',
     },
     icon: 'Utensils',
-    image: '/images/zupy/miso-zupa-krewetki.jpg',
+    image: '',
   },
   {
     id: 'sushi-burgery',
@@ -71,7 +71,7 @@ export const categories: Category[] = [
       uk: 'Суші Бургери',
     },
     icon: 'Sandwich',
-    image: '/images/sushi-burgery/morski-burger.jpg',
+    image: '',
   },
   {
     id: 'poke-bowl',
@@ -80,7 +80,7 @@ export const categories: Category[] = [
       uk: 'Поке Боули',
     },
     icon: 'Soup',
-    image: '/images/poke-bowl/poke-krewetki.jpg',
+    image: '',
   },
   {
     id: 'przekaski',
@@ -89,7 +89,7 @@ export const categories: Category[] = [
       uk: 'Закуски',
     },
     icon: 'Cookie',
-    image: '/images/przekaski/gyoza-kurczak.jpg',
+    image: '',
   },
   {
     id: 'zestawy',
@@ -98,7 +98,7 @@ export const categories: Category[] = [
       uk: 'Сети',
     },
     icon: 'Layers',
-    image: '/images/zestawy/mega-zestaw.jpg',
+    image: '',
   },
   {
     id: 'dodatki',
@@ -107,7 +107,7 @@ export const categories: Category[] = [
       uk: 'Додатки',
     },
     icon: 'PlusCircle',
-    image: '/images/dodatki/imbir.jpg',
+    image: '',
   },
 ];
 
@@ -129,7 +129,7 @@ export const products: Product[] = [
     weight: 120,
     pieces: 8,
     categoryId: 'mini-maki',
-    image: '/images/mini-maki/maki-ogorek.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'OGÓREK', 'SER ŚMIETANKOWY', 'SEZAM'],
       uk: ['НОРІ', 'РИС', 'ОГІРОК', 'ВЕРШКОВИЙ СИР', 'КУНЖУТ'],
@@ -156,7 +156,7 @@ export const products: Product[] = [
     weight: 120,
     pieces: 8,
     categoryId: 'mini-maki',
-    image: '/images/mini-maki/maki-awokado.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'AWOKADO', 'SOS UNAGI', 'SEZAM'],
       uk: ['НОРІ', 'РИС', 'АВОКАДО', 'СОУС УНАГІ', 'КУНЖУТ'],
@@ -183,7 +183,7 @@ export const products: Product[] = [
     weight: 120,
     pieces: 8,
     categoryId: 'mini-maki',
-    image: '/images/mini-maki/maki-krab.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'KRABSTIKI SURIMI'],
       uk: ['НОРІ', 'РИС', 'КРАБОВІ ПАЛИЧКИ СУРІМІ'],
@@ -210,7 +210,7 @@ export const products: Product[] = [
     weight: 120,
     pieces: 8,
     categoryId: 'mini-maki',
-    image: '/images/mini-maki/maki-tykwa.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'TYKWA GOTOWANA'],
       uk: ['НОРІ', 'РИС', 'ТИКВА ВАРЕНА'],
@@ -237,7 +237,7 @@ export const products: Product[] = [
     weight: 120,
     pieces: 8,
     categoryId: 'mini-maki',
-    image: '/images/mini-maki/maki-rzodkiew.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'RZODKIEW MARYNOWANA'],
       uk: ['НОРІ', 'РИС', 'РЕДЬКА МАРИНОВАНА'],
@@ -264,7 +264,7 @@ export const products: Product[] = [
     weight: 120,
     pieces: 8,
     categoryId: 'mini-maki',
-    image: '/images/mini-maki/maki-losos.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ'],
@@ -291,7 +291,7 @@ export const products: Product[] = [
     weight: 120,
     pieces: 8,
     categoryId: 'mini-maki',
-    image: '/images/mini-maki/maki-tunczyk.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'TUŃCZYK'],
       uk: ['НОРІ', 'РИС', 'ТУНЕЦЬ'],
@@ -318,7 +318,7 @@ export const products: Product[] = [
     weight: 120,
     pieces: 8,
     categoryId: 'mini-maki',
-    image: '/images/mini-maki/maki-krewetka.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'KREWETKI'],
       uk: ['НОРІ', 'РИС', 'КРЕВЕТКИ'],
@@ -345,7 +345,7 @@ export const products: Product[] = [
     weight: 125,
     pieces: 8,
     categoryId: 'mini-maki',
-    image: '/images/mini-maki/maki-wegorz.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'WĘGORZ', 'SOS UNAGI', 'SEZAM'],
       uk: ['НОРІ', 'РИС', 'ВУГОР', 'СОУС УНАГІ', 'КУНЖУТ'],
@@ -372,7 +372,7 @@ export const products: Product[] = [
     weight: 130,
     pieces: 8,
     categoryId: 'mini-maki',
-    image: '/images/mini-maki/maki-tempura.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'KREWETKA W TEMPURZE'],
       uk: ['НОРІ', 'РИС', 'КРЕВЕТКА В ТЕМПУРІ'],
@@ -403,7 +403,7 @@ export const products: Product[] = [
     weight: 240,
     pieces: 8,
     categoryId: 'futomaki',
-    image: '/images/futomaki/futomaki-wegan.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'OGÓREK', 'AWOKADO', 'TYKWA GOTOWANA', 'RZODKIEW MARYNOWANA'],
       uk: ['НОРІ', 'РИС', 'ОГІРОК', 'АВОКАДО', 'ТИКВА ВАРЕНА', 'РЕДЬКА МАРИНОВАНА'],
@@ -430,7 +430,7 @@ export const products: Product[] = [
     weight: 250,
     pieces: 8,
     categoryId: 'futomaki',
-    image: '/images/futomaki/futomaki-banzai.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'KREWETKA W TEMPURZE', 'KRABSTIKI SURIMI', 'MANGO', 'OGÓREK'],
       uk: ['НОРІ', 'РИС', 'КРЕВЕТКА В ТЕМПУРІ', 'КРАБОВІ ПАЛИЧКИ СУРІМІ', 'МАНГО', 'ОГІРОК'],
@@ -457,7 +457,7 @@ export const products: Product[] = [
     weight: 250,
     pieces: 8,
     categoryId: 'futomaki',
-    image: '/images/futomaki/futomaki-losos.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ', 'AWOKADO', 'SER ŚMIETANKOWY', 'OGÓREK'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ', 'АВОКАДО', 'ВЕРШКОВИЙ СИР', 'ОГІРОК'],
@@ -484,7 +484,7 @@ export const products: Product[] = [
     weight: 250,
     pieces: 8,
     categoryId: 'futomaki',
-    image: '/images/futomaki/futomaki-tunczyk.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'TUŃCZYK', 'OGÓREK', 'AWOKADO', 'SOS SRIRACHA MAYO'],
       uk: ['НОРІ', 'РИС', 'ТУНЕЦЬ', 'ОГІРОК', 'АВОКАДО', 'СОУС ШРІРАЧА МАЙО'],
@@ -511,7 +511,7 @@ export const products: Product[] = [
     weight: 250,
     pieces: 8,
     categoryId: 'futomaki',
-    image: '/images/futomaki/futomaki-bangkok.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'KREWETKA W TEMPURZE', 'MANGO', 'TYKWA GOTOWANA', 'RZODKIEW MARYNOWANA'],
       uk: ['НОРІ', 'РИС', 'КРЕВЕТКА В ТЕМПУРІ', 'МАНГО', 'ТИКВА ВАРЕНА', 'РЕДЬКА МАРИНОВАНА'],
@@ -538,7 +538,7 @@ export const products: Product[] = [
     weight: 250,
     pieces: 8,
     categoryId: 'futomaki',
-    image: '/images/futomaki/futomaki-kurama.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ', 'MANGO', 'TYKWA GOTOWANA', 'RZODKIEW MARYNOWANA'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ', 'МАНГО', 'ТИКВА ВАРЕНА', 'РЕДЬКА МАРИНОВАНА'],
@@ -565,7 +565,7 @@ export const products: Product[] = [
     weight: 260,
     pieces: 8,
     categoryId: 'futomaki',
-    image: '/images/futomaki/futomaki-tokio.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ PIECZONY', 'KREWETKI', 'OGÓREK', 'AWOKADO'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ ЗАПЕЧЕНИЙ', 'КРЕВЕТКИ', 'ОГІРОК', 'АВОКАДО'],
@@ -592,7 +592,7 @@ export const products: Product[] = [
     weight: 250,
     pieces: 8,
     categoryId: 'futomaki',
-    image: '/images/futomaki/futomaki-osmiornica.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'OŚMIORNICA W TEMPURZE', 'MANGO', 'TYKWA GOTOWANA', 'RZODKIEW MARYNOWANA'],
       uk: ['НОРІ', 'РИС', 'ВОСЬМИНІГ В ТЕМПУРІ', 'МАНГО', 'ТИКВА ВАРЕНА', 'РЕДЬКА МАРИНОВАНА'],
@@ -622,7 +622,7 @@ export const products: Product[] = [
     weight: 260,
     pieces: 8,
     categoryId: 'lux-rolki',
-    image: '/images/lux-rolki/filadelfia-losos.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ', 'SER ŚMIETANKOWY', 'AWOKADO', 'KAWIOR MASAGO'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ', 'ВЕРШКОВИЙ СИР', 'АВОКАДО', 'ІКРА МАСАГО'],
@@ -649,7 +649,7 @@ export const products: Product[] = [
     weight: 260,
     pieces: 8,
     categoryId: 'lux-rolki',
-    image: '/images/lux-rolki/filadelfia-tunczyk.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'SER ŚMIETANKOWY', 'TUŃCZYK', 'OGÓREK', 'SOS SRIRACHA MAYO'],
       uk: ['НОРІ', 'РИС', 'ВЕРШКОВИЙ СИР', 'ТУНЕЦЬ', 'ОГІРОК', 'СОУС ШРІРАЧА МАЙО'],
@@ -676,7 +676,7 @@ export const products: Product[] = [
     weight: 270,
     pieces: 8,
     categoryId: 'lux-rolki',
-    image: '/images/lux-rolki/zloty-smok.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'SER ŚMIETANKOWY', 'WĘGORZ', 'AWOKADO', 'SOS UNAGI', 'KAWIOR MASAGO', 'SEZAM'],
       uk: ['НОРІ', 'РИС', 'ВЕРШКОВИЙ СИР', 'ВУГОР', 'АВОКАДО', 'СОУС УНАГІ', 'ІКРА МАСАГО', 'КУНЖУТ'],
@@ -703,7 +703,7 @@ export const products: Product[] = [
     weight: 270,
     pieces: 8,
     categoryId: 'lux-rolki',
-    image: '/images/lux-rolki/zielony-smok.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'SER ŚMIETANKOWY', 'WĘGORZ', 'AWOKADO', 'SOS UNAGI', 'OGÓREK', 'SEZAM'],
       uk: ['НОРІ', 'РИС', 'ВЕРШКОВИЙ СИР', 'ВУГОР', 'АВОКАДО', 'СОУС УНАГІ', 'ОГІРОК', 'КУНЖУТ'],
@@ -730,7 +730,7 @@ export const products: Product[] = [
     weight: 260,
     pieces: 8,
     categoryId: 'lux-rolki',
-    image: '/images/lux-rolki/krolewski-smok.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'KREWETKI', 'MANGO', 'SOS MANGO JALAPENO', 'SER ŚMIETANKOWY'],
       uk: ['НОРІ', 'РИС', 'КРЕВЕТКИ', 'МАНГО', 'СОУС МАНГО ХАЛАПЕНЬЙО', 'ВЕРШКОВИЙ СИР'],
@@ -757,7 +757,7 @@ export const products: Product[] = [
     weight: 280,
     pieces: 8,
     categoryId: 'lux-rolki',
-    image: '/images/lux-rolki/favorite.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ OPAŁONY', 'KREWETKA W TEMPURZE', 'AWOKADO', 'OGÓREK', 'SOS MANGO JALAPENO'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ ОБПАЛЕНИЙ', 'КРЕВЕТКА В ТЕМПУРІ', 'АВОКАДО', 'ОГІРОК', 'СОУС МАНГО ХАЛАПЕНЬЙО'],
@@ -784,7 +784,7 @@ export const products: Product[] = [
     weight: 265,
     pieces: 8,
     categoryId: 'lux-rolki',
-    image: '/images/lux-rolki/fila-lux.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ', 'SER ŚMIETANKOWY', 'KRABSTIKI SURIMI', 'OGÓREK'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ', 'ВЕРШКОВИЙ СИР', 'КРАБОВІ ПАЛИЧКИ СУРІМІ', 'ОГІРОК'],
@@ -811,7 +811,7 @@ export const products: Product[] = [
     weight: 275,
     pieces: 8,
     categoryId: 'lux-rolki',
-    image: '/images/lux-rolki/mikado.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ', 'KREWETKI', 'SER ŚMIETANKOWY', 'AWOKADO'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ', 'КРЕВЕТКИ', 'ВЕРШКОВИЙ СИР', 'АВОКАДО'],
@@ -838,7 +838,7 @@ export const products: Product[] = [
     weight: 270,
     pieces: 8,
     categoryId: 'lux-rolki',
-    image: '/images/lux-rolki/mango-fila.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ OPALONY', 'SER ŚMIETANKOWY', 'MANGO', 'SOS MANGO JALAPENO', 'PŁATKI MIGDAŁOWE'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ ОБПАЛЕНИЙ', 'ВЕРШКОВИЙ СИР', 'МАНГО', 'СОУС МАНГО ХАЛАПЕНЬЙО', 'ПЛАСТІВЦІ МИГДАЛЮ'],
@@ -865,7 +865,7 @@ export const products: Product[] = [
     weight: 280,
     pieces: 8,
     categoryId: 'lux-rolki',
-    image: '/images/lux-rolki/kanada.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'WĘGORZ', 'ŁOSOŚ PIECZONY', 'AWOKADO', 'OGÓREK', 'SOS UNAGI', 'SEZAM'],
       uk: ['НОРІ', 'РИС', 'ВУГОР', 'ЛОСОСЬ ПЕЧЕНИЙ', 'АВОКАДО', 'ОГІРОК', 'СОУС УНАГІ', 'КУНЖУТ'],
@@ -892,7 +892,7 @@ export const products: Product[] = [
     weight: 275,
     pieces: 8,
     categoryId: 'lux-rolki',
-    image: '/images/lux-rolki/azuma.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'SER ŚMIETANKOWY', 'ŁOSOŚ', 'TYKWA GOTOWANA', 'RZODKIEW MARYNOWANA', 'OMLET TAMAGO', 'SOS UNAGI', 'CEBULKA PRAŻONA'],
       uk: ['НОРІ', 'РИС', 'ВЕРШКОВИЙ СИР', 'ЛОСОСЬ', 'ТИКВА ВАРЕНА', 'РЕДЬКА МАРИНОВАНА', 'ОМЛЕТ ТАМАГО', 'СОУС УНАГІ', 'ЦИБУЛЯ СМАЖЕНА'],
@@ -919,7 +919,7 @@ export const products: Product[] = [
     weight: 290,
     pieces: 8,
     categoryId: 'lux-rolki',
-    image: '/images/lux-rolki/okinawa.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ OPALONY', 'WĘGORZ', 'KREWETKA W TEMPURZE', 'TYKWA GOTOWANA', 'KAWIOR MASAGO', 'OGÓREK'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ ОБПАЛЕНИЙ', 'ВУГОР', 'КРЕВЕТКА В ТЕМПУРІ', 'ТИКВА ВАРЕНА', 'ІКРА МАСАГО', 'ОГІРОК'],
@@ -946,7 +946,7 @@ export const products: Product[] = [
     weight: 280,
     pieces: 8,
     categoryId: 'lux-rolki',
-    image: '/images/lux-rolki/komaki.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'KREWETKI', 'KRABSTIKI SURIMI', 'ŁOSOŚ', 'AWOKADO', 'OMLET TAMAGO', 'JAPOŃSKI MAJONEZ'],
       uk: ['НОРІ', 'РИС', 'КРЕВЕТКИ', 'КРАБОВІ ПАЛИЧКИ СУРІМІ', 'ЛОСОСЬ', 'АВОКАДО', 'ОМЛЕТ ТАМАГО', 'ЯПОНСЬКИЙ МАЙОНЕЗ'],
@@ -973,7 +973,7 @@ export const products: Product[] = [
     weight: 290,
     pieces: 8,
     categoryId: 'lux-rolki',
-    image: '/images/lux-rolki/matsue.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'TUŃCZYK', 'ŁOSOŚ', 'KREWETKA W TEMPURZE', 'CYTRYNA'],
       uk: ['НОРІ', 'РИС', 'ТУНЕЦЬ', 'ЛОСОСЬ', 'КРЕВЕТКА В ТЕМПУРІ', 'ЛИМОН'],
@@ -1000,7 +1000,7 @@ export const products: Product[] = [
     weight: 295,
     pieces: 8,
     categoryId: 'lux-rolki',
-    image: '/images/lux-rolki/sunrise.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ', 'TUŃCZYK', 'KRABSTIKI SURIMI', 'KREWETKI', 'AWOKADO', 'SOS UNAGI', 'OGÓREK'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ', 'ТУНЕЦЬ', 'КРАБОВІ ПАЛИЧКИ СУРІМІ', 'КРЕВЕТКИ', 'АВОКАДО', 'СОУС УНАГІ', 'ОГІРОК'],
@@ -1030,7 +1030,7 @@ export const products: Product[] = [
     weight: 250,
     pieces: 8,
     categoryId: 'rolki',
-    image: '/images/rolki/bonito.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ', 'SER ŚMIETANKOWY', 'OGÓREK', 'PŁATKI TUŃCZYKA'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ', 'ВЕРШКОВИЙ СИР', 'ОГІРОК', 'ПЛАСТІВЦІ ТУНЦЯ'],
@@ -1057,7 +1057,7 @@ export const products: Product[] = [
     weight: 260,
     pieces: 8,
     categoryId: 'rolki',
-    image: '/images/rolki/laguna-red.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'KREWETKI', 'SER ŚMIETANKOWY', 'OGÓREK', 'KAWIOR MASAGO'],
       uk: ['НОРІ', 'РИС', 'КРЕВЕТКИ', 'ВЕРШКОВИЙ СИР', 'ОГІРОК', 'ІКРА МАСАГО'],
@@ -1084,7 +1084,7 @@ export const products: Product[] = [
     weight: 270,
     pieces: 8,
     categoryId: 'rolki',
-    image: '/images/rolki/rock-n-roll.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ', 'WĘGORZ', 'SER ŚMIETANKOWY', 'OGÓREK', 'SOS UNAGI', 'SEZAM', 'KAWIOR MASAGO'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ', 'ВУГОР', 'ВЕРШКОВИЙ СИР', 'ОГІРОК', 'СОУС УНАГІ', 'КУНЖУТ', 'ІКРА МАСАГО'],
@@ -1111,7 +1111,7 @@ export const products: Product[] = [
     weight: 270,
     pieces: 8,
     categoryId: 'rolki',
-    image: '/images/rolki/sakura.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ', 'TUŃCZYK', 'SER ŚMIETANKOWY', 'OGÓREK', 'SOS SRIRACHA MAYO', 'KAWIOR MASAGO'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ', 'ТУНЕЦЬ', 'ВЕРШКОВИЙ СИР', 'ОГІРОК', 'СОУС ШРІРАЧА МАЙО', 'ІКРА МАСАГО'],
@@ -1138,7 +1138,7 @@ export const products: Product[] = [
     weight: 260,
     pieces: 8,
     categoryId: 'rolki',
-    image: '/images/rolki/lawa-tunczyk.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'TUŃCZYK', 'SER ŚMIETANKOWY', 'OGÓREK', 'SOS SRIRACHA MAYO'],
       uk: ['НОРІ', 'РИС', 'ТУНЕЦЬ', 'ВЕРШКОВИЙ СИР', 'ОГІРОК', 'СОУС ШРІРАЧА МАЙО'],
@@ -1165,7 +1165,7 @@ export const products: Product[] = [
     weight: 260,
     pieces: 8,
     categoryId: 'rolki',
-    image: '/images/rolki/lawa-losos.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ', 'SER ŚMIETANKOWY', 'OGÓREK', 'KAWIOR MASAGO'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ', 'ВЕРШКОВИЙ СИР', 'ОГІРОК', 'ІКРА МАСАГО'],
@@ -1192,7 +1192,7 @@ export const products: Product[] = [
     weight: 250,
     pieces: 8,
     categoryId: 'rolki',
-    image: '/images/rolki/kalifornia-losos-masago.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ', 'AWOKADO', 'OGÓREK', 'KAWIOR MASAGO'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ', 'АВОКАДО', 'ОГІРОК', 'ІКРА МАСАГО'],
@@ -1219,7 +1219,7 @@ export const products: Product[] = [
     weight: 260,
     pieces: 8,
     categoryId: 'rolki',
-    image: '/images/rolki/kalifornia-tunczyk-tempura.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'TUŃCZYK W TEMPURZE', 'AWOKADO', 'OGÓREK', 'SEZAM'],
       uk: ['НОРІ', 'РИС', 'ТУНЕЦЬ В ТЕМПУРІ', 'АВОКАДО', 'ОГІРОК', 'КУНЖУТ'],
@@ -1246,7 +1246,7 @@ export const products: Product[] = [
     weight: 240,
     pieces: 8,
     categoryId: 'rolki',
-    image: '/images/rolki/kalifornia-krewetki.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'KREWETKI', 'SER ŚMIETANKOWY', 'OGÓREK', 'SEZAM'],
       uk: ['НОРІ', 'РИС', 'КРЕВЕТКИ', 'ВЕРШКОВИЙ СИР', 'ОГІРОК', 'КУНЖУТ'],
@@ -1273,7 +1273,7 @@ export const products: Product[] = [
     weight: 250,
     pieces: 8,
     categoryId: 'rolki',
-    image: '/images/rolki/czarna-kalifornia.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ', 'SER ŚMIETANKOWY', 'OGÓREK', 'SEZAM'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ', 'ВЕРШКОВИЙ СИР', 'ОГІРОК', 'КУНЖУТ'],
@@ -1300,7 +1300,7 @@ export const products: Product[] = [
     weight: 230,
     pieces: 8,
     categoryId: 'rolki',
-    image: '/images/rolki/hanami.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'SER ŚMIETANKOWY', 'WAKAME', 'OGÓREK'],
       uk: ['НОРІ', 'РИС', 'ВЕРШКОВИЙ СИР', 'ВАКАМЕ', 'ОГІРОК'],
@@ -1327,7 +1327,7 @@ export const products: Product[] = [
     weight: 240,
     pieces: 8,
     categoryId: 'rolki',
-    image: '/images/rolki/sniezny-krab.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'KRABSTIKI SURIMI', 'SEZAM', 'OGÓREK'],
       uk: ['НОРІ', 'РИС', 'КРАБОВІ ПАЛИЧКИ СУРІМІ', 'КУНЖУТ', 'ОГІРОК'],
@@ -1354,7 +1354,7 @@ export const products: Product[] = [
     weight: 250,
     pieces: 8,
     categoryId: 'rolki',
-    image: '/images/rolki/kalifornia-tunczyk-sezam.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'TUŃCZYK', 'SER ŚMIETANKOWY', 'OGÓREK', 'SEZAM'],
       uk: ['НОРІ', 'РИС', 'ТУНЕЦЬ', 'ВЕРШКОВИЙ СИР', 'ОГІРОК', 'КУНЖУТ'],
@@ -1381,7 +1381,7 @@ export const products: Product[] = [
     weight: 250,
     pieces: 8,
     categoryId: 'rolki',
-    image: '/images/rolki/kalifornia-tunczyk-masago.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'TUŃCZYK', 'AWOKADO', 'OGÓREK', 'KAWIOR MASAGO'],
       uk: ['НОРІ', 'РИС', 'ТУНЕЦЬ', 'АВОКАДО', 'ОГІРОК', 'ІКРА МАСАГО'],
@@ -1408,7 +1408,7 @@ export const products: Product[] = [
     weight: 250,
     pieces: 8,
     categoryId: 'rolki',
-    image: '/images/rolki/kalifornia-light.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ', 'SER ŚMIETANKOWY', 'OGÓREK', 'KAWIOR MASAGO'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ', 'ВЕРШКОВИЙ СИР', 'ОГІРОК', 'ІКРА МАСАГО'],
@@ -1435,7 +1435,7 @@ export const products: Product[] = [
     weight: 240,
     pieces: 8,
     categoryId: 'rolki',
-    image: '/images/rolki/kalifornia-masago.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'KRABSTIKI SURIMI', 'KAWIOR MASAGO', 'OGÓREK'],
       uk: ['НОРІ', 'РИС', 'КРАБОВІ ПАЛИЧКИ СУРІМІ', 'ІКРА МАСАГО', 'ОГІРОК'],
@@ -1462,7 +1462,7 @@ export const products: Product[] = [
     weight: 260,
     pieces: 8,
     categoryId: 'rolki',
-    image: '/images/rolki/miyako.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'KREWETKI', 'TYKWA GOTOWANA', 'RZODKIEW MARYNOWANA', 'SER ŚMIETANKOWY', 'SEZAM'],
       uk: ['НОРІ', 'РИС', 'КРЕВЕТКИ', 'ТИКВА ВАРЕНА', 'РЕДЬКА МАРИНОВАНА', 'ВЕРШКОВИЙ СИР', 'КУНЖУТ'],
@@ -1489,7 +1489,7 @@ export const products: Product[] = [
     weight: 260,
     pieces: 8,
     categoryId: 'rolki',
-    image: '/images/rolki/cheese-light.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ', 'SER ŚMIETANKOWY', 'OGÓREK', 'SER TOSTOWY'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ', 'ВЕРШКОВИЙ СИР', 'ОГІРОК', 'СИР ТОСТОВИЙ'],
@@ -1516,7 +1516,7 @@ export const products: Product[] = [
     weight: 250,
     pieces: 8,
     categoryId: 'rolki',
-    image: '/images/rolki/cheese-ami.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'MAŁŻE', 'SER ŚMIETANKOWY', 'OGÓREK', 'SER TOSTOWY'],
       uk: ['НОРІ', 'РИС', 'МІДІЇ', 'ВЕРШКОВИЙ СИР', 'ОГІРОК', 'СИР ТОСТОВИЙ'],
@@ -1543,7 +1543,7 @@ export const products: Product[] = [
     weight: 245,
     pieces: 8,
     categoryId: 'rolki',
-    image: '/images/rolki/miami.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'MAŁŻE', 'SER ŚMIETANKOWY', 'OGÓREK', 'SEZAM'],
       uk: ['НОРІ', 'РИС', 'МІДІЇ', 'ВЕРШКОВИЙ СИР', 'ОГІРОК', 'КУНЖУТ'],
@@ -1573,7 +1573,7 @@ export const products: Product[] = [
     weight: 260,
     pieces: 8,
     categoryId: 'pieczone-rolki',
-    image: '/images/pieczone-rolki/kamikaze.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'MAŁŻE', 'SER ŚMIETANKOWY', 'OGÓREK', 'SER MOZZARELLA'],
       uk: ['НОРІ', 'РИС', 'МІДІЇ', 'ВЕРШКОВИЙ СИР', 'ОГІРОК', 'СИР МОЦАРЕЛА'],
@@ -1600,7 +1600,7 @@ export const products: Product[] = [
     weight: 260,
     pieces: 8,
     categoryId: 'pieczone-rolki',
-    image: '/images/pieczone-rolki/pieczony-krab.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'KRABSTIKI SURIMI', 'KREWETKI', 'OGÓREK', 'SER MOZZARELLA'],
       uk: ['НОРІ', 'РИС', 'КРАБОВІ ПАЛИЧКИ СУРІМІ', 'КРЕВЕТКИ', 'ОГІРОК', 'СИР МОЦАРЕЛА'],
@@ -1627,7 +1627,7 @@ export const products: Product[] = [
     weight: 270,
     pieces: 8,
     categoryId: 'pieczone-rolki',
-    image: '/images/pieczone-rolki/pieczona-fila.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ', 'SER ŚMIETANKOWY', 'OGÓREK', 'SER MOZZARELLA'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ', 'ВЕРШКОВИЙ СИР', 'ОГІРОК', 'СИР МОЦАРЕЛА'],
@@ -1654,7 +1654,7 @@ export const products: Product[] = [
     weight: 270,
     pieces: 8,
     categoryId: 'pieczone-rolki',
-    image: '/images/pieczone-rolki/japonia.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ', 'KREWETKI', 'OGÓREK', 'SER MOZZARELLA'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ', 'КРЕВЕТКИ', 'ОГІРОК', 'СИР МОЦАРЕЛА'],
@@ -1681,7 +1681,7 @@ export const products: Product[] = [
     weight: 275,
     pieces: 8,
     categoryId: 'pieczone-rolki',
-    image: '/images/pieczone-rolki/lawa-katana.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ', 'KREWETKI', 'SER ŚMIETANKOWY', 'OMLET TAMAGO', 'SOS SRIRACHA MAYO', 'KAWIOR MASAGO'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ', 'КРЕВЕТКИ', 'ВЕРШКОВИЙ СИР', 'ОМЛЕТ ТАМАГО', 'СОУС ШРІРАЧА МАЙО', 'ІКРА МАСАГО'],
@@ -1708,7 +1708,7 @@ export const products: Product[] = [
     weight: 275,
     pieces: 8,
     categoryId: 'pieczone-rolki',
-    image: '/images/pieczone-rolki/lawa-oni.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'OŚMIORNICA', 'KREWETKI', 'TYKWA GOTOWANA', 'RZODKIEW MARYNOWANA', 'MANGO', 'SOS SRIRACHA MAYO'],
       uk: ['НОРІ', 'РИС', 'ВОСЬМИНІГ', 'КРЕВЕТКИ', 'ТИКВА ВАРЕНА', 'РЕДЬКА МАРИНОВАНА', 'МАНГО', 'СОУС ШРІРАЧА МАЙО'],
@@ -1738,7 +1738,7 @@ export const products: Product[] = [
     weight: 260,
     pieces: 8,
     categoryId: 'rolki-tempura',
-    image: '/images/rolki-tempura/tempura-krab.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'KRABSTIKI SURIMI', 'SER ŚMIETANKOWY', 'OGÓREK', 'SOS TERIYAKI', 'TEMPURA'],
       uk: ['НОРІ', 'РИС', 'КРАБОВІ ПАЛИЧКИ СУРІМІ', 'ВЕРШКОВИЙ СИР', 'ОГІРОК', 'СОУС ТЕРІЯКІ', 'ТЕМПУРА'],
@@ -1765,7 +1765,7 @@ export const products: Product[] = [
     weight: 270,
     pieces: 8,
     categoryId: 'rolki-tempura',
-    image: '/images/rolki-tempura/tempura-losos.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ', 'SER ŚMIETANKOWY', 'OGÓREK', 'SOS TERIYAKI', 'TEMPURA'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ', 'ВЕРШКОВИЙ СИР', 'ОГІРОК', 'СОУС ТЕРІЯКІ', 'ТЕМПУРА'],
@@ -1792,7 +1792,7 @@ export const products: Product[] = [
     weight: 270,
     pieces: 8,
     categoryId: 'rolki-tempura',
-    image: '/images/rolki-tempura/fudzi.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ', 'KREWETKI', 'OGÓREK', 'SOS TERIYAKI', 'TEMPURA'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ', 'КРЕВЕТКИ', 'ОГІРОК', 'СОУС ТЕРІЯКІ', 'ТЕМПУРА'],
@@ -1819,7 +1819,7 @@ export const products: Product[] = [
     weight: 270,
     pieces: 8,
     categoryId: 'rolki-tempura',
-    image: '/images/rolki-tempura/tempura-tunczyk.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'TUŃCZYK', 'SER ŚMIETANKOWY', 'AWOKADO', 'SOS TERIYAKI', 'TEMPURA'],
       uk: ['НОРІ', 'РИС', 'ТУНЕЦЬ', 'ВЕРШКОВИЙ СИР', 'АВОКАДО', 'СОУС ТЕРІЯКІ', 'ТЕМПУРА'],
@@ -1846,7 +1846,7 @@ export const products: Product[] = [
     weight: 285,
     pieces: 8,
     categoryId: 'rolki-tempura',
-    image: '/images/rolki-tempura/aloha-nami-roll.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ', 'TUŃCZYK', 'AWOKADO', 'MANGO', 'SOS SŁODKIE CHILI', 'SER ŚMIETANKOWY', 'OMLET TAMAGO', 'SEZAM'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ', 'ТУНЕЦЬ', 'АВОКАДО', 'МАНГО', 'СОУС СОЛОДКИЙ ЧИЛІ', 'ВЕРШКОВИЙ СИР', 'ОМЛЕТ ТАМАГО', 'КУНЖУТ'],
@@ -1876,7 +1876,7 @@ export const products: Product[] = [
     weight: 300,
     pieces: 1,
     categoryId: 'zupy',
-    image: '/images/zupy/miso-zupa.jpg',
+    image: '',
     ingredients: {
       pl: ['TOFU', 'GRZYBY SHIITAKE', 'WAKAME', 'SEZAM'],
       uk: ['ТОФУ', 'ГРИБИ ШИЇТАКЕ', 'ВАКАМЕ', 'КУНЖУТ'],
@@ -1903,7 +1903,7 @@ export const products: Product[] = [
     weight: 330,
     pieces: 1,
     categoryId: 'zupy',
-    image: '/images/zupy/miso-zupa-losos.jpg',
+    image: '',
     ingredients: {
       pl: ['TOFU', 'GRZYBY SHIITAKE', 'ŁOSOŚ', 'WAKAME', 'SEZAM'],
       uk: ['ТОФУ', 'ГРИБИ ШИЇТАКЕ', 'ЛОСОСЬ', 'ВАКАМЕ', 'КУНЖУТ'],
@@ -1930,7 +1930,7 @@ export const products: Product[] = [
     weight: 330,
     pieces: 1,
     categoryId: 'zupy',
-    image: '/images/zupy/miso-zupa-krewetki.jpg',
+    image: '',
     ingredients: {
       pl: ['TOFU', 'GRZYBY SHIITAKE', 'KREWETKI', 'WAKAME', 'SEZAM'],
       uk: ['ТОФУ', 'ГРИБИ ШИЇТАКЕ', 'КРЕВЕТКИ', 'ВАКАМЕ', 'КУНЖУТ'],
@@ -1960,7 +1960,7 @@ export const products: Product[] = [
     weight: 320,
     pieces: 1,
     categoryId: 'sushi-burgery',
-    image: '/images/sushi-burgery/salmon-burger.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ', 'AWOKADO', 'OGÓREK', 'SER ŚMIETANKOWY', 'SOS UNAGI', 'SEZAM', 'TEMPURA'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ', 'АВОКАДО', 'ОГІРОК', 'ВЕРШКОВИЙ СИР', 'СОУС УНАГІ', 'КУНЖУТ', 'ТЕМПУРА'],
@@ -1987,7 +1987,7 @@ export const products: Product[] = [
     weight: 320,
     pieces: 1,
     categoryId: 'sushi-burgery',
-    image: '/images/sushi-burgery/tuna-burger.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'TUŃCZYK', 'AWOKADO', 'OGÓREK', 'SER ŚMIETANKOWY', 'SOS SRIRACHA MAYO', 'SEZAM', 'SOS TERIYAKI', 'TEMPURA'],
       uk: ['НОРІ', 'РИС', 'ТУНЕЦЬ', 'АВОКАДО', 'ОГІРОК', 'ВЕРШКОВИЙ СИР', 'СОУС ШРІРАЧА МАЙО', 'КУНЖУТ', 'СОУС ТЕРІЯКІ', 'ТЕМПУРА'],
@@ -2014,7 +2014,7 @@ export const products: Product[] = [
     weight: 310,
     pieces: 1,
     categoryId: 'sushi-burgery',
-    image: '/images/sushi-burgery/morski-burger.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'KREWETKI', 'KRABSTIKI SURIMI', 'OGÓREK', 'MANGO', 'SOS MANGO JALAPENO', 'PŁATKI MIGDAŁOWE', 'TEMPURA'],
       uk: ['НОРІ', 'РИС', 'КРЕВЕТКИ', 'КРАБОВІ ПАЛИЧКИ СУРІМІ', 'ОГІРОК', 'МАНГО', 'СОУС МАНГО ХАЛАПЕНЬЙО', 'ПЕЛЮСТКИ МИГДАЛЮ', 'ТЕМПУРА'],
@@ -2041,7 +2041,7 @@ export const products: Product[] = [
     weight: 315,
     pieces: 1,
     categoryId: 'sushi-burgery',
-    image: '/images/sushi-burgery/shrimp-burger.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'KREWETKA W TEMPURZE', 'OMLET TAMAGO', 'SER TOSTOWY', 'WAKAME', 'SOS SRIRACHA MAYO', 'CEBULKA PRAŻONA', 'TEMPURA'],
       uk: ['НОРІ', 'РИС', 'КРЕВЕТКА В ТЕМПУРІ', 'ОМЛЕТ ТАМАГО', 'СИР ТОСТОВИЙ', 'ВАКАМЕ', 'СОУС ШРІРАЧА МАЙО', 'ЦИБУЛЯ СМАЖЕНА', 'ТЕМПУРА'],
@@ -2068,7 +2068,7 @@ export const products: Product[] = [
     weight: 320,
     pieces: 1,
     categoryId: 'sushi-burgery',
-    image: '/images/sushi-burgery/tecza-burger.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ PIECZONY', 'AWOKADO', 'KAWIOR MASAGO', 'WAKAME', 'SOS TERIYAKI', 'CEBULKA PRAŻONA', 'TEMPURA'],
       uk: ['НОРІ', 'РИС', 'ЛОСОСЬ ЗАПЕЧЕНИЙ', 'АВОКАДО', 'ІКРА МАСАГО', 'ВАКАМЕ', 'СОУС ТЕРІЯКІ', 'ЦИБУЛЯ СМАЖЕНА', 'ТЕМПУРА'],
@@ -2095,7 +2095,7 @@ export const products: Product[] = [
     weight: 300,
     pieces: 1,
     categoryId: 'sushi-burgery',
-    image: '/images/sushi-burgery/wege-burger.jpg',
+    image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'SER ŚMIETANKOWY', 'OGÓREK', 'AWOKADO', 'TYKWA GOTOWANA', 'RZODKIEW MARYNOWANA', 'SEZAM', 'SOS TERIYAKI', 'TEMPURA'],
       uk: ['НОРІ', 'РИС', 'ВЕРШКОВИЙ СИР', 'ОГІРОК', 'АВОКАДО', 'ТИКВА ВАРЕНА', 'РЕДЬКА МАРИНОВАНА', 'КУНЖУТ', 'СОУС ТЕРІЯКІ', 'ТЕМПУРА'],
@@ -2125,7 +2125,7 @@ export const products: Product[] = [
     weight: 380,
     pieces: 1,
     categoryId: 'poke-bowl',
-    image: '/images/poke-bowl/poke-losos.jpg',
+    image: '',
     ingredients: {
       pl: ['RYŻ', 'NORI', 'AWOKADO', 'WAKAME', 'MANGO', 'KUKURYDZA', 'ŁOSOŚ', 'SOJA EDAMAME', 'SOS PONZU', 'SOS TERIYAKI', 'SEZAM'],
       uk: ['РИС', 'НОРІ', 'АВОКАДО', 'ВАКАМЕ', 'МАНГО', 'КУКУРУДЗА', 'ЛОСОСЬ', 'СОЯ ЕДАМАМЕ', 'СОУС ПОНЗУ', 'СОУС ТЕРІЯКІ', 'КУНЖУТ'],
@@ -2152,7 +2152,7 @@ export const products: Product[] = [
     weight: 380,
     pieces: 1,
     categoryId: 'poke-bowl',
-    image: '/images/poke-bowl/poke-tunczyk.jpg',
+    image: '',
     ingredients: {
       pl: ['RYŻ', 'NORI', 'AWOKADO', 'WAKAME', 'MANGO', 'KUKURYDZA', 'TUŃCZYK', 'SOJA EDAMAME', 'SOS PONZU', 'SOS TERIYAKI', 'SEZAM'],
       uk: ['РИС', 'НОРІ', 'АВОКАДО', 'ВАКАМЕ', 'МАНГО', 'КУКУРУДЗА', 'ТУНЕЦЬ', 'СОЯ ЕДАМАМЕ', 'СОУС ПОНЗУ', 'СОУС ТЕРІЯКІ', 'КУНЖУТ'],
@@ -2179,7 +2179,7 @@ export const products: Product[] = [
     weight: 380,
     pieces: 1,
     categoryId: 'poke-bowl',
-    image: '/images/poke-bowl/poke-krewetki.jpg',
+    image: '',
     ingredients: {
       pl: ['RYŻ', 'NORI', 'AWOKADO', 'WAKAME', 'MANGO', 'KUKURYDZA', 'KREWETKI', 'SOJA EDAMAME', 'SOS PONZU', 'SOS TERIYAKI', 'SEZAM'],
       uk: ['РИС', 'НОРІ', 'АВОКАДО', 'ВАКАМЕ', 'МАНГО', 'КУКУРУДЗА', 'КРЕВЕТКИ', 'СОЯ ЕДАМАМЕ', 'СОУС ПОНЗУ', 'СОУС ТЕРІЯКІ', 'КУНЖУТ'],
@@ -2209,7 +2209,7 @@ export const products: Product[] = [
     weight: 180,
     pieces: 6,
     categoryId: 'przekaski',
-    image: '/images/przekaski/krewetki-tempura.jpg',
+    image: '',
     ingredients: {
       pl: ['KREWETKI W TEMPURZE', 'SOS DO WYBORU'],
       uk: ['КРЕВЕТКИ В ТЕМПУРІ', 'СОУС НА ВИБІР'],
@@ -2236,7 +2236,7 @@ export const products: Product[] = [
     weight: 150,
     pieces: 1,
     categoryId: 'przekaski',
-    image: '/images/przekaski/kalmar-tempura.jpg',
+    image: '',
     ingredients: {
       pl: ['KALMARY W TEMPURZE', 'SOS DO WYBORU'],
       uk: ['КАЛЬМАРИ В ТЕМПУРІ', 'СОУС НА ВИБІР'],
@@ -2263,7 +2263,7 @@ export const products: Product[] = [
     weight: 200,
     pieces: 6,
     categoryId: 'przekaski',
-    image: '/images/przekaski/spring-rolls.jpg',
+    image: '',
     ingredients: {
       pl: ['WARZYWNE SAJGONKI', 'SOS SŁODKIE CHILI'],
       uk: ['ОВОЧЕВІ СПРІНГ-РОЛИ', 'СОУС СОЛОДКИЙ ЧИЛІ'],
@@ -2290,7 +2290,7 @@ export const products: Product[] = [
     weight: 120,
     pieces: 1,
     categoryId: 'przekaski',
-    image: '/images/przekaski/wakame.jpg',
+    image: '',
     ingredients: {
       pl: ['WAKAME', 'SEZAM'],
       uk: ['ВАКАМЕ', 'КУНЖУТ'],
@@ -2317,7 +2317,7 @@ export const products: Product[] = [
     weight: 160,
     pieces: 6,
     categoryId: 'przekaski',
-    image: '/images/przekaski/gyoza-mieso.jpg',
+    image: '',
     ingredients: {
       pl: ['SMAŻONE PIEROŻKI GYOZA Z MIĘSEM', 'SOS SŁODKIE CHILI'],
       uk: ['СМАЖЕНІ ПЕЛЬМЕНІ ГЬОДЗА З МʼЯСОМ', 'СОУС СОЛОДКИЙ ЧИЛІ'],
@@ -2344,7 +2344,7 @@ export const products: Product[] = [
     weight: 160,
     pieces: 6,
     categoryId: 'przekaski',
-    image: '/images/przekaski/gyoza-kurczak.jpg',
+    image: '',
     ingredients: {
       pl: ['SMAŻONE PIEROŻKI GYOZA Z KURCZAKIEM I GRZYBAMI', 'SOS SŁODKIE CHILI'],
       uk: ['СМАЖЕНІ ПЕЛЬМЕНІ ГЬОДЗА З КУРКОЮ ТА ГРИБАМИ', 'СОУС СОЛОДКИЙ ЧИЛІ'],
@@ -2374,7 +2374,7 @@ export const products: Product[] = [
     weight: 980,
     pieces: 32,
     categoryId: 'zestawy',
-    image: '/images/zestawy/zestaw-fiesta.jpg',
+    image: '',
     ingredients: {
       pl: ['BONITO', 'FILADELFIA Z ŁOSOSIEM', 'KALIFORNIA Z KREWETKAMI', 'KALIFORNIA MASAGO', '2 SOSY SOJOWE', '60G IMBIRU', '20G WASABI'],
       uk: ['БОНІТО', 'ФІЛАДЕЛЬФІЯ З ЛОСОСЕМ', 'КАЛІФОРНІЯ З КРЕВЕТКАМИ', 'КАЛІФОРНІЯ МАСАГО', '2 СОЄВІ СОУСИ', '60Г ІМБИРУ', '20Г ВАСАБІ'],
@@ -2401,7 +2401,7 @@ export const products: Product[] = [
     weight: 1150,
     pieces: 40,
     categoryId: 'zestawy',
-    image: '/images/zestawy/zestaw-florida.jpg',
+    image: '',
     ingredients: {
       pl: ['MANGO FILA', 'HANAMI', 'BONITO', 'FUTOMAKI BANGKOK', 'MAKI TUŃCZYK', '3 SOSY SOJOWE', '60G IMBIRU', '20G WASABI'],
       uk: ['МАНГО ФІЛА', 'ХАНАМІ', 'БОНІТО', 'ФУТОМАКІ БАНГКОК', 'МАКІ ТУНЕЦЬ', '3 СОЄВІ СОУСИ', '60Г ІМБИРУ', '20Г ВАСАБІ'],
@@ -2428,7 +2428,7 @@ export const products: Product[] = [
     weight: 1140,
     pieces: 40,
     categoryId: 'zestawy',
-    image: '/images/zestawy/zestaw-grand.jpg',
+    image: '',
     ingredients: {
       pl: ['CZARNA KALIFORNIA', 'KALIFORNIA LIGHT', 'CHEESE LIGHT', 'FUTOMAKI BANZAI', 'MAKI TUŃCZYK', '3 SOSY SOJOWE', '60G IMBIRU', '20G WASABI'],
       uk: ['ЧОРНА КАЛІФОРНІЯ', 'КАЛІФОРНІЯ ЛАЙТ', 'ЧІЗ ЛАЙТ', 'ФУТОМАКІ БАНЗАЙ', 'МАКІ ТУНЕЦЬ', '3 СОЄВІ СОУСИ', '60Г ІМБИРУ', '20Г ВАСАБІ'],
@@ -2455,7 +2455,7 @@ export const products: Product[] = [
     weight: 1050,
     pieces: 32,
     categoryId: 'zestawy',
-    image: '/images/zestawy/zestaw-filaman.jpg',
+    image: '',
     ingredients: {
       pl: ['FILADELFIA Z ŁOSOSIEM', 'FILA LUX', 'ROCK\'N\'ROLL', 'SAKURA', '2 SOSY SOJOWE', '60G IMBIRU', '20G WASABI'],
       uk: ['ФІЛАДЕЛЬФІЯ З ЛОСОСЕМ', 'ФІЛА ЛЮКС', 'РОК-Н-РОЛ', 'САКУРА', '2 СОЄВІ СОУСИ', '60Г ІМБИРУ', '20Г ВАСАБІ'],
@@ -2482,7 +2482,7 @@ export const products: Product[] = [
     weight: 1650,
     pieces: 56,
     categoryId: 'zestawy',
-    image: '/images/zestawy/mega-zestaw.jpg',
+    image: '',
     ingredients: {
       pl: ['KAMIKAZE', 'TEMPURA KRAB', 'CHEESE AMI', 'FILADELFIA Z ŁOSOSIEM', 'ŚNIEŻNY KRAB', '2X MAKI ŁOSOŚ', '4 SOSY SOJOWE', '120G IMBIRU', '40G WASABI'],
       uk: ['КАМІКАДЗЕ', 'ТЕМПУРА КРАБ', 'ЧІЗ АМІ', 'ФІЛАДЕЛЬФІЯ З ЛОСОСЕМ', 'СНІЖНИЙ КРАБ', '2X МАКІ ЛОСОСЬ', '4 СОЄВІ СОУСИ', '120Г ІМБИРУ', '40Г ВАСАБІ'],
@@ -2509,7 +2509,7 @@ export const products: Product[] = [
     weight: 1450,
     pieces: 48,
     categoryId: 'zestawy',
-    image: '/images/zestawy/zestaw-tsunami.jpg',
+    image: '',
     ingredients: {
       pl: ['LAWA KATANA', 'KANADA', 'KALIFORNIA LIGHT', 'CHEESE LIGHT', 'FUTOMAKI BANGKOK', 'MAKI AWOKADO', '3 SOSY SOJOWE', '90G IMBIRU', '30G WASABI'],
       uk: ['ЛАВА КАТАНА', 'КАНАДА', 'КАЛІФОРНІЯ ЛАЙТ', 'ЧІЗ ЛАЙТ', 'ФУТОМАКІ БАНГКОК', 'МАКІ АВОКАДО', '3 СОЄВІ СОУСИ', '90Г ІМБИРУ', '30Г ВАСАБІ'],
@@ -2536,7 +2536,7 @@ export const products: Product[] = [
     weight: 1950,
     pieces: 64,
     categoryId: 'zestawy',
-    image: '/images/zestawy/zestaw-lux.jpg',
+    image: '',
     ingredients: {
       pl: ['JAPONIA', 'TEMPURA ŁOSOŚ', 'BONITO', 'FILADELFIA Z ŁOSOSIEM', 'CZARNA KALIFORNIA', 'KALIFORNIA Z KREWETKAMI', 'MAKI ŁOSOŚ', 'MAKI KRAB', '4 SOSY SOJOWE', '120G IMBIRU', '40G WASABI'],
       uk: ['ЯПОНІЯ', 'ТЕМПУРА ЛОСОСЬ', 'БОНІТО', 'ФІЛАДЕЛЬФІЯ З ЛОСОСЕМ', 'ЧОРНА КАЛІФОРНІЯ', 'КАЛІФОРНІЯ З КРЕВЕТКАМИ', 'МАКІ ЛОСОСЬ', 'МАКІ КРАБ', '4 СОЄВІ СОУСИ', '120Г ІМБИРУ', '40Г ВАСАБІ'],
@@ -2563,7 +2563,7 @@ export const products: Product[] = [
     weight: 620,
     pieces: 24,
     categoryId: 'zestawy',
-    image: '/images/zestawy/zestaw-weganski.jpg',
+    image: '',
     ingredients: {
       pl: ['MAKI AWOKADO', 'HANAMI', 'FUTOMAKI WEGAN', '2 SOSY SOJOWE', '60G IMBIRU', '20G WASABI'],
       uk: ['МАКІ АВОКАДО', 'ХАНАМІ', 'ФУТОМАКІ ВЕГАН', '2 СОЄВІ СОУСИ', '60Г ІМБИРУ', '20Г ВАСАБІ'],
@@ -2590,7 +2590,7 @@ export const products: Product[] = [
     weight: 680,
     pieces: 24,
     categoryId: 'zestawy',
-    image: '/images/zestawy/zestaw-malibu.jpg',
+    image: '',
     ingredients: {
       pl: ['MAKI WĘGORZ', 'FUTOMAKI TOKIO', 'KALIFORNIA Z ŁOSOSIEM W MASAGO', '2 SOSY SOJOWE', '60G IMBIRU', '20G WASABI'],
       uk: ['МАКІ ВУГОР', 'ФУТОМАКІ ТОКІО', 'КАЛІФОРНІЯ З ЛОСОСЕМ В МАСАГО', '2 СОЄВІ СОУСИ', '60Г ІМБИРУ', '20Г ВАСАБІ'],
@@ -2617,7 +2617,7 @@ export const products: Product[] = [
     weight: 690,
     pieces: 24,
     categoryId: 'zestawy',
-    image: '/images/zestawy/mini-zestaw-1.jpg',
+    image: '',
     ingredients: {
       pl: ['KALIFORNIA Z TUŃCZYKIEM W MASAGO', 'ŚNIEŻNY KRAB', 'FUTOMAKI Z ŁOSOSIEM', '2 SOSY SOJOWE', '60G IMBIRU', '20G WASABI'],
       uk: ['КАЛІФОРНІЯ З ТУНЦЕМ В МАСАГО', 'СНІЖНИЙ КРАБ', 'ФУТОМАКІ З ЛОСОСЕМ', '2 СОЄВІ СОУСИ', '60Г ІМБИРУ', '20Г ВАСАБІ'],
@@ -2644,7 +2644,7 @@ export const products: Product[] = [
     weight: 710,
     pieces: 24,
     categoryId: 'zestawy',
-    image: '/images/zestawy/mini-zestaw-2.jpg',
+    image: '',
     ingredients: {
       pl: ['FILADELFIA Z ŁOSOSIEM', 'LAWA ŁOSOŚ', 'KALIFORNIA MASAGO', '2 SOSY SOJOWE', '60G IMBIRU', '20G WASABI'],
       uk: ['ФІЛАДЕЛЬФІЯ З ЛОСОСЕМ', 'ЛАВА ЛОСОСЬ', 'КАЛІФОРНІЯ МАСАГО', '2 СОЄВІ СОУСИ', '60Г ІМБИРУ', '20Г ВАСАБІ'],
@@ -2671,7 +2671,7 @@ export const products: Product[] = [
     weight: 920,
     pieces: 32,
     categoryId: 'zestawy',
-    image: '/images/zestawy/zestaw-3.jpg',
+    image: '',
     ingredients: {
       pl: ['PIECZONY KRAB', 'PIECZONA FILA', 'CZARNA KALIFORNIA', 'MAKI KRAB', '2 SOSY SOJOWE', '60G IMBIRU', '20G WASABI'],
       uk: ['ПЕЧЕНИЙ КРАБ', 'ПЕЧЕНА ФІЛА', 'ЧОРНА КАЛІФОРНІЯ', 'МАКІ КРАБ', '2 СОЄВІ СОУСИ', '60Г ІМБИРУ', '20Г ВАСАБІ'],
@@ -2698,7 +2698,7 @@ export const products: Product[] = [
     weight: 910,
     pieces: 32,
     categoryId: 'zestawy',
-    image: '/images/zestawy/zestaw-4.jpg',
+    image: '',
     ingredients: {
       pl: ['FUDŻI', 'TEMPURA KRAB', 'ŚNIEŻNY KRAB', 'MAKI ŁOSOŚ', '2 SOSY SOJOWE', '60G IMBIRU', '20G WASABI'],
       uk: ['ФУДЗІ', 'ТЕМПУРА КРАБ', 'СНІЖНИЙ КРАБ', 'МАКІ ЛОСОСЬ', '2 СОЄВІ СОУСИ', '60Г ІМБИРУ', '20Г ВАСАБІ'],
@@ -2725,7 +2725,7 @@ export const products: Product[] = [
     weight: 920,
     pieces: 32,
     categoryId: 'zestawy',
-    image: '/images/zestawy/zestaw-chrupiacy.jpg',
+    image: '',
     ingredients: {
       pl: ['TEMPURA TUŃCZYK', 'FUDŻI', 'MAKI TUŃCZYK W TEMPURZE', 'MAKI ŁOSOŚ W TEMPURZE', '2 SOSY SOJOWE', '60G IMBIRU', '20G WASABI'],
       uk: ['ТЕМПУРА ТУНЕЦЬ', 'ФУДЗІ', 'МАКІ ТУНЕЦЬ У ТЕМПУРІ', 'МАКІ ЛОСОСЬ У ТЕМПУРІ', '2 СОЄВІ СОУСИ', '60Г ІМБИРУ', '20Г ВАСАБІ'],
@@ -2752,7 +2752,7 @@ export const products: Product[] = [
     weight: 900,
     pieces: 32,
     categoryId: 'zestawy',
-    image: '/images/zestawy/zestaw-medium.jpg',
+    image: '',
     ingredients: {
       pl: ['MAKI AWOKADO', 'FUTOMAKI BANGKOK', 'KALIFORNIA Z TUŃCZYKIEM W TEMPURZE', 'FUTOMAKI Z PIECZONYM ŁOSOSIEM', '2 SOSY SOJOWE', '60G IMBIRU', '20G WASABI'],
       uk: ['МАКІ АВОКАДО', 'ФУТОМАКІ БАНГКОК', 'КАЛІФОРНІЯ З ТУНЦЕМ У ТЕМПУРІ', 'ФУТОМАКІ З ЗАПЕЧЕНИМ ЛОСОСЕМ', '2 СОЄВІ СОУСИ', '60Г ІМБИРУ', '20Г ВАСАБІ'],
@@ -2779,7 +2779,7 @@ export const products: Product[] = [
     weight: 810,
     pieces: 24,
     categoryId: 'zestawy',
-    image: '/images/zestawy/zestaw-smokow.jpg',
+    image: '',
     ingredients: {
       pl: ['ZŁOTY SMOK', 'ZIELONY SMOK', 'KRÓLEWSKI SMOK', '2 SOSY SOJOWE', '60G IMBIRU', '20G WASABI'],
       uk: ['ЗОЛОТИЙ ДРАКОН', 'ЗЕЛЕНИЙ ДРАКОН', 'КОРОЛІВСЬКИЙ ДРАКОН', '2 СОЄВІ СОУСИ', '60Г ІМБИРУ', '20Г ВАСАБІ'],
@@ -2809,7 +2809,7 @@ export const products: Product[] = [
     price: 2,
     weight: 30,
     categoryId: 'dodatki',
-    image: '/images/dodatki/sos-sojowy.jpg',
+    image: '',
     ingredients: {
       pl: ['SOS SOJOWY TRADYCYJNY 30 ML'],
       uk: ['СОЄВИЙ СОУС ТРАДИЦІЙНИЙ 30 МЛ'],
@@ -2835,7 +2835,7 @@ export const products: Product[] = [
     price: 1,
     weight: 5,
     categoryId: 'dodatki',
-    image: '/images/dodatki/pomocniki.jpg',
+    image: '',
     ingredients: {
       pl: ['UCHWYT DO PAŁECZEK 1 SZT.'],
       uk: ['ТРИМАЧ ДЛЯ ПАЛИЧОК 1 ШТ.'],
@@ -2861,7 +2861,7 @@ export const products: Product[] = [
     price: 2,
     weight: 35,
     categoryId: 'dodatki',
-    image: '/images/dodatki/sos-mango-jalapeno.jpg',
+    image: '',
     ingredients: {
       pl: ['SOS MANGO JALAPEÑO 35 ML'],
       uk: ['СОУС МАНГО ХАЛАПЕНЬЙО 35 МЛ'],
@@ -2887,7 +2887,7 @@ export const products: Product[] = [
     price: 2,
     weight: 15,
     categoryId: 'dodatki',
-    image: '/images/dodatki/wasabi.jpg',
+    image: '',
     ingredients: {
       pl: ['WASABI ORYGINALNE 15 G'],
       uk: ['ВАСАБІ ОРИГІНАЛЬНЕ 15 Г'],
@@ -2913,7 +2913,7 @@ export const products: Product[] = [
     price: 2,
     weight: 30,
     categoryId: 'dodatki',
-    image: '/images/dodatki/imbir.jpg',
+    image: '',
     ingredients: {
       pl: ['IMBIR MARYNOWANY 30 G'],
       uk: ['ІМБИР МАРИНОВАНИЙ 30 Г'],
@@ -2939,7 +2939,7 @@ export const products: Product[] = [
     price: 2,
     weight: 35,
     categoryId: 'dodatki',
-    image: '/images/dodatki/sos-sriracha-mayo.jpg',
+    image: '',
     ingredients: {
       pl: ['SOS SRIRACHA MAYO 35 ML'],
       uk: ['СОУС ШРІРАЧА МАЙО 35 МЛ'],
@@ -2965,7 +2965,7 @@ export const products: Product[] = [
     price: 2,
     weight: 35,
     categoryId: 'dodatki',
-    image: '/images/dodatki/sos-teriyaki.jpg',
+    image: '',
     ingredients: {
       pl: ['SOS TERIYAKI 35 ML'],
       uk: ['СОУС ТЕРІЯКІ 35 МЛ'],
@@ -2991,7 +2991,7 @@ export const products: Product[] = [
     price: 3,
     weight: 35,
     categoryId: 'dodatki',
-    image: '/images/dodatki/sos-unagi.jpg',
+    image: '',
     ingredients: {
       pl: ['SOS UNAGI 35 ML'],
       uk: ['СОУС УНАГІ 35 МЛ'],
@@ -3017,7 +3017,7 @@ export const products: Product[] = [
     price: 2,
     weight: 35,
     categoryId: 'dodatki',
-    image: '/images/dodatki/sos-ponzu.jpg',
+    image: '',
     ingredients: {
       pl: ['SOS PONZU 35 ML'],
       uk: ['СОУС ПОНЗУ 35 МЛ'],
