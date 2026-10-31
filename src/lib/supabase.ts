@@ -49,7 +49,41 @@ export async function createOrder(order: Order): Promise<{ success: boolean; ord
         .single();
 
       if (error) {
-        console.warn('Supabase insert notice (fallback to local):', error.message);
+        console.warn('Supabase full insert notice, attempting compatible insert:', error.message);
+        
+        // Сумісний інсерт для таблиць, де ще не виконано ALTER TABLE
+        const timingNote = order.timingType === 'scheduled' && order.scheduledTime 
+          ? `[НА ЧАС: ${order.scheduledTime}] ` 
+          : '';
+        const combinedComment = `${timingNote}${order.comment || ''}`.trim();
+
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('orders')
+          .insert([
+            {
+              id: order.id,
+              customer_name: order.name,
+              phone: order.phone,
+              delivery_method: order.deliveryMethod,
+              address: order.address,
+              payment_method: order.paymentMethod,
+              items: order.items,
+              subtotal: order.subtotal,
+              delivery_fee: order.deliveryFee,
+              total: order.total,
+              comment: combinedComment,
+              status: order.status,
+              created_at: order.createdAt,
+            },
+          ])
+          .select()
+          .single();
+
+        if (fallbackError) {
+          console.warn('Supabase fallback insert error:', fallbackError.message);
+        } else if (fallbackData) {
+          return { success: true, orderId: fallbackData.id };
+        }
       } else if (data) {
         return { success: true, orderId: data.id };
       }

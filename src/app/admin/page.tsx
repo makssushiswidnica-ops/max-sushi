@@ -318,33 +318,41 @@ export default function AdminPage() {
             rlsIssue = true;
           }
         } else if (data) {
-          loaded = data.map((d: any) => ({
-            id: String(d.id || ''),
-            customer_name: d.customer_name || d.name || 'Клієнт',
-            name: d.customer_name || d.name || 'Клієнт',
-            phone: d.phone || '',
-            delivery_method: d.delivery_method || d.deliveryMethod || 'delivery',
-            deliveryMethod: d.delivery_method || d.deliveryMethod || 'delivery',
-            address: d.address,
-            payment_method: d.payment_method || d.paymentMethod || 'blik_online',
-            paymentMethod: d.payment_method || d.paymentMethod || 'blik_online',
-            changeFrom: d.change_from || d.changeFrom,
-            comment: d.comment || '',
-            personsCount: d.persons_count || d.personsCount || 1,
-            timing_type: d.timing_type || d.timingType,
-            timingType: d.timing_type || d.timingType,
-            scheduled_time: d.scheduled_time || d.scheduledTime,
-            scheduledTime: d.scheduled_time || d.scheduledTime,
-            items: Array.isArray(d.items) ? d.items : [],
-            subtotal: Number(d.subtotal || 0),
-            delivery_fee: Number(d.delivery_fee ?? d.deliveryFee ?? 0),
-            deliveryFee: Number(d.delivery_fee ?? d.deliveryFee ?? 0),
-            total: Number(d.total || 0),
-            status: d.status || 'pending',
-            created_at: d.created_at || d.createdAt || new Date().toISOString(),
-            accepted_at: d.accepted_at || d.acceptedAt || localAcceptedMap[String(d.id)],
-            acceptedAt: d.accepted_at || d.acceptedAt || localAcceptedMap[String(d.id)],
-          }));
+          loaded = data.map((d: any) => {
+            const rawComment = d.comment || '';
+            const matchScheduled = !d.scheduled_time && rawComment.match(/\[НА ЧАС:\s*([^\]]+)\]/i);
+            const scheduledTime = d.scheduled_time || d.scheduledTime || (matchScheduled ? matchScheduled[1].trim() : undefined);
+            const timingType = d.timing_type || d.timingType || (scheduledTime ? 'scheduled' : 'asap');
+            const cleanComment = matchScheduled ? rawComment.replace(/\[НА ЧАС:\s*[^\]]+\]\s*/i, '').trim() : rawComment;
+
+            return {
+              id: String(d.id || ''),
+              customer_name: d.customer_name || d.name || 'Клієнт',
+              name: d.customer_name || d.name || 'Клієнт',
+              phone: d.phone || '',
+              delivery_method: d.delivery_method || d.deliveryMethod || 'delivery',
+              deliveryMethod: d.delivery_method || d.deliveryMethod || 'delivery',
+              address: d.address,
+              payment_method: d.payment_method || d.paymentMethod || 'blik_online',
+              paymentMethod: d.payment_method || d.paymentMethod || 'blik_online',
+              changeFrom: d.change_from || d.changeFrom,
+              comment: cleanComment,
+              personsCount: d.persons_count || d.personsCount || 1,
+              timing_type: timingType,
+              timingType: timingType,
+              scheduled_time: scheduledTime,
+              scheduledTime: scheduledTime,
+              items: Array.isArray(d.items) ? d.items : [],
+              subtotal: Number(d.subtotal || 0),
+              delivery_fee: Number(d.delivery_fee ?? d.deliveryFee ?? 0),
+              deliveryFee: Number(d.delivery_fee ?? d.deliveryFee ?? 0),
+              total: Number(d.total || 0),
+              status: d.status || 'pending',
+              created_at: d.created_at || d.createdAt || new Date().toISOString(),
+              accepted_at: d.accepted_at || d.acceptedAt || localAcceptedMap[String(d.id)],
+              acceptedAt: d.accepted_at || d.acceptedAt || localAcceptedMap[String(d.id)],
+            };
+          });
         }
       }
 
