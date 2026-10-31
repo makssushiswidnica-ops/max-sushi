@@ -41,8 +41,12 @@ export async function createOrder(order: Order): Promise<{ success: boolean; ord
             comment: order.comment,
             timing_type: order.timingType,
             scheduled_time: order.scheduledTime,
+            scheduled_date: order.scheduledDate,
+            persons_count: order.personsCount || 1,
+            change_from: order.changeFrom,
             status: order.status,
             created_at: order.createdAt,
+            accepted_at: (order as any).accepted_at || (order as any).acceptedAt,
           },
         ])
         .select()

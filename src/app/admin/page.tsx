@@ -59,7 +59,7 @@ import {
 } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 import { cn, formatPrice } from '@/lib/utils';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured, createOrder } from '@/lib/supabase';
 import { brandTheme } from '@/config/theme';
 import { Category, Product, ProductBadge as ProductBadgeType } from '@/types';
 import { ProductBadge } from '@/components/menu/ProductBadge';
@@ -364,6 +364,31 @@ export default function AdminPage() {
             const existingIds = new Set(loaded.map((o) => o.id));
             for (const item of local) {
               if (item && item.id && !existingIds.has(item.id)) {
+                // Автоматично вивантажуємо в Supabase локальні замовлення, які були збережені до додавання колонок
+                if (isSupabaseConfigured) {
+                  createOrder({
+                    id: String(item.id),
+                    name: item.name || item.customer_name || 'Клієнт',
+                    phone: item.phone || '',
+                    deliveryMethod: item.deliveryMethod || item.delivery_method || 'delivery',
+                    address: item.address,
+                    paymentMethod: item.paymentMethod || item.payment_method || 'blik_online',
+                    changeFrom: item.changeFrom || item.change_from,
+                    comment: item.comment || '',
+                    personsCount: item.personsCount || item.persons_count || 1,
+                    timingType: item.timingType || item.timing_type || 'asap',
+                    scheduledDate: item.scheduledDate || item.scheduled_date,
+                    scheduledTime: item.scheduledTime || item.scheduled_time,
+                    items: Array.isArray(item.items) ? item.items : [],
+                    subtotal: Number(item.subtotal || 0),
+                    deliveryFee: Number(item.deliveryFee ?? item.delivery_fee ?? 0),
+                    total: Number(item.total || 0),
+                    status: item.status || 'pending',
+                    createdAt: item.createdAt || item.created_at || new Date().toISOString(),
+                    accepted_at: item.accepted_at || item.acceptedAt || localAcceptedMap[String(item.id)],
+                  } as any).catch((err: any) => console.warn('Auto-sync local order error:', err));
+                }
+
                 loaded.push({
                   id: String(item.id),
                   customer_name: item.name || item.customer_name || 'Клієнт',
