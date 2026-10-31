@@ -50,6 +50,7 @@ export interface CartItem {
 
 export type DeliveryMethod = 'delivery' | 'pickup';
 export type PaymentMethod = 'cash' | 'card_courier' | 'blik_online';
+export type OrderTimingType = 'asap' | 'scheduled';
 
 export interface OrderAddress {
   street: string;
@@ -68,6 +69,9 @@ export interface CheckoutFormData {
   comment?: string;
   changeFrom?: string; // решта з купюри
   personsCount: number;
+  timingType?: OrderTimingType;
+  scheduledDate?: 'today' | 'tomorrow';
+  scheduledTime?: string; // e.g. "18:30" or ISO
 }
 
 export interface Order extends CheckoutFormData {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { 
   Lock, 
@@ -25,6 +25,7 @@ import {
   Upload,
   Image as ImageIcon,
   X,
+  Menu,
   Sparkles,
   Flame,
   Check,
@@ -34,9 +35,30 @@ import {
   FolderPlus,
   Wand2,
   Globe,
-  LayoutGrid
+  LayoutGrid,
+  Truck,
+  Store,
+  Phone,
+  MapPin,
+  User,
+  CreditCard,
+  Banknote,
+  MessageSquare,
+  ChefHat,
+  Package,
+  Calendar,
+  History,
+  XCircle,
+  Ban,
+  RotateCcw,
+  AlertTriangle,
+  Copy,
+  Minus,
+  Timer,
+  Printer
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useCartStore } from '@/store/useCartStore';
+import { cn, formatPrice } from '@/lib/utils';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { brandTheme } from '@/config/theme';
 import { Category, Product, ProductBadge as ProductBadgeType } from '@/types';
@@ -53,6 +75,50 @@ import {
 import { autoTranslateDish } from '@/lib/translateService';
 
 type AdminTab = 'dashboard' | 'orders' | 'menu' | 'stats' | 'settings';
+
+export interface AdminOrder {
+  id: string;
+  customer_name: string;
+  name?: string;
+  phone: string;
+  delivery_method: 'delivery' | 'pickup';
+  deliveryMethod?: 'delivery' | 'pickup';
+  address?: {
+    street?: string;
+    house?: string;
+    apartment?: string;
+    floor?: string;
+    entryCode?: string;
+  };
+  payment_method: string;
+  paymentMethod?: string;
+  changeFrom?: string;
+  comment?: string;
+  personsCount?: number;
+  timing_type?: 'asap' | 'scheduled';
+  timingType?: 'asap' | 'scheduled';
+  scheduled_date?: 'today' | 'tomorrow';
+  scheduledDate?: 'today' | 'tomorrow';
+  scheduled_time?: string;
+  scheduledTime?: string;
+  items: Array<{
+    product: {
+      id?: string;
+      name?: { pl: string; uk: string } | string;
+      price?: number;
+      image?: string;
+    };
+    quantity: number;
+  }>;
+  subtotal: number;
+  delivery_fee: number;
+  deliveryFee?: number;
+  total: number;
+  status: 'pending' | 'confirmed' | 'preparing' | 'in_delivery' | 'delivered' | 'cancelled';
+  created_at: string;
+  accepted_at?: string;
+  acceptedAt?: string;
+}
 
 export default function AdminPage() {
   const [session, setSession] = useState<any>(null);
@@ -73,6 +139,31 @@ export default function AdminPage() {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('mini-maki');
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [searchMenuQuery, setSearchMenuQuery] = useState('');
+
+  // Дані замовлень
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>('pending');
+  const [orderSearchQuery, setOrderSearchQuery] = useState('');
+  const [orderRlsNotice, setOrderRlsNotice] = useState(false);
+  const [copiedPhoneId, setCopiedPhoneId] = useState<string | null>(null);
+  const [copiedSql, setCopiedSql] = useState(false);
+  const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
+  const [collapsedHistoryDays, setCollapsedHistoryDays] = useState<Set<string>>(new Set());
+  
+  // Час очікування приготування / доставки від закладу (глобальний через store)
+  const prepWaitTimeMinutes = useCartStore((s) => s.prepWaitTimeMinutes);
+  const setPrepWaitTimeMinutes = useCartStore((s) => s.setPrepWaitTimeMinutes);
+  const [isEditingWaitTime, setIsEditingWaitTime] = useState(false);
+  const [tempWaitTime, setTempWaitTime] = useState(String(prepWaitTimeMinutes || 40));
+
+  // Синхронізація локального часу при зміні в store
+  useEffect(() => {
+    setTempWaitTime(String(prepWaitTimeMinutes || 40));
+  }, [prepWaitTimeMinutes]);
+
+  // Стан мобільного бургер-меню в хедері
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Модальне вікно редагування / створення страви
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -163,6 +254,29 @@ export default function AdminPage() {
     }
   }, [isModalOpen, isAddCategoryModalOpen]);
 
+  // Звукове сповіщення про нове замовлення через Web Audio API
+  const playOrderSound = () => {
+    if (typeof window === 'undefined') return;
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+      osc.frequency.setValueAtTime(880, ctx.currentTime + 0.12); // A5
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.45);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.45);
+    } catch {
+      // ігноруємо обмеження аудіоконтексту браузера
+    }
+  };
+
   // Завантаження меню після авторизації
   const loadMenu = async () => {
     setIsLoadingMenu(true);
@@ -177,9 +291,708 @@ export default function AdminPage() {
     }
   };
 
+  // Завантаження замовлень із Supabase + LocalStorage (fallback)
+  const loadOrders = async (showLoading = true) => {
+    if (showLoading) setIsLoadingOrders(true);
+    let loaded: AdminOrder[] = [];
+    let rlsIssue = false;
+
+    // Зчитуємо локальну карту часу прийняття на кухню
+    let localAcceptedMap: Record<string, string> = {};
+    if (typeof window !== 'undefined') {
+      try {
+        localAcceptedMap = JSON.parse(localStorage.getItem('max-sushi-kitchen-accepted') || '{}');
+      } catch {}
+    }
+
+    try {
+      if (isSupabaseConfigured) {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.warn('Supabase fetch orders notice:', error.message);
+          if (error.code === '42501' || error.message?.includes('policy') || error.message?.includes('security')) {
+            rlsIssue = true;
+          }
+        } else if (data) {
+          loaded = data.map((d: any) => ({
+            id: String(d.id || ''),
+            customer_name: d.customer_name || d.name || 'Клієнт',
+            name: d.customer_name || d.name || 'Клієнт',
+            phone: d.phone || '',
+            delivery_method: d.delivery_method || d.deliveryMethod || 'delivery',
+            deliveryMethod: d.delivery_method || d.deliveryMethod || 'delivery',
+            address: d.address,
+            payment_method: d.payment_method || d.paymentMethod || 'blik_online',
+            paymentMethod: d.payment_method || d.paymentMethod || 'blik_online',
+            changeFrom: d.change_from || d.changeFrom,
+            comment: d.comment || '',
+            personsCount: d.persons_count || d.personsCount || 1,
+            timing_type: d.timing_type || d.timingType,
+            timingType: d.timing_type || d.timingType,
+            scheduled_time: d.scheduled_time || d.scheduledTime,
+            scheduledTime: d.scheduled_time || d.scheduledTime,
+            items: Array.isArray(d.items) ? d.items : [],
+            subtotal: Number(d.subtotal || 0),
+            delivery_fee: Number(d.delivery_fee ?? d.deliveryFee ?? 0),
+            deliveryFee: Number(d.delivery_fee ?? d.deliveryFee ?? 0),
+            total: Number(d.total || 0),
+            status: d.status || 'pending',
+            created_at: d.created_at || d.createdAt || new Date().toISOString(),
+            accepted_at: d.accepted_at || d.acceptedAt || localAcceptedMap[String(d.id)],
+            acceptedAt: d.accepted_at || d.acceptedAt || localAcceptedMap[String(d.id)],
+          }));
+        }
+      }
+
+      // Також завантажуємо локальні замовлення (якщо клієнт оформив їх у LocalStorage)
+      if (typeof window !== 'undefined') {
+        try {
+          const local = JSON.parse(localStorage.getItem('max-sushi-orders') || '[]');
+          if (Array.isArray(local) && local.length > 0) {
+            const existingIds = new Set(loaded.map((o) => o.id));
+            for (const item of local) {
+              if (item && item.id && !existingIds.has(item.id)) {
+                loaded.push({
+                  id: String(item.id),
+                  customer_name: item.name || item.customer_name || 'Клієнт',
+                  name: item.name || item.customer_name || 'Клієнт',
+                  phone: item.phone || '',
+                  delivery_method: item.deliveryMethod || item.delivery_method || 'delivery',
+                  deliveryMethod: item.deliveryMethod || item.delivery_method || 'delivery',
+                  address: item.address,
+                  payment_method: item.paymentMethod || item.payment_method || 'blik_online',
+                  paymentMethod: item.paymentMethod || item.paymentMethod || 'blik_online',
+                  changeFrom: item.changeFrom || item.change_from,
+                  comment: item.comment || '',
+                  personsCount: item.personsCount || item.persons_count || 1,
+                  timing_type: item.timingType || item.timing_type,
+                  timingType: item.timingType || item.timing_type,
+                  scheduled_time: item.scheduledTime || item.scheduled_time,
+                  scheduledTime: item.scheduledTime || item.scheduled_time,
+                  items: Array.isArray(item.items) ? item.items : [],
+                  subtotal: Number(item.subtotal || 0),
+                  delivery_fee: Number(item.deliveryFee ?? item.delivery_fee ?? 0),
+                  deliveryFee: Number(item.deliveryFee ?? item.delivery_fee ?? 0),
+                  total: Number(item.total || 0),
+                  status: item.status || 'pending',
+                  created_at: item.createdAt || item.created_at || new Date().toISOString(),
+                  accepted_at: item.accepted_at || item.acceptedAt || localAcceptedMap[String(item.id)],
+                  acceptedAt: item.accepted_at || item.acceptedAt || localAcceptedMap[String(item.id)],
+                });
+                existingIds.add(item.id);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('LocalStorage orders parsing error:', e);
+        }
+      }
+
+      loaded.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setOrders(loaded);
+      setOrderRlsNotice(rlsIssue);
+
+      // Якщо є нове замовлення, за замовчуванням активуємо вкладку "Нові"
+      if (loaded.some((o) => o.status === 'pending')) {
+        setOrderStatusFilter('pending');
+      }
+    } catch (err) {
+      console.warn('Failed to load orders:', err);
+    } finally {
+      if (showLoading) setIsLoadingOrders(false);
+    }
+  };
+
+  // Оновлення статусу замовлення
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
+    const nowIso = new Date().toISOString();
+    const isAcceptedToKitchen = newStatus === 'preparing' || newStatus === 'confirmed';
+
+    setOrders((prev) =>
+      prev.map((o) => {
+        if (o.id === orderId) {
+          const acceptedTime = o.accepted_at || o.acceptedAt || (isAcceptedToKitchen ? nowIso : undefined);
+          return {
+            ...o,
+            status: newStatus as any,
+            ...(acceptedTime ? { accepted_at: acceptedTime, acceptedAt: acceptedTime } : {}),
+          };
+        }
+        return o;
+      })
+    );
+
+    // Зберігаємо час прийняття на кухню в localStorage для надійного відновлення
+    if (typeof window !== 'undefined' && isAcceptedToKitchen) {
+      try {
+        const saved = JSON.parse(localStorage.getItem('max-sushi-kitchen-accepted') || '{}');
+        if (!saved[orderId]) {
+          saved[orderId] = nowIso;
+          localStorage.setItem('max-sushi-kitchen-accepted', JSON.stringify(saved));
+        }
+      } catch {}
+    }
+
+    try {
+      if (isSupabaseConfigured) {
+        const payload: Record<string, any> = { status: newStatus };
+        if (isAcceptedToKitchen) {
+          payload.accepted_at = nowIso;
+        }
+        const { error } = await supabase
+          .from('orders')
+          .update(payload)
+          .eq('id', orderId);
+
+        if (error) {
+          // Якщо в базі даних ще немає стовпця accepted_at, оновлюємо тільки статус
+          if (error.message?.includes('accepted_at')) {
+            await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
+          } else {
+            console.warn('Update order status in Supabase error:', error.message);
+          }
+        }
+      }
+
+      if (typeof window !== 'undefined') {
+        try {
+          const local = JSON.parse(localStorage.getItem('max-sushi-orders') || '[]');
+          const updated = local.map((o: any) =>
+            o.id === orderId
+              ? {
+                  ...o,
+                  status: newStatus,
+                  ...(isAcceptedToKitchen && !o.accepted_at && !o.acceptedAt
+                    ? { accepted_at: nowIso, acceptedAt: nowIso }
+                    : {}),
+                }
+              : o
+          );
+          localStorage.setItem('max-sushi-orders', JSON.stringify(updated));
+        } catch {}
+      }
+    } catch (err) {
+      console.error('Error changing order status:', err);
+    }
+  };
+
+  // Видалення замовлення
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!window.confirm(`Ви дійсно бажаєте видалити замовлення #${orderId}?`)) return;
+
+    setOrders((prev) => prev.filter((o) => o.id !== orderId));
+
+    try {
+      if (isSupabaseConfigured) {
+        await supabase.from('orders').delete().eq('id', orderId);
+      }
+      if (typeof window !== 'undefined') {
+        try {
+          const local = JSON.parse(localStorage.getItem('max-sushi-orders') || '[]');
+          const updated = local.filter((o: any) => o.id !== orderId);
+          localStorage.setItem('max-sushi-orders', JSON.stringify(updated));
+        } catch {}
+      }
+    } catch (err) {
+      console.error('Error deleting order:', err);
+    }
+  };
+
+  // Копіювання номера телефону
+  const handleCopyPhone = (phone: string, id: string) => {
+    navigator.clipboard.writeText(phone);
+    setCopiedPhoneId(id);
+    setTimeout(() => setCopiedPhoneId(null), 2000);
+  };
+
+  // Форматування дати замовлення
+  const formatOrderTime = (isoString?: string) => {
+    if (!isoString) return '';
+    try {
+      const date = new Date(isoString);
+      return (
+        date.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) +
+        ', ' +
+        date.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' })
+      );
+    } catch {
+      return isoString;
+    }
+  };
+
+  // Підрахунок часу від оформлення
+  const getTimeAgo = (isoString?: string) => {
+    if (!isoString) return '';
+    try {
+      const diffMs = Date.now() - new Date(isoString).getTime();
+      const diffMin = Math.floor(diffMs / 60000);
+      if (diffMin < 1) return 'щойно';
+      if (diffMin < 60) return `${diffMin} хв тому`;
+      const diffHours = Math.floor(diffMin / 60);
+      if (diffHours < 24) return `${diffHours} год тому`;
+      return `${Math.floor(diffHours / 24)} дн тому`;
+    } catch {
+      return '';
+    }
+  };
+
+  // Перевірка чи дата сьогоднішня
+  const isToday = (iso?: string) => {
+    if (!iso) return false;
+    const d = new Date(iso);
+    const now = new Date();
+    return (
+      d.getDate() === now.getDate() &&
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear()
+    );
+  };
+
+  // Друк чека замовлення для кухні
+  const handlePrintKitchenReceipt = (order: AdminOrder) => {
+    const isPickup = order.delivery_method === 'pickup' || order.deliveryMethod === 'pickup';
+    const scheduled = order.scheduled_time || order.scheduledTime;
+    const isScheduled = (order.timing_type === 'scheduled' || order.timingType === 'scheduled') && Boolean(scheduled);
+    const isTomorrow = order.scheduled_date === 'tomorrow' || order.scheduledDate === 'tomorrow' || (typeof scheduled === 'string' && scheduled.toLowerCase().includes('jutro'));
+    const cleanTime = typeof scheduled === 'string' ? scheduled.replace(/^jutro,?\s*/i, '') : scheduled;
+    const timingBadge = isScheduled ? `НА ЧАС: ${isTomorrow ? 'ЗАВТРА ' : ''}${cleanTime}` : 'ЯКНАЙШВИДШЕ';
+    const addressStr = order.address
+      ? `вул. ${order.address.street || ''} ${order.address.house || ''}${order.address.apartment ? `, кв. ${order.address.apartment}` : ''}${order.address.floor ? `, пов. ${order.address.floor}` : ''}${order.address.entryCode ? `, код ${order.address.entryCode}` : ''}`
+      : 'Адреса не вказана';
+
+    const itemsHtml = order.items
+      .map((item) => {
+        const prod = item.product || {};
+        const titleUk = typeof prod.name === 'object' ? (prod.name.uk || prod.name.pl || 'Страва') : (prod.name || 'Страва');
+        const titlePl = typeof prod.name === 'object' ? (prod.name.pl || '') : '';
+        const price = Number(prod.price || 0);
+        return `
+          <tr style="border-bottom: 1px dashed #666;">
+            <td style="padding: 6px 0; font-size: 16px; font-weight: 900; width: 36px; vertical-align: top;">
+              ${item.quantity}×
+            </td>
+            <td style="padding: 6px 4px; font-size: 14px; font-weight: bold; vertical-align: top;">
+              <div>${titleUk}</div>
+              ${titlePl && titlePl !== titleUk ? `<div style="font-size: 11px; font-weight: normal; color: #444; margin-top: 1px;">${titlePl}</div>` : ''}
+            </td>
+            <td style="padding: 6px 0; font-size: 13px; text-align: right; vertical-align: top; white-space: nowrap;">
+              ${price * item.quantity} zł
+            </td>
+          </tr>
+        `;
+      })
+      .join('');
+
+    const printWindow = window.open('', '_blank', 'width=420,height=650');
+    if (!printWindow) {
+      alert('Будь ласка, дозвольте відкриття спливаючих вікон у браузері для друку чека.');
+      return;
+    }
+
+    const receiptHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Чек #${order.id} - Max Sushi</title>
+          <style>
+            @page {
+              size: 80mm auto;
+              margin: 4mm;
+            }
+            * {
+              box-sizing: border-box;
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+              width: 72mm;
+              margin: 0 auto;
+              padding: 4mm 2mm;
+              color: #000;
+              background: #fff;
+              font-size: 13px;
+              line-height: 1.35;
+            }
+            .center { text-align: center; }
+            .bold { font-weight: bold; }
+            .header {
+              border-bottom: 2px solid #000;
+              padding-bottom: 6px;
+              margin-bottom: 8px;
+            }
+            .logo {
+              font-size: 22px;
+              font-weight: 900;
+              letter-spacing: 1.5px;
+            }
+            .order-id {
+              font-size: 20px;
+              font-weight: 900;
+              margin: 4px 0 2px 0;
+            }
+            .timing-banner {
+              background: #000;
+              color: #fff;
+              font-size: 15px;
+              font-weight: 900;
+              padding: 6px;
+              margin: 8px 0;
+              text-align: center;
+              border-radius: 4px;
+              letter-spacing: 0.5px;
+            }
+            .info-row {
+              display: flex;
+              justify-content: space-between;
+              margin: 3px 0;
+              font-size: 12px;
+            }
+            .divider {
+              border-top: 1px dashed #000;
+              margin: 8px 0;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 6px 0;
+            }
+            .comment-box {
+              border: 2px solid #000;
+              padding: 5px 7px;
+              margin: 8px 0;
+              font-size: 13px;
+              background: #fff;
+              border-radius: 3px;
+            }
+            .total-row {
+              display: flex;
+              justify-content: space-between;
+              font-size: 16px;
+              font-weight: 900;
+              margin-top: 6px;
+              padding-top: 6px;
+              border-top: 2px solid #000;
+            }
+            @media print {
+              body { width: 100%; margin: 0; padding: 0; }
+              .no-print { display: none !important; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="center header">
+            <div class="logo">MAX SUSHI</div>
+            <div class="order-id">#${order.id}</div>
+            <div style="font-size: 11px; color: #444;">${formatOrderTime(order.created_at)}</div>
+          </div>
+
+          <div class="timing-banner">
+            ${timingBadge}
+          </div>
+
+          <div class="info-row">
+            <span class="bold">Спосіб:</span>
+            <span class="bold" style="font-size: 13px;">${isPickup ? 'САМОВИВІЗ' : 'ДОСТАВКА КУРʼЄРОМ'}</span>
+          </div>
+          ${!isPickup ? `<div style="font-size: 12px; margin: 3px 0 6px 0;"><strong>Адреса:</strong> ${addressStr}</div>` : ''}
+
+          <div class="info-row">
+            <span>Клієнт:</span>
+            <span class="bold">${order.customer_name || order.name || 'Клієнт'}</span>
+          </div>
+          <div class="info-row">
+            <span>Телефон:</span>
+            <span class="bold">${order.phone}</span>
+          </div>
+          <div class="info-row">
+            <span>Персон / приборів:</span>
+            <span class="bold">${order.personsCount || 1} шт</span>
+          </div>
+
+          ${order.comment ? `
+            <div class="comment-box">
+              <strong style="text-transform: uppercase;">Коментар:</strong> ${order.comment}
+            </div>
+          ` : ''}
+
+          <div class="divider"></div>
+          <div class="bold" style="font-size: 13px; margin-bottom: 2px;">
+            СТРАВИ (${order.items.reduce((s, i) => s + (i.quantity || 1), 0)} шт):
+          </div>
+
+          <table>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+
+          <div class="total-row">
+            <span>РАЗОМ:</span>
+            <span>${order.total} zł</span>
+          </div>
+          <div class="info-row" style="margin-top: 5px;">
+            <span>Оплата:</span>
+            <span class="bold">${order.payment_method === 'cash' || order.paymentMethod === 'cash' ? 'Готівка' : 'BLIK / Картка'}</span>
+          </div>
+          ${(order.changeFrom || (order as any).change_from) ? `
+            <div class="info-row">
+              <span>Решта з купюри:</span>
+              <span class="bold">${order.changeFrom || (order as any).change_from}</span>
+            </div>
+          ` : ''}
+
+          <div class="divider" style="margin-top: 10px;"></div>
+          <div class="center" style="font-size: 11px; margin-top: 8px; color: #555;">
+            Max Sushi • Смачного!
+          </div>
+
+          <div class="no-print center" style="margin-top: 15px;">
+            <button onclick="window.print()" style="padding: 8px 16px; font-weight: bold; cursor: pointer; border-radius: 4px;">
+              Роздрукувати ще раз
+            </button>
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.focus();
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(receiptHtml);
+    printWindow.document.close();
+  };
+
+  // Підрахунки для статистики
+  const newOrdersCount = orders.filter((o) => o.status === 'pending').length;
+  const inKitchenCount = orders.filter((o) => o.status === 'preparing' || o.status === 'confirmed').length;
+  const inDeliveryCount = orders.filter((o) => o.status === 'in_delivery').length;
+  const deliveredTodayCount = orders.filter((o) => o.status === 'delivered' && isToday(o.created_at)).length;
+  const cancelledOrdersCount = orders.filter((o) => o.status === 'cancelled').length;
+  const todayRevenue = orders
+    .filter((o) => o.status === 'delivered' && isToday(o.created_at))
+    .reduce((sum, o) => sum + (o.total || 0), 0);
+
+  // Фільтрація та розумне сортування списку замовлень за активною плашкою
+  const filteredOrders = useMemo(() => {
+    const list = orders.filter((order) => {
+      if (orderStatusFilter === 'pending') {
+        return order.status === 'pending';
+      }
+      if (orderStatusFilter === 'in_progress') {
+        return order.status === 'preparing' || order.status === 'confirmed';
+      }
+      if (orderStatusFilter === 'in_delivery') {
+        return order.status === 'in_delivery';
+      }
+      if (orderStatusFilter === 'delivered') {
+        return order.status === 'delivered';
+      }
+      if (orderStatusFilter === 'cancelled') {
+        return order.status === 'cancelled';
+      }
+      if (orderStatusFilter === 'history') {
+        return order.status === 'delivered';
+      }
+      return true;
+    });
+
+    // Розумне сортування:
+    // Для вкладки "Кухня" (in_progress): сортуємо від найтерміновішого до найпізнішого!
+    // Розраховуємо цільовий timestamp дедлайну для кожного замовлення.
+    if (orderStatusFilter === 'in_progress') {
+      const getTargetTimestamp = (o: AdminOrder) => {
+        const scheduled = o.scheduled_time || o.scheduledTime;
+        const isScheduled = (o.timing_type === 'scheduled' || o.timingType === 'scheduled') && Boolean(scheduled);
+        if (isScheduled && scheduled) {
+          const isTomorrow = scheduled.toLowerCase().includes('завтра') || 
+                             scheduled.toLowerCase().includes('jutro') || 
+                             scheduled.toLowerCase().includes('tomorrow');
+          const timeMatch = scheduled.match(/(\d{1,2}):(\d{2})/);
+          if (timeMatch) {
+            const hours = parseInt(timeMatch[1], 10);
+            const mins = parseInt(timeMatch[2], 10);
+            const date = new Date(o.created_at);
+            if (isTomorrow) {
+              date.setDate(date.getDate() + 1);
+            }
+            date.setHours(hours, mins, 0, 0);
+            return date.getTime();
+          }
+        }
+        // Для ASAP замовлень: рахуємо від часу прийняття на кухню (або створення) + час очікування
+        const base = (o.accepted_at || o.acceptedAt)
+          ? new Date(o.accepted_at || o.acceptedAt!).getTime()
+          : new Date(o.created_at).getTime();
+        return base + (prepWaitTimeMinutes || 40) * 60 * 1000;
+      };
+
+      return list.sort((a, b) => getTargetTimestamp(a) - getTargetTimestamp(b));
+    }
+
+    // Для решти вкладок (Нові, Курʼєр, Скасовані тощо):
+    return list.sort((a, b) => {
+      const aScheduled = a.scheduled_time || a.scheduledTime;
+      const bScheduled = b.scheduled_time || b.scheduledTime;
+      const aIsScheduled = (a.timing_type === 'scheduled' || a.timingType === 'scheduled') && Boolean(aScheduled);
+      const bIsScheduled = (b.timing_type === 'scheduled' || b.timingType === 'scheduled') && Boolean(bScheduled);
+
+      // Якщо одне термінове (ASAP), а інше попереднє на час:
+      if (!aIsScheduled && bIsScheduled) return -1; // ASAP спочатку!
+      if (aIsScheduled && !bIsScheduled) return 1;
+
+      // Якщо обидва заплановані на час: спочатку сьогоднішні, потім завтрашні
+      if (aIsScheduled && bIsScheduled && aScheduled && bScheduled) {
+        const aIsTomorrow = aScheduled.toLowerCase().includes('завтра') || aScheduled.toLowerCase().includes('jutro');
+        const bIsTomorrow = bScheduled.toLowerCase().includes('завтра') || bScheduled.toLowerCase().includes('jutro');
+        if (!aIsTomorrow && bIsTomorrow) return -1;
+        if (aIsTomorrow && !bIsTomorrow) return 1;
+        return aScheduled.localeCompare(bScheduled);
+      }
+
+      // Інакше за часом створення (новіші вище)
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+  }, [orders, orderStatusFilter]);
+
+  // Групування замовлень по днях для розділу "Історія" (тільки виконані замовлення)
+  const historyByDays = useMemo(() => {
+    const groups: {
+      [key: string]: {
+        dateLabel: string;
+        orders: AdminOrder[];
+        totalRevenue: number;
+        deliveredCount: number;
+      };
+    } = {};
+
+    // В історію потрапляють виключно виконані замовлення
+    const deliveredOrders = orders.filter((o) => o.status === 'delivered');
+    const sorted = [...deliveredOrders].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    for (const order of sorted) {
+      const d = new Date(order.created_at);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const dateKey = `${year}-${month}-${day}`;
+
+      if (!groups[dateKey]) {
+        const now = new Date();
+        const isCurrentDay =
+          d.getDate() === now.getDate() &&
+          d.getMonth() === now.getMonth() &&
+          d.getFullYear() === now.getFullYear();
+
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        const isYesterday =
+          d.getDate() === yesterday.getDate() &&
+          d.getMonth() === yesterday.getMonth() &&
+          d.getFullYear() === yesterday.getFullYear();
+
+        const dayName = d.toLocaleDateString('uk-UA', { weekday: 'long' });
+        const dayAndMonth = d.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
+        const yearStr = d.getFullYear() !== now.getFullYear() ? ` ${d.getFullYear()}` : '';
+
+        let dateLabel = `${dayAndMonth}${yearStr} (${dayName})`;
+        if (isCurrentDay) dateLabel = `Сьогодні, ${dayAndMonth}`;
+        if (isYesterday) dateLabel = `Вчора, ${dayAndMonth}`;
+
+        groups[dateKey] = {
+          dateLabel,
+          orders: [],
+          totalRevenue: 0,
+          deliveredCount: 0,
+        };
+      }
+
+      groups[dateKey].orders.push(order);
+      groups[dateKey].totalRevenue += order.total || 0;
+      groups[dateKey].deliveredCount += 1;
+    }
+
+    return Object.entries(groups).map(([dateKey, data]) => ({
+      dateKey,
+      ...data,
+    }));
+  }, [orders]);
+
+  // Згортання / розгортання окремого дня в історії
+  const toggleHistoryDay = (dateKey: string) => {
+    setCollapsedHistoryDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(dateKey)) {
+        next.delete(dateKey);
+      } else {
+        next.add(dateKey);
+      }
+      return next;
+    });
+  };
+
+  // Згортання / розгортання складу замовлення
+  const toggleOrderExpand = (orderId: string) => {
+    setExpandedOrderIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(orderId)) {
+        next.delete(orderId);
+      } else {
+        next.add(orderId);
+      }
+      return next;
+    });
+  };
+
+  const toggleExpandAllOrders = () => {
+    if (expandedOrderIds.size === filteredOrders.length && filteredOrders.length > 0) {
+      setExpandedOrderIds(new Set());
+    } else {
+      setExpandedOrderIds(new Set(filteredOrders.map((o) => o.id)));
+    }
+  };
+
+  // Автозавантаження меню, замовлень та Realtime підписка на Supabase
   useEffect(() => {
     if (session) {
       loadMenu();
+      loadOrders();
+
+      const channel = supabase
+        .channel('admin_orders_channel')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'orders' },
+          (payload) => {
+            console.log('Realtime orders change detected:', payload);
+            loadOrders(false);
+            if (payload.eventType === 'INSERT') {
+              playOrderSound();
+              setOrderStatusFilter('pending');
+            }
+          }
+        )
+        .subscribe();
+
+      // Періодичне автооновлення раз на 25 секунд
+      const interval = setInterval(() => {
+        loadOrders(false);
+      }, 25000);
+
+      return () => {
+        supabase.removeChannel(channel);
+        clearInterval(interval);
+      };
     }
   }, [session]);
 
@@ -734,6 +1547,551 @@ export default function AdminPage() {
     );
   }
 
+  // Розрахунок часу, що залишився до дедлайну приготування / доставки (хвилини)
+  const getOrderRemainingMinutes = (order: AdminOrder) => {
+    const scheduled = order.scheduled_time || order.scheduledTime;
+    const isScheduled = (order.timing_type === 'scheduled' || order.timingType === 'scheduled') && Boolean(scheduled);
+    const now = Date.now();
+
+    if (isScheduled && scheduled) {
+      const isTomorrow = scheduled.toLowerCase().includes('завтра') || 
+                         scheduled.toLowerCase().includes('jutro') || 
+                         scheduled.toLowerCase().includes('tomorrow');
+      const timeMatch = scheduled.match(/(\d{1,2}):(\d{2})/);
+      if (timeMatch) {
+        const hours = parseInt(timeMatch[1], 10);
+        const mins = parseInt(timeMatch[2], 10);
+        const targetDate = new Date(order.created_at);
+        if (isTomorrow) {
+          targetDate.setDate(targetDate.getDate() + 1);
+        }
+        targetDate.setHours(hours, mins, 0, 0);
+        return Math.round((targetDate.getTime() - now) / 60000);
+      }
+    }
+
+    // Для ASAP: рахуємо від моменту натиску "Прийняти на кухню" (або від створення, якщо ще не прийнято)
+    const baseTime = (order.accepted_at || order.acceptedAt)
+      ? new Date(order.accepted_at || order.acceptedAt!).getTime()
+      : new Date(order.created_at).getTime();
+
+    const targetTime = baseTime + (prepWaitTimeMinutes || 40) * 60000;
+    return Math.round((targetTime - now) / 60000);
+  };
+
+  // Функція рендерингу однієї картки замовлення
+  const renderOrderCard = (order: AdminOrder, index = 0, isUrgent = false) => {
+    const isNew = order.status === 'pending';
+    const isKitchen = order.status === 'preparing' || order.status === 'confirmed';
+    const isInDelivery = order.status === 'in_delivery';
+    const isDelivered = order.status === 'delivered';
+    const isPickup = order.delivery_method === 'pickup' || order.deliveryMethod === 'pickup';
+    const isExpanded = expandedOrderIds.has(order.id);
+    const isEven = index % 2 === 0;
+
+    // Розрахунок залишку хвилин для кухні
+    const remainingMins = isKitchen ? getOrderRemainingMinutes(order) : null;
+
+    // Чергування відтінків (зебра) для максимального розрізнення сусідніх карток
+    // Чітко контрастні стилі для парних і непарних карток:
+    const cardBgClass = isNew
+      ? isEven
+        ? 'bg-[#150f16] border-rose-500/70 shadow-lg shadow-rose-950/40 ring-1 ring-rose-500/40'
+        : 'bg-[#0f0c13] border-rose-500/40 shadow-md shadow-rose-950/20'
+      : isKitchen
+        ? isEven
+          ? 'bg-[#181510] border-amber-500/50 shadow-lg shadow-amber-950/30'
+          : 'bg-[#111118] border-amber-500/25 shadow-md shadow-black/40'
+        : isEven
+          ? 'bg-[#13131e] border-white/15'
+          : 'bg-[#0c0c14] border-white/10';
+
+    return (
+      <div
+        key={order.id}
+        style={{
+          clipPath: 'polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)',
+        }}
+        className={cn(
+          'p-4 sm:p-5 transition-all duration-300 relative border',
+          cardBgClass
+        )}
+      >
+        {/* Верхня плашка картки: Номер замовлення, статус, час, видалення */}
+        <div className="flex flex-col gap-2 pb-3.5 border-b border-white/5">
+          {/* Рядок 1: Номер замовлення, статус та плашка таймінгу (з flex-wrap для запобігання накладанню на мобільних) */}
+          <div className="flex flex-wrap items-center justify-between gap-x-2.5 gap-y-1.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-base sm:text-lg font-black text-white tracking-wide">
+                #{order.id}
+              </span>
+
+              {/* Статус замовлення: на кухні, у курʼєра та в доставлених статуси не показуються */}
+              {!isKitchen && !isInDelivery && !isDelivered && orderStatusFilter !== 'in_progress' && orderStatusFilter !== 'in_delivery' && orderStatusFilter !== 'delivered' && (
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-black border',
+                    order.status === 'pending' && 'bg-rose-500/15 text-rose-400 border-rose-500/40',
+                    order.status === 'confirmed' && 'bg-blue-500/15 text-blue-400 border-blue-500/40',
+                    order.status === 'preparing' && 'bg-amber-500/15 text-amber-400 border-amber-500/40',
+                    order.status === 'in_delivery' && 'bg-purple-500/15 text-purple-400 border-purple-500/40',
+                    order.status === 'delivered' && 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40',
+                    order.status === 'cancelled' && 'bg-zinc-700/20 text-zinc-400 border-zinc-700/40'
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'w-1.5 h-1.5 rounded-full shrink-0',
+                      order.status === 'pending' && 'bg-rose-500 animate-ping',
+                      order.status === 'confirmed' && 'bg-blue-500',
+                      order.status === 'preparing' && 'bg-amber-500 animate-pulse',
+                      order.status === 'in_delivery' && 'bg-purple-500',
+                      order.status === 'delivered' && 'bg-emerald-500',
+                      order.status === 'cancelled' && 'bg-zinc-500'
+                    )}
+                  />
+                  {order.status === 'pending' && 'Нове'}
+                  {order.status === 'confirmed' && 'Підтверджено'}
+                  {order.status === 'preparing' && 'Кухня (готується)'}
+                  {order.status === 'in_delivery' && (isPickup ? 'Готово до видачі' : 'Курʼєр (в дорозі)')}
+                  {order.status === 'delivered' && 'Виконано'}
+                  {order.status === 'cancelled' && 'Скасовано'}
+                </span>
+              )}
+            </div>
+
+            {/* Бейдж бажаного часу / зворотній відлік для кухні */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {((order.timing_type === 'scheduled' || order.timingType === 'scheduled') && (order.scheduled_time || order.scheduledTime)) ? (
+                <span 
+                  style={{
+                    clipPath: 'polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px)',
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/25 border border-amber-500/60 text-amber-300 font-black text-xs shadow-xs"
+                >
+                  <Clock className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                  <span>НА ЧАС: {order.scheduled_time || order.scheduledTime}</span>
+                </span>
+              ) : (!isKitchen && !isInDelivery && !isDelivered && orderStatusFilter !== 'in_progress' && orderStatusFilter !== 'in_delivery' && orderStatusFilter !== 'delivered') ? (
+                <span 
+                  style={{
+                    clipPath: 'polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px)',
+                  }}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-zinc-800/80 border border-white/10 text-zinc-300 font-bold text-[10px]"
+                >
+                  <span>Якнайшвидше</span>
+                </span>
+              ) : null}
+
+              {/* Пульсуючий відлік для кухні: показується лише коли часу залишилось менше або дорівнює часу очікування */}
+              {isKitchen && remainingMins !== null && remainingMins <= (prepWaitTimeMinutes || 40) && (
+                <span
+                  style={{
+                    clipPath: 'polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px)',
+                  }}
+                  className={cn(
+                    'inline-flex items-center gap-1 px-2.5 py-1 font-black text-xs tracking-wider border shadow-sm animate-pulse',
+                    remainingMins <= 0
+                      ? 'bg-rose-600 text-white border-rose-400'
+                      : 'bg-rose-500/25 text-rose-300 border-rose-500/50'
+                  )}
+                >
+                  <Timer className="w-3.5 h-3.5 text-rose-400" />
+                  <span>
+                    {remainingMins <= 0
+                      ? `ПРОСТРОЧЕНО: ${Math.abs(remainingMins)} хв`
+                      : `Залишилось: ~${remainingMins} хв`}
+                  </span>
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Рядок 2: Дата та час створення зліва, кнопки друку та видалення справа */}
+          <div className="flex items-center justify-between gap-2 text-xs text-zinc-400 pt-0.5">
+            <div className="flex items-center gap-2 min-w-0">
+              {/* Дата створення замовлення (на кухні прихована на мобільних телефонах та планшетах) */}
+              <span
+                className={cn(
+                  'items-center gap-1.5 font-mono whitespace-nowrap text-zinc-400',
+                  (isKitchen || orderStatusFilter === 'in_progress')
+                    ? 'hidden lg:inline-flex'
+                    : 'inline-flex'
+                )}
+              >
+                <Clock className="w-3.5 h-3.5 shrink-0 text-zinc-500" />
+                <span>{formatOrderTime(order.created_at)}</span>
+              </span>
+
+              {/* Час тому */}
+              <span className="text-[11px] text-zinc-500 font-medium whitespace-nowrap">
+                ({getTimeAgo(order.created_at)})
+              </span>
+            </div>
+
+            {/* Кнопки дій: Друк чека та Видалення */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Кнопка швидкого друку чека для кухні */}
+              <button
+                type="button"
+                onClick={() => handlePrintKitchenReceipt(order)}
+                title="Роздрукувати чек замовлення"
+                className="p-1.5 text-zinc-400 hover:text-amber-300 bg-white/5 hover:bg-white/10 rounded-lg transition-all cursor-pointer active:scale-95 border border-white/5"
+              >
+                <Printer className="w-4 h-4 text-amber-400/90 hover:text-amber-300" />
+              </button>
+
+              {/* Іконка видалення (прихована на кухні, у курʼєра та в доставлених) */}
+              {!(isKitchen || isInDelivery || isDelivered || orderStatusFilter === 'in_progress' || orderStatusFilter === 'in_delivery' || orderStatusFilter === 'delivered') && (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteOrder(order.id)}
+                  title="Видалити замовлення"
+                  className="p-1.5 text-zinc-400 hover:text-rose-400 bg-white/5 hover:bg-rose-500/10 rounded-lg transition-all cursor-pointer active:scale-95 border border-white/5"
+                >
+                  <Trash2 className="w-4 h-4 text-zinc-400 hover:text-rose-400" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Основна інформація: Клієнт, Адреса, Оплата */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 py-3.5 text-xs border-b border-white/5">
+          {/* Клієнт */}
+          <div className="space-y-1 bg-[#14141e] p-3 rounded-xl border border-white/5">
+            <span className="text-[10px] text-zinc-400 uppercase tracking-wider font-bold block">
+              Клієнт
+            </span>
+            <div className="flex items-center gap-1.5 font-bold text-white text-sm">
+              <User className="w-3.5 h-3.5 text-[#e50914] shrink-0" />
+              <span className="truncate">{order.customer_name || order.name || 'Клієнт'}</span>
+            </div>
+            <div className="flex items-center justify-between pt-0.5">
+              <a
+                href={`tel:${order.phone}`}
+                className="font-mono text-zinc-300 hover:text-[#e50914] flex items-center gap-1 font-semibold transition-colors"
+              >
+                <Phone className="w-3 h-3 text-emerald-400 shrink-0" />
+                <span>{order.phone}</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => handleCopyPhone(order.phone, order.id)}
+                className="text-[10px] text-zinc-400 hover:text-white px-1.5 py-0.5 bg-white/5 hover:bg-white/10 rounded transition-all cursor-pointer"
+              >
+                {copiedPhoneId === order.id ? 'Скопійовано' : 'Копіювати'}
+              </button>
+            </div>
+          </div>
+
+          {/* Доставка / Самовивіз */}
+          <div className="space-y-1 bg-[#14141e] p-3 rounded-xl border border-white/5">
+            <span className="text-[10px] text-zinc-400 uppercase tracking-wider font-bold block">
+              Спосіб отримання
+            </span>
+            {isPickup ? (
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1.5 font-bold text-white text-sm">
+                  <Store className="w-3.5 h-3.5 text-[#e50914] shrink-0" />
+                  <span>Самовивіз</span>
+                </div>
+                <span className="inline-block text-[10px] bg-emerald-500/15 text-emerald-400 px-1.5 py-0.2 rounded font-black">
+                  Знижка -{brandTheme.delivery.pickupDiscountPercent}% застосована
+                </span>
+              </div>
+            ) : (
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1.5 font-bold text-white text-sm">
+                  <Truck className="w-3.5 h-3.5 text-[#e50914] shrink-0" />
+                  <span>Доставка кур'єром</span>
+                </div>
+                <div className="text-zinc-300 flex items-start gap-1 font-medium leading-tight">
+                  <MapPin className="w-3 h-3 text-[#e50914] shrink-0 mt-0.5" />
+                  <span>
+                    {order.address?.street
+                      ? `вул. ${order.address.street} ${order.address.house || ''}`
+                      : 'Адреса не вказана'}
+                    {order.address?.apartment && `, кв. ${order.address.apartment}`}
+                    {order.address?.floor && `, пов. ${order.address.floor}`}
+                    {order.address?.entryCode && `, код ${order.address.entryCode}`}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Спосіб оплати */}
+          <div className="space-y-1 bg-[#14141e] p-3 rounded-xl border border-white/5">
+            <span className="text-[10px] text-zinc-400 uppercase tracking-wider font-bold block">
+              Оплата
+            </span>
+            <div className="flex items-center gap-1.5 font-bold text-white text-sm">
+              {order.payment_method === 'cash' || order.paymentMethod === 'cash' ? (
+                <>
+                  <Banknote className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>Готівка при отриманні</span>
+                </>
+              ) : (
+                <>
+                  <CreditCard className="w-3.5 h-3.5 text-[#e50914] shrink-0" />
+                  <span>BLIK / Картка</span>
+                </>
+              )}
+            </div>
+            {(order.changeFrom || (order as any).change_from) && (
+              <p className="text-[11px] text-amber-300 font-medium">
+                Решта з купюри: <span className="font-bold">{order.changeFrom || (order as any).change_from}</span>
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Коментар клієнта (якщо є) */}
+        {order.comment && (
+          <div className="my-3 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200 flex items-start gap-2">
+            <MessageSquare className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold text-amber-300 block text-[10px] uppercase tracking-wider">
+                Коментар клієнта:
+              </span>
+              <span className="italic leading-relaxed">{order.comment}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Склад замовлення: компактний режим зі згортанням/розгортанням */}
+        <div className="py-2.5">
+          <button
+            type="button"
+            onClick={() => toggleOrderExpand(order.id)}
+            style={{
+              clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+            }}
+            className={cn(
+              'w-full flex items-center justify-between gap-3 px-3 py-2 transition-all cursor-pointer border select-none group',
+              isExpanded
+                ? 'bg-[#181824] border-white/20 text-white shadow-xs'
+                : 'bg-[#13131e] hover:bg-[#1a1a28] border-white/5 hover:border-white/15 text-zinc-300'
+            )}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <Package className={cn('w-3.5 h-3.5 shrink-0 transition-colors', isExpanded ? 'text-[#e50914]' : 'text-zinc-400 group-hover:text-white')} />
+              <span className="text-xs font-bold text-white shrink-0">
+                Склад ({order.items.reduce((acc, i) => acc + (i.quantity || 1), 0)} шт):
+              </span>
+              {!isExpanded && (
+                <span className="text-xs text-zinc-400 truncate font-normal">
+                  {order.items
+                    .map((i) => {
+                      const prod = i.product || {};
+                      const title = typeof prod.name === 'object' ? prod.name.uk || prod.name.pl : prod.name;
+                      return `${title || 'Страва'} ×${i.quantity || 1}`;
+                    })
+                    .join(', ')}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0 text-xs font-bold text-zinc-400 group-hover:text-white">
+              <span className="hidden xs:inline text-[11px] text-zinc-500 font-semibold">
+                {isExpanded ? 'Згорнути' : 'Розгорнути'}
+              </span>
+              <ChevronDown
+                className={cn(
+                  'w-3.5 h-3.5 text-[#e50914] transition-transform duration-200',
+                  isExpanded ? 'rotate-180' : ''
+                )}
+              />
+            </div>
+          </button>
+
+          {/* Розгорнутий детальний список страв */}
+          {isExpanded && (
+            <div className="mt-2 divide-y divide-white/5 bg-[#12121c] rounded-xl p-2.5 sm:p-3 border border-white/5 animate-in fade-in zoom-in-98 duration-150">
+              {order.items.map((item, idx) => {
+                const prod = item.product || {};
+                const title =
+                  typeof prod.name === 'object'
+                    ? prod.name.uk || prod.name.pl || 'Страва'
+                    : prod.name || 'Страва';
+                const titlePl =
+                  typeof prod.name === 'object' ? prod.name.pl : '';
+                const price = Number(prod.price || 0);
+
+                return (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between py-2 first:pt-0 last:pb-0 gap-3"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {prod.image ? (
+                        <img
+                          src={prod.image}
+                          alt={title}
+                          className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg object-cover bg-black/40 shrink-0 border border-white/10"
+                        />
+                      ) : (
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white/5 flex items-center justify-center shrink-0 border border-white/10 text-zinc-500">
+                          <Package className="w-4 h-4" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-xs sm:text-sm font-bold text-white truncate">{title}</p>
+                        {titlePl && titlePl !== title && (
+                          <p className="text-[10px] text-zinc-400 truncate italic">{titlePl}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <div className="text-xs sm:text-sm font-black text-white">
+                        <span className="text-[#e50914] font-bold mr-1.5">×{item.quantity}</span>
+                        <span>{formatPrice(price * (item.quantity || 1))}</span>
+                      </div>
+                      <div className="text-[10px] text-zinc-400">
+                        {formatPrice(price)} / шт
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Фінансовий підсумок + Кнопки зміни статусів */}
+        <div className="pt-3 border-t border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+          {/* Суми */}
+          <div className="flex items-baseline gap-3 text-xs">
+            <span className="text-zinc-400">
+              Страви: <strong className="text-white">{formatPrice(order.subtotal)}</strong>
+            </span>
+            {!isPickup && order.delivery_fee > 0 && (
+              <span className="text-zinc-400">
+                Доставка: <strong className="text-white">{formatPrice(order.delivery_fee)}</strong>
+              </span>
+            )}
+            <div className="text-sm sm:text-base font-black text-white pl-2 border-l border-white/10">
+              Разом: <span className="text-[#e50914]">{formatPrice(order.total)}</span>
+            </div>
+          </div>
+
+          {/* Кнопки переходу між статусами (випадаючі списки прибрано — всі дії виконують прямі кнопки) */}
+          <div className="w-full sm:w-auto flex flex-wrap items-center justify-center sm:justify-end gap-2">
+            {/* 1. Нове замовлення: кнопка прийняти на кухню + скасувати */}
+            {order.status === 'pending' && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleUpdateOrderStatus(order.id, 'preparing')}
+                  style={{
+                    clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                  }}
+                  className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shadow-md shadow-amber-500/20 active:scale-95"
+                >
+                  <ChefHat className="w-3.5 h-3.5" />
+                  <span>Прийняти на кухню</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm(`Скасувати замовлення #${order.id}?`)) {
+                      handleUpdateOrderStatus(order.id, 'cancelled');
+                    }
+                  }}
+                  style={{
+                    clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                  }}
+                  className="px-3 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                  title="Скасувати нове замовлення"
+                >
+                  <Ban className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Скасувати</span>
+                </button>
+              </div>
+            )}
+
+            {/* 2. Кухня: кнопка друку та передати курʼєру або готово до видачі */}
+            {(order.status === 'preparing' || order.status === 'confirmed') && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handlePrintKitchenReceipt(order)}
+                  style={{
+                    clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                  }}
+                  className="px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer border border-white/10 hover:border-white/25 active:scale-95 shadow-sm"
+                  title="Роздрукувати чек для кухаря"
+                >
+                  <Printer className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Друк</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleUpdateOrderStatus(order.id, 'in_delivery')}
+                  style={{
+                    clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                  }}
+                  className="px-3.5 py-2 bg-purple-500 hover:bg-purple-400 text-white font-black text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shadow-md shadow-purple-500/20 active:scale-95"
+                >
+                  <Truck className="w-3.5 h-3.5" />
+                  <span>{isPickup ? 'Готово до видачі' : 'Передати курʼєру'}</span>
+                </button>
+              </div>
+            )}
+
+            {/* 3. Доставка: кнопка позначити виконаним */}
+            {order.status === 'in_delivery' && (
+              <button
+                type="button"
+                onClick={() => handleUpdateOrderStatus(order.id, 'delivered')}
+                style={{
+                  clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                }}
+                className="px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shadow-md shadow-emerald-500/20 active:scale-95"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Позначити виконаним</span>
+              </button>
+            )}
+
+            {/* 4. Виконано: красива плашка завершеного замовлення */}
+            {order.status === 'delivered' && (
+              <span className="px-3 py-1.5 text-xs font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-md flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Виконано</span>
+              </span>
+            )}
+
+            {/* 5. Скасовано: статус та можливість відновити */}
+            {order.status === 'cancelled' && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-bold text-zinc-500 flex items-center gap-1 bg-zinc-900/80 px-2.5 py-1.5 border border-zinc-700/40 rounded">
+                  <Ban className="w-3.5 h-3.5 text-zinc-500" />
+                  Скасовано
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleUpdateOrderStatus(order.id, 'pending')}
+                  style={{
+                    clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                  }}
+                  className="px-2.5 py-1.5 bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 border border-blue-500/30 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                  title="Відновити замовлення назад у 'Нові'"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Відновити</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Dashboard адмін-панелі
   return (
     <div className="min-h-screen bg-[#07070a] text-zinc-100 flex flex-col selection:bg-[#e50914] selection:text-white">
@@ -773,7 +2131,8 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          {/* Десктопні кнопки дій у шапці */}
+          <div className="hidden sm:flex items-center gap-2 sm:gap-3">
             {/* Кнопка налаштувань (іконка шестерні) */}
             <button
               type="button"
@@ -807,30 +2166,114 @@ export default function AdminPage() {
               <span className="hidden sm:inline">Вийти</span>
             </button>
           </div>
+
+          {/* Мобільна кнопка бургер-меню в правому кутку */}
+          <div className="flex sm:hidden items-center">
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              title={isMobileMenuOpen ? 'Закрити меню' : 'Меню керування'}
+              className="p-2 rounded-lg bg-[#151520] hover:bg-[#1e1e2d] border border-white/10 text-white flex items-center justify-center transition-all cursor-pointer active:scale-95"
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-5 h-5 text-white" />
+              ) : (
+                <Menu className="w-5 h-5 text-white" />
+              )}
+            </button>
+          </div>
         </div>
+
+        {/* Мобільне висувне бургер-меню (налаштування, статистика, перехід на сайт та вихід) */}
+        {isMobileMenuOpen && (
+          <>
+            <div 
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="sm:hidden fixed inset-0 top-16 z-35 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150"
+            />
+            <div className="sm:hidden absolute inset-x-0 top-16 z-40 bg-[#0e0e16] border-b border-white/15 p-3.5 shadow-2xl animate-in slide-in-from-top-2 duration-150 space-y-1.5">
+              {/* Вкладка Статистика */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('stats');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={cn(
+                  'w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all',
+                  activeTab === 'stats'
+                    ? 'bg-[#e50914] text-white shadow-md shadow-[#e50914]/40'
+                    : 'text-zinc-300 hover:text-white bg-white/5 border border-white/5'
+                )}
+              >
+                <BarChart3 className={cn('w-4 h-4', activeTab === 'stats' ? 'text-white' : 'text-amber-400')} />
+                <span>Аналітика та статистика</span>
+              </button>
+
+              {/* Вкладка Налаштування */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('settings');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={cn(
+                  'w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all',
+                  activeTab === 'settings'
+                    ? 'bg-[#e50914] text-white shadow-md shadow-[#e50914]/40'
+                    : 'text-zinc-300 hover:text-white bg-white/5 border border-white/5'
+                )}
+              >
+                <Settings className={cn('w-4 h-4', activeTab === 'settings' ? 'text-white' : 'text-zinc-400')} />
+                <span>Налаштування системи</span>
+              </button>
+
+              {/* Повернення на клієнтський сайт */}
+              <Link
+                href="/pl"
+                target="_blank"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider text-zinc-300 hover:text-white bg-white/5 border border-white/5 transition-all"
+              >
+                <ExternalLink className="w-4 h-4 text-blue-400" />
+                <span>Повернутися на сайт</span>
+              </Link>
+
+              {/* Вихід з адмінки */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  handleLogout();
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider text-rose-400 hover:text-white bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 transition-all cursor-pointer"
+              >
+                <LogOut className="w-4 h-4 text-rose-400" />
+                <span>Вийти з адмін-панелі</span>
+              </button>
+            </div>
+          </>
+        )}
       </header>
 
-      {/* Стікі-навігація під хедером (3 вкладки, на мобілці ідеально влазять без скролу) */}
+      {/* Стікі-навігація під хедером (на мобілці тільки 2 вкладки: Меню та Замовлення) */}
       {activeTab !== 'dashboard' && (
         <div className="sticky top-16 z-30 w-full bg-[#0d0d14]/95 backdrop-blur-xl border-b border-white/10 shadow-md">
           <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
-            <div className={cn(
-              "grid w-full py-0.5",
-              activeTab === 'settings' ? "grid-cols-4" : "grid-cols-3 sm:flex sm:w-auto sm:items-center sm:gap-4"
-            )}>
+            <div className="grid grid-cols-2 sm:flex sm:w-auto sm:items-center sm:gap-4 w-full py-0.5">
               {/* Розділ МЕНЮ */}
               <button
                 type="button"
                 onClick={() => setActiveTab('menu')}
                 className={cn(
-                  'relative py-3 px-1 sm:px-4 text-[11px] xs:text-xs sm:text-sm font-bold tracking-wider uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none flex items-center justify-center gap-1.5 sm:gap-2',
+                  'relative py-3 px-2 sm:px-4 text-xs sm:text-sm font-bold tracking-wider uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none flex items-center justify-center gap-1.5 sm:gap-2',
                   activeTab === 'menu' ? 'text-white font-black' : 'text-zinc-400 hover:text-zinc-200'
                 )}
               >
                 <UtensilsCrossed className={cn('w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0', activeTab === 'menu' ? 'text-[#e50914]' : 'text-zinc-400')} />
-                <span className="truncate">МЕНЮ <span className="hidden sm:inline">({products.length})</span></span>
+                <span className="truncate">МЕНЮ <span className="opacity-75 text-[11px] sm:text-xs">({products.length})</span></span>
                 {activeTab === 'menu' && (
-                  <span className="absolute bottom-0 left-1 right-1 sm:left-2 sm:right-2 h-[2.5px] rounded-full bg-gradient-to-r from-[#e50914] via-[#ff4d58] to-[#e50914] shadow-[0_0_12px_#e50914]" />
+                  <span className="absolute bottom-0 left-2 right-2 sm:left-2 sm:right-2 h-[2.5px] rounded-full bg-gradient-to-r from-[#e50914] via-[#ff4d58] to-[#e50914] shadow-[0_0_12px_#e50914]" />
                 )}
               </button>
 
@@ -839,43 +2282,53 @@ export default function AdminPage() {
                 type="button"
                 onClick={() => setActiveTab('orders')}
                 className={cn(
-                  'relative py-3 px-1 sm:px-4 text-[11px] xs:text-xs sm:text-sm font-bold tracking-wider uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none flex items-center justify-center gap-1.5 sm:gap-2',
+                  'relative py-3 px-2 sm:px-4 text-xs sm:text-sm font-bold tracking-wider uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none flex items-center justify-center gap-1.5 sm:gap-2',
                   activeTab === 'orders' ? 'text-white font-black' : 'text-zinc-400 hover:text-zinc-200'
                 )}
               >
                 <ShoppingBag className={cn('w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0', activeTab === 'orders' ? 'text-[#e50914]' : 'text-zinc-400')} />
                 <span className="truncate">ЗАМОВЛЕННЯ</span>
+                {newOrdersCount > 0 && (
+                  <span
+                    style={{
+                      clipPath: 'polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px)',
+                    }}
+                    className="px-1.5 py-0.5 text-[9px] sm:text-[10px] bg-[#e50914] text-white font-black shadow-sm shadow-[#e50914]/40"
+                  >
+                    {newOrdersCount}
+                  </span>
+                )}
                 {activeTab === 'orders' && (
-                  <span className="absolute bottom-0 left-1 right-1 sm:left-2 sm:right-2 h-[2.5px] rounded-full bg-gradient-to-r from-[#e50914] via-[#ff4d58] to-[#e50914] shadow-[0_0_12px_#e50914]" />
+                  <span className="absolute bottom-0 left-2 right-2 sm:left-2 sm:right-2 h-[2.5px] rounded-full bg-gradient-to-r from-[#e50914] via-[#ff4d58] to-[#e50914] shadow-[0_0_12px_#e50914]" />
                 )}
               </button>
 
-              {/* Розділ СТАТИСТИКА */}
+              {/* Розділ СТАТИСТИКА (на мобілці сховано у бургер-меню, на десктопі показується) */}
               <button
                 type="button"
                 onClick={() => setActiveTab('stats')}
                 className={cn(
-                  'relative py-3 px-1 sm:px-4 text-[11px] xs:text-xs sm:text-sm font-bold tracking-wider uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none flex items-center justify-center gap-1.5 sm:gap-2',
+                  'hidden sm:flex relative py-3 px-4 text-xs sm:text-sm font-bold tracking-wider uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none items-center justify-center gap-2',
                   activeTab === 'stats' ? 'text-white font-black' : 'text-zinc-400 hover:text-zinc-200'
                 )}
               >
                 <BarChart3 className={cn('w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0', activeTab === 'stats' ? 'text-[#e50914]' : 'text-zinc-400')} />
                 <span className="truncate">СТАТИСТИКА</span>
                 {activeTab === 'stats' && (
-                  <span className="absolute bottom-0 left-1 right-1 sm:left-2 sm:right-2 h-[2.5px] rounded-full bg-gradient-to-r from-[#e50914] via-[#ff4d58] to-[#e50914] shadow-[0_0_12px_#e50914]" />
+                  <span className="absolute bottom-0 left-2 right-2 h-[2.5px] rounded-full bg-gradient-to-r from-[#e50914] via-[#ff4d58] to-[#e50914] shadow-[0_0_12px_#e50914]" />
                 )}
               </button>
 
-              {/* Розділ НАЛАШТУВАННЯ (при активному переході через шестерню) */}
+              {/* Розділ НАЛАШТУВАННЯ (на десктопі при активному переході через шестерню) */}
               {activeTab === 'settings' && (
                 <button
                   type="button"
                   onClick={() => setActiveTab('settings')}
-                  className="relative py-3 px-1 sm:px-4 text-[11px] xs:text-xs sm:text-sm font-black tracking-wider uppercase whitespace-nowrap text-white select-none flex items-center justify-center gap-1.5 sm:gap-2"
+                  className="hidden sm:flex relative py-3 px-4 text-xs sm:text-sm font-black tracking-wider uppercase whitespace-nowrap text-white select-none items-center justify-center gap-2"
                 >
                   <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#e50914] shrink-0" />
                   <span className="truncate">ОПЦІЇ</span>
-                  <span className="absolute bottom-0 left-1 right-1 sm:left-2 sm:right-2 h-[2.5px] rounded-full bg-gradient-to-r from-[#e50914] via-[#ff4d58] to-[#e50914] shadow-[0_0_12px_#e50914]" />
+                  <span className="absolute bottom-0 left-2 right-2 h-[2.5px] rounded-full bg-gradient-to-r from-[#e50914] via-[#ff4d58] to-[#e50914] shadow-[0_0_12px_#e50914]" />
                 </button>
               )}
             </div>
@@ -973,31 +2426,70 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* 2. КАРТКА: ЗАМОВЛЕННЯ */}
+              {/* 2. КАРТКА: ЗАМОВЛЕННЯ (пульсує червоним, якщо є нові замовлення) */}
               <div
                 onClick={() => setActiveTab('orders')}
                 style={{
                   clipPath: 'polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)',
                 }}
-                className="group relative p-[1px] bg-gradient-to-b from-white/20 via-white/5 to-[#e50914]/30 hover:to-[#e50914] cursor-pointer transition-all duration-300 hover:shadow-2xl hover:shadow-[#e50914]/25 hover:-translate-y-1 active:scale-98"
+                className={cn(
+                  'group relative p-[1px] cursor-pointer transition-all duration-300 hover:-translate-y-1 active:scale-98',
+                  newOrdersCount > 0
+                    ? 'bg-gradient-to-b from-[#ff3844] via-[#e50914] to-[#99060e] shadow-[0_0_35px_rgba(229,9,20,0.6)] animate-pulse'
+                    : 'bg-gradient-to-b from-white/20 via-white/5 to-[#e50914]/30 hover:to-[#e50914] hover:shadow-2xl hover:shadow-[#e50914]/25'
+                )}
               >
                 <div
                   style={{
                     clipPath: 'polygon(11px 0, 100% 0, 100% calc(100% - 11px), calc(100% - 11px) 100%, 0 100%, 0 11px)',
                   }}
-                  className="bg-[#0f0f18] p-3.5 sm:p-8 h-full flex flex-col justify-between"
+                  className={cn(
+                    'p-3.5 sm:p-8 h-full flex flex-col justify-between transition-colors duration-300',
+                    newOrdersCount > 0
+                      ? 'bg-gradient-to-br from-[#2b080b] via-[#1a0608] to-[#110406]'
+                      : 'bg-[#0f0f18]'
+                  )}
                 >
                   <div className="flex items-center justify-between sm:block">
                     <div className="flex items-center gap-3 sm:block">
-                      <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-[#e50914]/10 border border-[#e50914]/30 flex items-center justify-center text-[#e50914] group-hover:scale-110 group-hover:bg-[#e50914] group-hover:text-white transition-all duration-300 shadow-md shadow-[#e50914]/20 shrink-0 sm:mb-6">
+                      <div
+                        className={cn(
+                          'w-11 h-11 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-300 shrink-0 sm:mb-6',
+                          newOrdersCount > 0
+                            ? 'bg-[#e50914] text-white shadow-lg shadow-[#e50914]/60 scale-105'
+                            : 'bg-[#e50914]/10 border border-[#e50914]/30 text-[#e50914] group-hover:scale-110 group-hover:bg-[#e50914] group-hover:text-white shadow-md shadow-[#e50914]/20'
+                        )}
+                      >
                         <ShoppingBag className="w-5 h-5 sm:w-7 sm:h-7" />
                       </div>
                       <div>
-                        <h2 className="text-base sm:text-2xl font-black uppercase tracking-wider text-white group-hover:text-[#ff4d58] transition-colors">
-                          ЗАМОВЛЕННЯ
-                        </h2>
-                        <p className="hidden sm:block text-xs sm:text-sm text-zinc-400 mt-2 leading-relaxed">
-                          Потік онлайн-замовлень у реальному часі, кухня, кур'єрська доставка та статуси.
+                        <div className="flex items-center gap-2">
+                          <h2
+                            className={cn(
+                              'text-base sm:text-2xl font-black uppercase tracking-wider transition-colors',
+                              newOrdersCount > 0 ? 'text-[#ff4d58]' : 'text-white group-hover:text-[#ff4d58]'
+                            )}
+                          >
+                            ЗАМОВЛЕННЯ
+                          </h2>
+                          {newOrdersCount > 0 && (
+                            <span
+                              style={{
+                                clipPath: 'polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px)',
+                              }}
+                              className="px-2 py-0.5 text-[10px] sm:text-xs bg-[#e50914] text-white font-black tracking-wider shadow-md shadow-[#e50914]/40"
+                            >
+                              +{newOrdersCount} НОВИХ
+                            </span>
+                          )}
+                        </div>
+                        <p className={cn(
+                          'hidden sm:block text-xs sm:text-sm mt-2 leading-relaxed',
+                          newOrdersCount > 0 ? 'text-zinc-300' : 'text-zinc-400'
+                        )}>
+                          {newOrdersCount > 0
+                            ? `У вас ${newOrdersCount} ${newOrdersCount === 1 ? 'нове замовлення' : 'нових замовлень'}! Натисніть, щоб переглянути та прийняти.`
+                            : "Потік онлайн-замовлень у реальному часі, кухня, кур'єрська доставка та статуси."}
                         </p>
                       </div>
                     </div>
@@ -1006,7 +2498,9 @@ export default function AdminPage() {
                     </div>
                   </div>
                   <div className="hidden sm:flex pt-6 mt-6 border-t border-white/10 items-center justify-between text-xs font-black uppercase tracking-wider text-zinc-400 group-hover:text-white transition-colors">
-                    <span>Перейти до замовлень</span>
+                    <span className={cn(newOrdersCount > 0 ? 'text-[#ff4d58] font-black' : '')}>
+                      {newOrdersCount > 0 ? `Переглянути нові (${newOrdersCount})` : 'Перейти до замовлень'}
+                    </span>
                     <span className="text-base text-[#e50914] group-hover:translate-x-1.5 transition-transform">→</span>
                   </div>
                 </div>
@@ -1528,42 +3022,380 @@ export default function AdminPage() {
         {/* 2. РОЗДІЛ: ЗАМОВЛЕННЯ */}
         {activeTab === 'orders' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 sm:gap-4">
-              <div className="bg-[#0f0f17] border border-white/10 rounded-xl p-4">
-                <span className="text-xs text-zinc-400 font-semibold uppercase">Нові замовлення</span>
-                <p className="text-2xl font-black text-white mt-1">0</p>
+            {/* Попередження про RLS, якщо виявлено проблему з політиками Supabase */}
+            {orderRlsNotice && (
+              <div
+                style={{
+                  clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
+                }}
+                className="p-4 bg-amber-500/10 border border-amber-500/30 text-amber-200 space-y-2.5"
+              >
+                <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
+                  <AlertTriangle className="w-5 h-5 shrink-0" />
+                  <span>Потрібно налаштувати Row Level Security (RLS) для таблиці orders у Supabase</span>
+                </div>
+                <p className="text-xs text-zinc-300 leading-relaxed">
+                  Supabase блокує пряме читання замовлень через увімкнений RLS без політики на SELECT. Виконайте наступний SQL у вашому Supabase SQL Editor, щоб замовлення читалися миттєво:
+                </p>
+                <div className="flex items-center gap-2 bg-[#0c0c14] p-2.5 rounded-lg border border-white/10 text-xs font-mono text-emerald-400 overflow-x-auto">
+                  <span className="flex-1 select-all">
+                    ALTER TABLE orders ENABLE ROW LEVEL SECURITY; DROP POLICY IF EXISTS &quot;Allow all for orders&quot; ON orders; CREATE POLICY &quot;Allow all for orders&quot; ON orders FOR ALL USING (true) WITH CHECK (true);
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        'ALTER TABLE orders ENABLE ROW LEVEL SECURITY; DROP POLICY IF EXISTS "Allow all for orders" ON orders; CREATE POLICY "Allow all for orders" ON orders FOR ALL USING (true) WITH CHECK (true);'
+                      );
+                      setCopiedSql(true);
+                      setTimeout(() => setCopiedSql(false), 2500);
+                    }}
+                    className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs rounded transition-all shrink-0 cursor-pointer"
+                  >
+                    {copiedSql ? 'Скопійовано!' : 'Копіювати SQL'}
+                  </button>
+                </div>
               </div>
-              <div className="bg-[#0f0f17] border border-white/10 rounded-xl p-4">
-                <span className="text-xs text-zinc-400 font-semibold uppercase">В процесі (кухня)</span>
-                <p className="text-2xl font-black text-amber-400 mt-1">0</p>
+            )}
+
+            {/* Верхня панель дій: статус підключення та швидкі дії */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+              <div className="flex items-center gap-2.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shadow-sm shadow-emerald-500/50" />
+                <h2 className="text-base sm:text-lg font-black text-white uppercase tracking-wider">
+                  Онлайн-замовлення
+                </h2>
+                <span className="text-xs text-zinc-400 font-mono">
+                  ({orders.length})
+                </span>
+                {isLoadingOrders && (
+                  <span className="text-xs text-amber-400 animate-pulse font-medium">Оновлення...</span>
+                )}
               </div>
-              <div className="bg-[#0f0f17] border border-white/10 rounded-xl p-4">
-                <span className="text-xs text-zinc-400 font-semibold uppercase">Доставлено сьогодні</span>
-                <p className="text-2xl font-black text-emerald-400 mt-1">0</p>
-              </div>
-              <div className="bg-[#0f0f17] border border-white/10 rounded-xl p-4">
-                <span className="text-xs text-zinc-400 font-semibold uppercase">Каса сьогодні</span>
-                <p className="text-2xl font-black text-[#e50914] mt-1">0 zł</p>
+
+              <div className="flex items-center gap-2">
+                {/* Інтерактивний захищений блок встановлення часу очікування (за замовчуванням 40 хв) */}
+                <div
+                  style={{
+                    clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                  }}
+                  className="flex items-center bg-[#151522] border border-amber-500/40 p-1 sm:p-1.5 gap-1.5 shadow-md shadow-black/60 select-none"
+                  title="Час приготування/доставки для клієнтів (за замовчуванням 40 хв)"
+                >
+                  <div className="flex items-center gap-1 pl-1.5 pr-1 text-amber-400 font-black text-[10px] sm:text-xs uppercase tracking-wider">
+                    <Timer className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span className="hidden sm:inline">Час очікування:</span>
+                    <span className="sm:hidden">Час:</span>
+                  </div>
+
+                  {/* Кнопка швидкого зменшення (-5 хв) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = Math.max(10, prepWaitTimeMinutes - 5);
+                      setPrepWaitTimeMinutes(next);
+                    }}
+                    className="w-6 h-6 sm:w-7 sm:h-7 rounded bg-[#202030] hover:bg-amber-500/20 text-zinc-300 hover:text-amber-300 font-black flex items-center justify-center transition-all cursor-pointer border border-white/10 active:scale-95"
+                    title="Зменшити на 5 хв"
+                  >
+                    <Minus className="w-3 h-3" />
+                  </button>
+
+                  {/* Захищене поле числа (без реакції на колесико миші) */}
+                  <div className="relative flex items-center">
+                    <input
+                      type="number"
+                      min={10}
+                      max={240}
+                      step={5}
+                      value={tempWaitTime}
+                      onWheel={(e) => (e.target as HTMLElement).blur()} // блокуємо зміну колесиком миші
+                      onChange={(e) => {
+                        setTempWaitTime(e.target.value);
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val) && val >= 10 && val <= 240) {
+                          setPrepWaitTimeMinutes(val);
+                        }
+                      }}
+                      onBlur={() => {
+                        const val = parseInt(tempWaitTime, 10);
+                        if (isNaN(val) || val < 10) {
+                          setTempWaitTime('10');
+                          setPrepWaitTimeMinutes(10);
+                        } else if (val > 240) {
+                          setTempWaitTime('240');
+                          setPrepWaitTimeMinutes(240);
+                        } else {
+                          setPrepWaitTimeMinutes(val);
+                        }
+                      }}
+                      className="w-12 sm:w-14 text-center font-mono font-black text-xs sm:text-sm bg-black/60 text-white border border-amber-500/50 rounded py-0.5 sm:py-1 focus:outline-none focus:border-amber-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <span className="text-[10px] sm:text-xs text-amber-300 font-bold ml-1 mr-0.5">хв</span>
+                  </div>
+
+                  {/* Кнопка швидкого збільшення (+5 хв) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = Math.min(240, prepWaitTimeMinutes + 5);
+                      setPrepWaitTimeMinutes(next);
+                    }}
+                    className="w-6 h-6 sm:w-7 sm:h-7 rounded bg-[#202030] hover:bg-amber-500/20 text-zinc-300 hover:text-amber-300 font-black flex items-center justify-center transition-all cursor-pointer border border-white/10 active:scale-95"
+                    title="Збільшити на 5 хв"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
+
+                {/* Кнопка перегляду скасованих замовлень (якщо є) */}
+                {cancelledOrdersCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setOrderStatusFilter(orderStatusFilter === 'cancelled' ? 'pending' : 'cancelled')}
+                    style={{
+                      clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                    }}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 px-3 py-1.5 border font-bold text-[11px] sm:text-xs uppercase tracking-wider transition-all cursor-pointer',
+                      orderStatusFilter === 'cancelled'
+                        ? 'bg-rose-500/20 border-rose-500 text-rose-300 shadow-sm'
+                        : 'bg-[#171724] hover:bg-[#202030] border-white/10 text-zinc-400 hover:text-zinc-200'
+                    )}
+                    title="Переглянути скасовані замовлення"
+                  >
+                    <Ban className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Скасовані ({cancelledOrdersCount})</span>
+                  </button>
+                )}
               </div>
             </div>
 
-            <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-6 sm:p-8">
-              <h2 className="text-lg font-black text-white uppercase tracking-wide mb-1">
-                Потік замовлень
-              </h2>
-              <p className="text-xs text-zinc-400 mb-8">
-                Замовлення клієнтів з кошика будуть надходити сюди в реальному часі через таблицю orders.
-              </p>
-              <div className="py-16 flex flex-col items-center justify-center text-center">
-                <div className="w-14 h-14 rounded-full bg-[#181824] flex items-center justify-center mb-3">
-                  <ShoppingBag className="w-7 h-7 text-[#e50914]" />
+            {/* 4 великі клікабельні плашки етапів замовлення (Нові, Кухня, Курʼєр, Доставлено) */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+              {/* 1. НОВІ */}
+              <button
+                type="button"
+                onClick={() => setOrderStatusFilter('pending')}
+                style={{
+                  clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
+                }}
+                className={cn(
+                  'p-3.5 sm:p-4 text-left transition-all duration-200 cursor-pointer select-none relative overflow-hidden border',
+                  orderStatusFilter === 'pending'
+                    ? 'bg-rose-500/15 border-rose-500 text-rose-400 shadow-lg shadow-rose-500/20 ring-1 ring-rose-500/40'
+                    : 'bg-[#0f0f17] border-white/10 hover:border-white/25 hover:bg-[#151522] text-zinc-400 hover:text-white'
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider">
+                    Нові
+                  </span>
+                  {newOrdersCount > 0 ? (
+                    <span
+                      style={{
+                        clipPath: 'polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px)',
+                      }}
+                      className="px-1.5 py-0.5 text-[9px] bg-rose-600 text-white font-black"
+                    >
+                      +{newOrdersCount}
+                    </span>
+                  ) : (
+                    <span className="w-2 h-2 rounded-full bg-zinc-600" />
+                  )}
                 </div>
-                <h3 className="text-base font-bold text-white mb-1">Замовлень поки що немає</h3>
-                <p className="text-xs text-zinc-400 max-w-sm">
-                  Оформіть тестове замовлення через сайт, і воно миттєво з'явиться тут.
+                <p className={cn('text-2xl sm:text-3xl font-black mt-1.5', orderStatusFilter === 'pending' ? 'text-rose-400' : 'text-white')}>
+                  {newOrdersCount}
+                </p>
+                <div className="text-[10px] text-zinc-400 mt-0.5">Очікують підтвердження</div>
+                <div className="absolute -right-3 -bottom-3 text-rose-500/10 pointer-events-none">
+                  <ShoppingBag className="w-16 h-16" />
+                </div>
+              </button>
+
+              {/* 2. КУХНЯ */}
+              <button
+                type="button"
+                onClick={() => setOrderStatusFilter('in_progress')}
+                style={{
+                  clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
+                }}
+                className={cn(
+                  'p-3.5 sm:p-4 text-left transition-all duration-200 cursor-pointer select-none relative overflow-hidden border',
+                  orderStatusFilter === 'in_progress'
+                    ? 'bg-amber-500/15 border-amber-500 text-amber-400 shadow-lg shadow-amber-500/20 ring-1 ring-amber-500/40'
+                    : 'bg-[#0f0f17] border-white/10 hover:border-white/25 hover:bg-[#151522] text-zinc-400 hover:text-white'
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider">
+                    Кухня
+                  </span>
+                  <span className={cn('w-2 h-2 rounded-full', inKitchenCount > 0 ? 'bg-amber-500 animate-pulse' : 'bg-zinc-600')} />
+                </div>
+                <p className={cn('text-2xl sm:text-3xl font-black mt-1.5', orderStatusFilter === 'in_progress' ? 'text-amber-400' : 'text-white')}>
+                  {inKitchenCount}
+                </p>
+                <div className="text-[10px] text-zinc-400 mt-0.5">Готуються шефом</div>
+                <div className="absolute -right-3 -bottom-3 text-amber-500/10 pointer-events-none">
+                  <ChefHat className="w-16 h-16" />
+                </div>
+              </button>
+
+              {/* 3. КУРʼЄР */}
+              <button
+                type="button"
+                onClick={() => setOrderStatusFilter('in_delivery')}
+                style={{
+                  clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
+                }}
+                className={cn(
+                  'p-3.5 sm:p-4 text-left transition-all duration-200 cursor-pointer select-none relative overflow-hidden border',
+                  orderStatusFilter === 'in_delivery'
+                    ? 'bg-purple-500/15 border-purple-500 text-purple-400 shadow-lg shadow-purple-500/20 ring-1 ring-purple-500/40'
+                    : 'bg-[#0f0f17] border-white/10 hover:border-white/25 hover:bg-[#151522] text-zinc-400 hover:text-white'
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider">
+                    Курʼєр
+                  </span>
+                  <span className={cn('w-2 h-2 rounded-full', inDeliveryCount > 0 ? 'bg-purple-500' : 'bg-zinc-600')} />
+                </div>
+                <p className={cn('text-2xl sm:text-3xl font-black mt-1.5', orderStatusFilter === 'in_delivery' ? 'text-purple-400' : 'text-white')}>
+                  {inDeliveryCount}
+                </p>
+                <div className="text-[10px] text-zinc-400 mt-0.5">В дорозі до клієнта</div>
+                <div className="absolute -right-3 -bottom-3 text-purple-500/10 pointer-events-none">
+                  <Truck className="w-16 h-16" />
+                </div>
+              </button>
+
+              {/* 4. ДОСТАВЛЕНО (всі виконані замовлення по днях) */}
+              <button
+                type="button"
+                onClick={() => setOrderStatusFilter('delivered')}
+                style={{
+                  clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
+                }}
+                className={cn(
+                  'p-3.5 sm:p-4 text-left transition-all duration-200 cursor-pointer select-none relative overflow-hidden border',
+                  orderStatusFilter === 'delivered'
+                    ? 'bg-emerald-500/15 border-emerald-500 text-emerald-400 shadow-lg shadow-emerald-500/20 ring-1 ring-emerald-500/40'
+                    : 'bg-[#0f0f17] border-white/10 hover:border-white/25 hover:bg-[#151522] text-zinc-400 hover:text-white'
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider">
+                    Доставлено
+                  </span>
+                  <span className={cn('w-2 h-2 rounded-full', orders.filter((o) => o.status === 'delivered').length > 0 ? 'bg-emerald-500' : 'bg-zinc-600')} />
+                </div>
+                <p className={cn('text-2xl sm:text-3xl font-black mt-1.5', orderStatusFilter === 'delivered' ? 'text-emerald-400' : 'text-white')}>
+                  {orders.filter((o) => o.status === 'delivered').length}
+                </p>
+                <div className="text-[10px] text-zinc-400 mt-0.5">
+                  {historyByDays.length > 0 ? `${historyByDays.length} дн. в архіві` : 'Виконані замовлення'}
+                </div>
+                <div className="absolute -right-3 -bottom-3 text-emerald-500/10 pointer-events-none">
+                  <CheckCircle2 className="w-16 h-16" />
+                </div>
+              </button>
+            </div>
+
+            {/* Вміст: Доставлені замовлення по днях АБО активний список замовлень */}
+            {orderStatusFilter === 'delivered' ? (
+              historyByDays.length === 0 ? (
+                <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-12 text-center space-y-3">
+                  <div className="w-14 h-14 rounded-full bg-[#181824] flex items-center justify-center mx-auto text-zinc-500">
+                    <CheckCircle2 className="w-7 h-7" />
+                  </div>
+                  <h3 className="text-base font-bold text-white">Немає доставлених замовлень</h3>
+                  <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+                    Тут збиратимуться всі виконані замовлення, згруповані по днях із касою за кожен день.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {historyByDays.map((dayGroup) => {
+                    const isCollapsed = collapsedHistoryDays.has(dayGroup.dateKey);
+                    return (
+                      <div key={dayGroup.dateKey} className="space-y-3">
+                        {/* Плашка дня */}
+                        <button
+                          type="button"
+                          onClick={() => toggleHistoryDay(dayGroup.dateKey)}
+                          style={{
+                            clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
+                          }}
+                          className="w-full p-3.5 sm:p-4 bg-[#141420] hover:bg-[#1a1a28] border border-white/10 hover:border-white/20 transition-all flex flex-wrap items-center justify-between gap-3 text-left cursor-pointer select-none"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-lg bg-sky-500/10 border border-sky-500/30 text-sky-400 flex items-center justify-center shrink-0">
+                              <Calendar className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="text-sm sm:text-base font-black text-white capitalize">
+                                {dayGroup.dateLabel}
+                              </div>
+                              <div className="text-xs text-zinc-400 flex items-center gap-2 mt-0.5">
+                                <span>{dayGroup.orders.length} {dayGroup.orders.length === 1 ? 'замовлення' : dayGroup.orders.length < 5 ? 'замовлення' : 'замовлень'}</span>
+                                <span>•</span>
+                                <span className="text-emerald-400 font-semibold">{dayGroup.deliveredCount} виконано</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-4">
+                            <div className="text-right">
+                              <span className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">Каса за день</span>
+                              <span className="text-base sm:text-lg font-black text-[#e50914]">{formatPrice(dayGroup.totalRevenue)}</span>
+                            </div>
+                            <ChevronDown
+                              className={cn(
+                                'w-5 h-5 text-zinc-400 transition-transform duration-200',
+                                !isCollapsed && 'rotate-180 text-white'
+                              )}
+                            />
+                          </div>
+                        </button>
+
+                        {/* Замовлення за цей день */}
+                        {!isCollapsed && (
+                          <div className="space-y-3.5 pl-0 sm:pl-3 border-l-0 sm:border-l-2 border-sky-500/20">
+                            {dayGroup.orders.map((order, idx) => renderOrderCard(order, idx, false))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )
+            ) : filteredOrders.length === 0 ? (
+              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-12 text-center space-y-3">
+                <div className="w-14 h-14 rounded-full bg-[#181824] flex items-center justify-center mx-auto text-zinc-500">
+                  <ShoppingBag className="w-7 h-7" />
+                </div>
+                <h3 className="text-base font-bold text-white">
+                  {orderStatusFilter === 'pending' && 'Немає нових замовлень'}
+                  {orderStatusFilter === 'in_progress' && 'На кухні чисто — замовлень немає'}
+                  {orderStatusFilter === 'in_delivery' && 'Зараз немає замовлень у дорозі'}
+                  {orderStatusFilter === 'delivered' && 'Немає виконаних замовлень'}
+                  {orderStatusFilter === 'cancelled' && 'Немає скасованих замовлень'}
+                </h3>
+                <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+                  {orderStatusFilter === 'pending' && 'Коли клієнт оформить замовлення на сайті, воно з\'явиться тут автоматично зі звуковим сигналом.'}
+                  {orderStatusFilter === 'in_progress' && 'Прийміть нове замовлення на кухню, і воно відобразиться тут для приготування.'}
+                  {orderStatusFilter === 'in_delivery' && 'Передайте готове замовлення курʼєру або на видачу.'}
+                  {orderStatusFilter === 'delivered' && 'Тут зберігаються замовлення, які вже успішно передані клієнту.'}
+                  {orderStatusFilter === 'cancelled' && 'Скасовані замовлення зʼявляються тут з можливістю їх відновлення.'}
                 </p>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredOrders.map((order, idx) => renderOrderCard(order, idx, idx === 0 && orderStatusFilter === 'in_progress'))}
+              </div>
+            )}
           </div>
         )}
 

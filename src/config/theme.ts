@@ -45,7 +45,8 @@ export const brandTheme = {
     deliveryFee: 12,             // Вартість стандартної доставки (PLN)
     estimatedDeliveryTime: '30-45', // Хвилини
     estimatedPickupTime: '15-20',   // Хвилини
-    pickupDiscountPercent: 5,    // Знижка на самовивіз (5%) з меню
+    pickupDiscountPercent: 5,    // Знижка на самовивіз (5%)
+    birthdayDiscountPercent: 10, // Знижка на день народження (10%)
     currency: {
       pl: 'zł',
       uk: 'грн', // або zł при замовленні в Польщі для українців

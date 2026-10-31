@@ -34,6 +34,10 @@ interface CartState {
   isMenuOpen: boolean;
   setIsMenuOpen: (open: boolean) => void;
 
+  // Час очікування приготування/доставки від закладу (в хвилинах)
+  prepWaitTimeMinutes: number;
+  setPrepWaitTimeMinutes: (minutes: number) => void;
+
   // Обчислення
   getTotalCount: () => number;
   getSubtotal: () => number;
@@ -58,6 +62,8 @@ export const useCartStore = create<CartState>()(
       setActiveCardId: (id: string | null) => set({ activeCardId: id }),
       isMenuOpen: false,
       setIsMenuOpen: (open: boolean) => set({ isMenuOpen: open }),
+      prepWaitTimeMinutes: 40,
+      setPrepWaitTimeMinutes: (minutes: number) => set({ prepWaitTimeMinutes: Math.max(10, Math.min(minutes, 240)) }),
 
       addItem: (product: Product, quantity = 1) => {
         set((state) => {
@@ -149,7 +155,7 @@ export const useCartStore = create<CartState>()(
         const subtotal = get().getSubtotal();
         const deliveryFee = get().getDeliveryFee(isPickup);
         if (isPickup) {
-          // Знижка на самовивіз 10%
+          // Знижка на самовивіз 5%
           const discounted = Math.round(subtotal * (1 - brandTheme.delivery.pickupDiscountPercent / 100));
           return discounted;
         }
@@ -166,10 +172,11 @@ export const useCartStore = create<CartState>()(
     {
       name: 'max-sushi-cart-storage',
       storage: createJSONStorage(() => localStorage),
-      // Зберігаємо в LocalStorage тільки елементи кошика та кількість приборів, щоб модалки не залишалися відкритими при перезавантаженні
+      // Зберігаємо в LocalStorage тільки елементи кошика, кількість приборів та час очікування
       partialize: (state) => ({
         items: state.items,
         personsCount: state.personsCount,
+        prepWaitTimeMinutes: state.prepWaitTimeMinutes,
       }),
     }
   )

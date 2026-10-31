@@ -52,7 +52,7 @@
     "freeDeliveryFrom": "Darmowa dostawa od",
     "awayFromFreeDelivery": "Brakuje Ci jeszcze {{amount}} zł do darmowej dostawy!",
     "qualifiesForFreeDelivery": "Super! Masz darmową dostawę!",
-    "chopsticks": "Liczba pałeczek i sztućców",
+    "chopsticks": "Pałeczki i sztućce",
     "chopsticksHelp": "Wybierz liczbę osób, dla których dołączymy pałeczki, sos sojowy, imbir i wasabi",
     "persons": "os.",
     "checkout": "Przejdź do kasy",
@@ -100,6 +100,7 @@
     "successMessage": "Twoje zamówienie zostało przyjęte i szef kuchni już przystąpił do przygotowania!",
     "orderNumber": "Numer zamówienia",
     "estimatedTime": "Szacowany czas dostawy",
+    "estimatedPickupTime": "Czas gotowości do odbioru",
     "backToMenu": "Wróć do menu",
     "errors": {
       "nameRequired": "Proszę podać imię i nazwisko",

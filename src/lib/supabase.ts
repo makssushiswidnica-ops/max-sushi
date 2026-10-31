@@ -39,6 +39,8 @@ export async function createOrder(order: Order): Promise<{ success: boolean; ord
             delivery_fee: order.deliveryFee,
             total: order.total,
             comment: order.comment,
+            timing_type: order.timingType,
+            scheduled_time: order.scheduledTime,
             status: order.status,
             created_at: order.createdAt,
           },
