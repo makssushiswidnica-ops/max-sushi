@@ -4084,11 +4084,11 @@ export default function AdminPage() {
                       key: 'blik',
                       label: 'BLIK онлайн',
                       customBadge: (
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-400/20 text-amber-400 border border-amber-400/30 tracking-wider">
+                        <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-black text-white border border-white/80 tracking-wider inline-flex items-center justify-center shadow-sm">
                           BLIK
                         </span>
                       ),
-                      bar: 'bg-amber-400',
+                      bar: 'bg-white',
                       data: statsData.paymentStats.blik,
                     },
                     {
