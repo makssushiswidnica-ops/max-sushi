@@ -155,6 +155,18 @@ export default function AdminPage() {
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
   const [collapsedHistoryDays, setCollapsedHistoryDays] = useState<Set<string>>(new Set());
   const [statsPeriod, setStatsPeriod] = useState<'today' | '7days' | '30days' | 'all'>('7days');
+  const chartScrollRef = useRef<HTMLDivElement>(null);
+  
+  // Автоматичне прокручування графіка виручки праворуч (до найновіших дат) при зміні періоду
+  useEffect(() => {
+    if (chartScrollRef.current) {
+      setTimeout(() => {
+        if (chartScrollRef.current) {
+          chartScrollRef.current.scrollLeft = chartScrollRef.current.scrollWidth;
+        }
+      }, 50);
+    }
+  }, [statsPeriod]);
   
   // Відстеження вже відомих замовлень, щоб перемикати на "Нові" ЛИШЕ один раз при надходженні нового
   const knownOrderIdsRef = useRef<Set<string>>(new Set());
@@ -1077,31 +1089,53 @@ export default function AdminPage() {
     const shortDayNamesUk = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
     const fullDayNamesUk = ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'Пʼятниця', 'Субота'];
 
-    // Кількість робочих днів для графіка (пропускаючи вихідні дні закладу)
-    const targetBarsCount = statsPeriod === 'today' ? 1 : statsPeriod === '30days' ? 14 : statsPeriod === 'all' ? 18 : 7;
+    // Збираємо робочі дні для графіка відповідно до обраного періоду (пропускаючи вихідні закладу)
     const workingDaysList: Date[] = [];
 
-    let dayOffset = 0;
-    const maxLookbackDays = 60;
-
-    while (workingDaysList.length < targetBarsCount && dayOffset < maxLookbackDays) {
-      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOffset);
-      const isClosed = isDayClosed(d);
-
-      if (statsPeriod === 'today') {
-        workingDaysList.push(d);
-        break;
+    if (statsPeriod === 'today') {
+      workingDaysList.push(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
+    } else if (statsPeriod === '7days') {
+      // 7 календарних днів (пропускаючи понеділки)
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+        if (!isDayClosed(d)) {
+          workingDaysList.push(d);
+        }
       }
-
-      // Пропускаємо вихідні дні закладу (понеділки)
-      if (!isClosed) {
-        workingDaysList.push(d);
+    } else if (statsPeriod === '30days') {
+      // Повні 30 днів (пропускаючи вихідні понеділки -> ~26 робочих днів)
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+        if (!isDayClosed(d)) {
+          workingDaysList.push(d);
+        }
       }
-      dayOffset++;
+    } else {
+      // 'all' — Весь час від найпершого замовлення до сьогодні (пропускаючи понеділки)
+      const validOrderTimestamps = orders
+        .map((o) => new Date(o.created_at).getTime())
+        .filter((t) => !isNaN(t) && t > 0);
+
+      const earliestTime = validOrderTimestamps.length > 0 
+        ? Math.min(...validOrderTimestamps) 
+        : now.getTime() - 30 * 24 * 60 * 60 * 1000;
+
+      const earliestDate = new Date(earliestTime);
+      const startDay = new Date(earliestDate.getFullYear(), earliestDate.getMonth(), earliestDate.getDate());
+      const endDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      const diffDays = Math.min(
+        Math.max(1, Math.round((endDay.getTime() - startDay.getTime()) / (24 * 60 * 60 * 1000))),
+        180
+      );
+
+      for (let i = diffDays; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+        if (!isDayClosed(d)) {
+          workingDaysList.push(d);
+        }
+      }
     }
-
-    // Хронологічний порядок (зліва направо)
-    workingDaysList.reverse();
 
     const startOfPeriod = workingDaysList.length > 0 
       ? new Date(workingDaysList[0].getFullYear(), workingDaysList[0].getMonth(), workingDaysList[0].getDate()).getTime()
@@ -3746,8 +3780,8 @@ export default function AdminPage() {
                 </p>
               </div>
 
-              {/* Перемикач періоду */}
-              <div className="flex items-center gap-1.5 p-1 bg-[#151520] border border-white/10 rounded-xl self-start sm:self-auto">
+              {/* Перемикач періоду (в дизайні як категорії в StickyNav з червоним підкресленням) */}
+              <div className="flex items-center gap-1 sm:gap-2 self-start sm:self-auto overflow-x-auto no-scrollbar max-w-full pb-1 sm:pb-0">
                 {(
                   [
                     { id: 'today', label: 'Сьогодні' },
@@ -3755,29 +3789,43 @@ export default function AdminPage() {
                     { id: '30days', label: '30 днів' },
                     { id: 'all', label: 'Весь час' },
                   ] as const
-                ).map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setStatsPeriod(p.id)}
-                    className={cn(
-                      'px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer select-none',
-                      statsPeriod === p.id
-                        ? 'bg-[#e50914] text-white shadow-md shadow-[#e50914]/30'
-                        : 'text-zinc-400 hover:text-white'
-                    )}
-                  >
-                    {p.label}
-                  </button>
-                ))}
+                ).map((p) => {
+                  const isActive = statsPeriod === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setStatsPeriod(p.id)}
+                      className={cn(
+                        'relative px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-[13px] font-bold tracking-wide uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none active:scale-95',
+                        isActive
+                          ? 'text-white font-black'
+                          : 'text-zinc-400 hover:text-white'
+                      )}
+                    >
+                      <span className="relative z-10">{p.label}</span>
+                      {/* Неонова рубінова лінія підкреслення як у категоріях меню */}
+                      <span
+                        className={cn(
+                          'absolute bottom-0 left-2 right-2 h-[2.5px] rounded-full transition-all duration-300 ease-out',
+                          isActive
+                            ? 'bg-gradient-to-r from-[#e50914] via-[#ff4d58] to-[#e50914] shadow-[0_0_12px_#e50914] opacity-100 scale-x-100'
+                            : 'opacity-0 scale-x-50 pointer-events-none'
+                        )}
+                      />
+                    </button>
+                  );
+                })}
+
+                <div className="h-5 w-[1px] bg-white/10 mx-1 shrink-0" />
 
                 <button
                   type="button"
                   onClick={() => loadOrders(true)}
                   title="Оновити дані"
-                  className="p-1.5 text-zinc-400 hover:text-white transition-colors cursor-pointer rounded-lg hover:bg-white/5 ml-1"
+                  className="p-1.5 text-zinc-400 hover:text-white transition-colors cursor-pointer rounded-lg hover:bg-white/5 active:scale-95"
                 >
-                  <RefreshCw className={cn('w-3.5 h-3.5', isLoadingOrders && 'animate-spin text-[#e50914]')} />
+                  <RefreshCw className={cn('w-4 h-4', isLoadingOrders && 'animate-spin text-[#e50914]')} />
                 </button>
               </div>
             </div>
@@ -3903,61 +3951,91 @@ export default function AdminPage() {
                     </span>
                   </div>
 
-                  {/* Стовпчаста діаграма */}
+                  {/* Стовпчаста діаграма зі скролом при великій кількості стовпчиків */}
                   <div className="pt-6 pb-2">
-                    <div className="h-44 sm:h-52 flex items-end justify-between gap-1.5 sm:gap-4 border-b border-white/10 pb-2">
-                      {statsData.chartBars.map((bar, idx) => {
-                        const heightPercent = Math.max(
-                          bar.revenue > 0 ? Math.round((bar.revenue / statsData.maxBarRevenue) * 100) : 4,
-                          bar.count > 0 ? 8 : 4
-                        );
-                        const isLatest = idx === statsData.chartBars.length - 1;
+                    <div
+                      ref={chartScrollRef}
+                      className="overflow-x-auto pb-2 scroll-smooth select-none"
+                      style={{
+                        scrollbarWidth: 'thin',
+                        scrollbarColor: 'rgba(255, 255, 255, 0.25) rgba(255, 255, 255, 0.05)',
+                      }}
+                    >
+                      <div className={cn(
+                        'h-44 sm:h-52 flex items-end border-b border-white/10 pb-2',
+                        statsData.chartBars.length <= 8
+                          ? 'w-full justify-between gap-1.5 sm:gap-4'
+                          : 'min-w-max justify-start gap-1.5 sm:gap-2.5 px-1'
+                      )}>
+                        {statsData.chartBars.map((bar, idx) => {
+                          const heightPercent = Math.max(
+                            bar.revenue > 0 ? Math.round((bar.revenue / statsData.maxBarRevenue) * 100) : 4,
+                            bar.count > 0 ? 8 : 4
+                          );
+                          const isLatest = idx === statsData.chartBars.length - 1;
 
-                        return (
-                          <div
-                            key={bar.dateStr}
-                            className="flex-1 flex flex-col items-center justify-end h-full group/bar relative"
-                          >
-                            {/* Спливаюча підказка (Tooltip) при наведенні */}
-                            <div className="absolute -top-12 z-30 opacity-0 group-hover/bar:opacity-100 transition-opacity pointer-events-none bg-black/95 text-white text-[10px] px-2.5 py-1.5 rounded-lg border border-white/20 whitespace-nowrap shadow-xl">
-                              <p className="font-bold">{bar.fullDateLabel}</p>
-                              <p className="text-emerald-400 font-mono">
-                                {formatPrice(bar.revenue, 'pl')} {bar.count > 0 ? `(${bar.count} зам.)` : '(0 зам.)'}
-                              </p>
-                            </div>
+                          return (
+                            <div
+                              key={bar.dateStr}
+                              className={cn(
+                                'flex flex-col items-center justify-end h-full group/bar relative',
+                                statsData.chartBars.length <= 8
+                                  ? 'flex-1 max-w-[42px]'
+                                  : 'w-7 sm:w-8 shrink-0'
+                              )}
+                            >
+                              {/* Спливаюча підказка (Tooltip) при наведенні */}
+                              <div className="absolute -top-12 z-30 opacity-0 group-hover/bar:opacity-100 transition-opacity pointer-events-none bg-black/95 text-white text-[10px] px-2.5 py-1.5 rounded-lg border border-white/20 whitespace-nowrap shadow-xl">
+                                <p className="font-bold">{bar.fullDateLabel}</p>
+                                <p className="text-emerald-400 font-mono">
+                                  {formatPrice(bar.revenue, 'pl')} {bar.count > 0 ? `(${bar.count} зам.)` : '(0 зам.)'}
+                                </p>
+                              </div>
 
-                            {/* Стовпчик */}
-                            <div className="w-full max-w-[42px] bg-white/5 rounded-t-lg overflow-hidden flex flex-col justify-end h-full">
-                              <div
-                                style={{ height: `${heightPercent}%` }}
-                                className={cn(
-                                  'w-full transition-all duration-500 rounded-t-lg',
-                                  isLatest
-                                    ? 'bg-gradient-to-t from-[#e50914] to-[#ff4d58] shadow-md shadow-[#e50914]/40'
-                                    : bar.revenue > 0
-                                    ? 'bg-gradient-to-t from-[#8b1419] to-[#e50914] group-hover/bar:brightness-125'
-                                    : 'bg-white/10'
-                                )}
-                              />
-                            </div>
+                              {/* Стовпчик */}
+                              <div className="w-full bg-white/5 rounded-t-lg overflow-hidden flex flex-col justify-end h-full">
+                                <div
+                                  style={{ height: `${heightPercent}%` }}
+                                  className={cn(
+                                    'w-full transition-all duration-500 rounded-t-lg',
+                                    isLatest
+                                      ? 'bg-gradient-to-t from-[#e50914] to-[#ff4d58] shadow-md shadow-[#e50914]/40'
+                                      : bar.revenue > 0
+                                      ? 'bg-gradient-to-t from-[#8b1419] to-[#e50914] group-hover/bar:brightness-125'
+                                      : 'bg-white/10'
+                                  )}
+                                />
+                              </div>
 
-                            {/* Дата та день тижня під стовпчиком */}
-                            <div className={cn(
-                              'text-[10px] mt-2 font-mono text-center flex flex-col items-center leading-tight',
-                              isLatest ? 'text-white font-bold' : 'text-zinc-500'
-                            )}>
-                              <span className={cn(
-                                'text-[9px] uppercase tracking-wider font-sans font-semibold',
-                                isLatest ? 'text-red-400' : 'text-zinc-400'
+                              {/* Дата та день тижня під стовпчиком */}
+                              <div className={cn(
+                                'text-[10px] mt-2 font-mono text-center flex flex-col items-center leading-tight whitespace-nowrap',
+                                isLatest ? 'text-white font-bold' : 'text-zinc-500'
                               )}>
-                                {bar.dayName}
-                              </span>
-                              <span className="text-[10px]">{bar.label}</span>
+                                <span className={cn(
+                                  'text-[8px] sm:text-[9px] uppercase tracking-wider font-sans font-semibold',
+                                  isLatest ? 'text-red-400' : 'text-zinc-400'
+                                )}>
+                                  {bar.dayName}
+                                </span>
+                                <span className="text-[9px] sm:text-[10px]">{bar.label}</span>
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
+
+                    {/* Підказка щодо горизонтального скролу, якщо стовпчиків багато */}
+                    {statsData.chartBars.length > 8 && (
+                      <div className="flex items-center justify-between text-[10px] text-zinc-500 pt-2 px-1">
+                        <span className="flex items-center gap-1 text-zinc-400">
+                          <span>←</span>
+                          <span>Прокрутіть для перегляду попередніх днів</span>
+                        </span>
+                        <span className="font-mono text-zinc-400">{statsData.chartBars.length} роб. дн.</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
