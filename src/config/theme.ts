@@ -60,6 +60,7 @@ export const brandTheme = {
     phoneRaw: '791744048',
     address: 'ul. Parkowa 8, 58-100 Świdnica',
     shortAddress: 'Parkowa 8, Świdnica',
+    googleMapsUrl: 'https://www.google.com/maps/search/?api=1&query=Maks+Sushi,+ul.+Parkowa+8,+58-100+Świdnica',
     workingHours: '12:00 - 21:00 / 22:00',
     schedule: [
       { dayPl: 'Poniedziałek', dayUk: 'Понеділок', hours: 'Zamknięte', hoursUk: 'Зачинено', isClosed: true },

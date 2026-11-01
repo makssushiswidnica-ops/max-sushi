@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18nContext';
 import { brandTheme } from '@/config/theme';
-import { Phone, MapPin, Clock, Heart } from 'lucide-react';
+import { Phone, MapPin, Clock } from 'lucide-react';
 
 function InstagramIcon({ className }: { className?: string }) {
   return (
@@ -68,15 +68,21 @@ export function Footer() {
                 {brandTheme.contacts.phone}
               </a>
             </div>
-            <div className="flex items-start gap-2 text-zinc-300">
-              <MapPin className="w-4 h-4 text-[#e50914] shrink-0 mt-0.5" />
+            <a
+              href={brandTheme.contacts.googleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-start gap-2 text-zinc-300 hover:text-white transition-colors group cursor-pointer"
+              title={locale === 'pl' ? 'Pokaż na Google Maps' : 'Показати на Google Maps'}
+            >
+              <MapPin className="w-4 h-4 text-[#e50914] shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
               <div>
-                <span className="block font-medium">{brandTheme.contacts.address}</span>
-                <span className="text-[11px] text-zinc-500">
+                <span className="block font-medium group-hover:underline underline-offset-2">{brandTheme.contacts.address}</span>
+                <span className="text-[11px] text-zinc-500 group-hover:text-zinc-400">
                   {locale === 'pl' ? 'Odbiór osobisty i dostawa w Świdnicy' : 'Самовивіз та доставка по Свідниці'}
                 </span>
               </div>
-            </div>
+            </a>
 
             {/* Соціальні мережі */}
             <div className="pt-2 flex flex-col gap-2 text-xs">
@@ -126,13 +132,9 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500">
+        <div className="pt-8 flex items-center justify-center sm:justify-start text-xs text-zinc-500">
           <div>
             © {new Date().getFullYear()} {brandTheme.name}. {t.footer.rights}
-          </div>
-          <div className="flex items-center gap-1">
-            <span>Зроблено з любовʼю до якісних суші</span>
-            <Heart className="w-3.5 h-3.5 text-[#e50914] fill-[#e50914]" />
           </div>
         </div>
       </div>

@@ -72,10 +72,16 @@ export function Header() {
                   {storeStatus.todayHours}
                 </span>
               </div>
-              <div className="hidden md:flex items-center gap-1 text-zinc-400">
-                <MapPin className="w-3.5 h-3.5 text-[#e50914]" />
-                <span>{brandTheme.contacts.shortAddress}</span>
-              </div>
+              <a
+                href={brandTheme.contacts.googleMapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden md:flex items-center gap-1 text-zinc-400 hover:text-white transition-colors group cursor-pointer"
+                title={locale === 'pl' ? 'Pokaż na Google Maps' : 'Показати на Google Maps'}
+              >
+                <MapPin className="w-3.5 h-3.5 text-[#e50914] group-hover:scale-110 transition-transform" />
+                <span className="group-hover:underline underline-offset-2">{brandTheme.contacts.shortAddress}</span>
+              </a>
             </div>
 
             <div className="flex items-center gap-4">
