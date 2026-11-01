@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from 'next';
-import Script from 'next/script';
 import { Montserrat, Knewave, Unbounded, Dela_Gothic_One } from 'next/font/google';
 import localFont from 'next/font/local';
 import './globals.css';
+import { BisSkinCleanup } from '@/components/common/BisSkinCleanup';
 
 const montserrat = Montserrat({
   subsets: ['latin', 'cyrillic'],
@@ -68,39 +68,7 @@ export default function RootLayout({
   return (
     <html lang="pl" suppressHydrationWarning className={`${montserrat.variable} ${knewave.variable} ${delaGothicOne.variable} ${unbounded.variable} ${edoSZ.variable} dark antialiased`}>
       <body suppressHydrationWarning className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col font-sans selection:bg-[#e50914] selection:text-white">
-        <Script
-          id="bis-skin-cleanup"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  var origSetAttr = Element.prototype.setAttribute;
-                  Element.prototype.setAttribute = function(name, value) {
-                    if (name === 'bis_skin_checked') return;
-                    return origSetAttr.apply(this, arguments);
-                  };
-                  var origSetAttrNS = Element.prototype.setAttributeNS;
-                  Element.prototype.setAttributeNS = function(ns, name, value) {
-                    if (name === 'bis_skin_checked') return;
-                    return origSetAttrNS.apply(this, arguments);
-                  };
-                  if (typeof MutationObserver !== 'undefined') {
-                    var observer = new MutationObserver(function(mutations) {
-                      for (var i = 0; i < mutations.length; i++) {
-                        var m = mutations[i];
-                        if (m.type === 'attributes' && m.attributeName === 'bis_skin_checked') {
-                          m.target.removeAttribute('bis_skin_checked');
-                        }
-                      }
-                    });
-                    observer.observe(document.documentElement, { attributes: true, subtree: true, attributeFilter: ['bis_skin_checked'] });
-                  }
-                } catch(e) {}
-              })();
-            `,
-          }}
-        />
+        <BisSkinCleanup />
         {children}
       </body>
     </html>
