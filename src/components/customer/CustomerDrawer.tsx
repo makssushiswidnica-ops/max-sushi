@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   User, 
   Phone, 
@@ -83,19 +83,61 @@ export function CustomerDrawer() {
   // Історія замовлень
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
-  const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const ORDERS_PER_PAGE = 4;
+  const [ordersPerPage, setOrdersPerPage] = useState(6);
 
-  const toggleOrderExpand = (orderId: string) => {
-    setExpandedOrderIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(orderId)) {
-        next.delete(orderId);
+  const ordersContainerRef = useRef<HTMLDivElement | null>(null);
+  const orderCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Динамічний розрахунок кількості замовлень на сторінці залежно від висоти екрану
+  useEffect(() => {
+    const calcPerPage = () => {
+      if (typeof window === 'undefined') return;
+      const h = window.innerHeight;
+      const isMobile = window.innerWidth < 640;
+      if (isMobile) {
+        setOrdersPerPage(h < 680 ? 4 : 5);
       } else {
-        next.add(orderId);
+        if (h >= 1050) {
+          setOrdersPerPage(10);
+        } else if (h >= 880) {
+          setOrdersPerPage(8);
+        } else if (h >= 740) {
+          setOrdersPerPage(6);
+        } else {
+          setOrdersPerPage(5);
+        }
       }
-      return next;
+    };
+
+    calcPerPage();
+    window.addEventListener('resize', calcPerPage);
+    return () => window.removeEventListener('resize', calcPerPage);
+  }, []);
+
+  // Розгортання тільки однієї картки за раз + розумне докручування вгору, якщо знизу брак місця
+  const toggleOrderExpand = (orderId: string) => {
+    setExpandedOrderId((prev) => {
+      const willOpen = prev !== orderId;
+      if (willOpen) {
+        setTimeout(() => {
+          const el = orderCardRefs.current[orderId];
+          const container = ordersContainerRef.current;
+          if (el && container) {
+            const elRect = el.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            const bottomOverflow = elRect.bottom - containerRect.bottom;
+            if (bottomOverflow > -40) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            } else {
+              el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+          }
+        }, 120);
+        return orderId;
+      }
+      return null;
     });
   };
 
@@ -292,12 +334,18 @@ export function CustomerDrawer() {
     }
   };
 
-  // Розрахунок сторінок та пагінації замовлень
-  const totalPages = Math.max(1, Math.ceil(orders.length / ORDERS_PER_PAGE));
+  // Розрахунок сторінок та пагінації замовлень з урахуванням адаптивної висоти
+  const totalPages = Math.max(1, Math.ceil(orders.length / ordersPerPage));
   const paginatedOrders = orders.slice(
-    (currentPage - 1) * ORDERS_PER_PAGE,
-    currentPage * ORDERS_PER_PAGE
+    (currentPage - 1) * ordersPerPage,
+    currentPage * ordersPerPage
   );
+
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
 
   // Групуємо замовлення поточної сторінки по календарних датах
   const groupedOrders = paginatedOrders.reduce((acc, order) => {
@@ -668,8 +716,11 @@ export function CustomerDrawer() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {/* Контейнер списку з адаптивною висотою без безкінечного розтягування */}
-                  <div className="max-h-[calc(100vh-270px)] sm:max-h-[520px] overflow-y-auto pr-1 space-y-4 scrollbar-thin">
+                  {/* Контейнер списку з адаптивною висотою під висоту екрану */}
+                  <div
+                    ref={ordersContainerRef}
+                    className="max-h-[calc(100vh-270px)] sm:max-h-[calc(100vh-260px)] overflow-y-auto pr-1 space-y-4 scrollbar-thin scroll-smooth"
+                  >
                     {groupedOrders.map((group) => (
                       <div key={group.dateKey} className="space-y-2">
                         {/* Заголовок групи дати */}
@@ -685,12 +736,15 @@ export function CustomerDrawer() {
                         <div className="space-y-2">
                           {group.orders.map((order) => {
                             const isPickup = order.deliveryMethod === 'pickup';
-                            const isExpanded = expandedOrderIds.has(order.id);
+                            const isExpanded = expandedOrderId === order.id;
                             const itemsCount = (order.items || []).reduce((sum, item) => sum + item.quantity, 0);
 
                             return (
                               <div
                                 key={order.id}
+                                ref={(el) => {
+                                  orderCardRefs.current[order.id] = el;
+                                }}
                                 className="rounded-xl bg-[#14141e] border border-white/10 hover:border-white/20 transition-all overflow-hidden shadow-sm"
                               >
                                 {/* Згорнутий компактний рядок (клікабельний) */}
@@ -709,15 +763,15 @@ export function CustomerDrawer() {
                                     </span>
                                     <span
                                       className={cn(
-                                        'px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shrink-0',
-                                        order.status === 'pending' && 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-                                        order.status === 'confirmed' && 'bg-blue-500/15 text-blue-300 border-blue-500/30',
-                                        order.status === 'preparing' && 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-                                        order.status === 'in_delivery' && 'bg-purple-500/15 text-purple-300 border-purple-500/30',
-                                        order.status === 'delivered' && 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                                        'text-[11px] font-bold tracking-wide shrink-0',
+                                        order.status === 'pending' && 'text-[#e50914]',
+                                        order.status === 'confirmed' && 'text-amber-400',
+                                        order.status === 'preparing' && 'text-amber-400',
+                                        order.status === 'in_delivery' && 'text-sky-400',
+                                        order.status === 'delivered' && 'text-emerald-400'
                                       )}
                                     >
-                                      {order.status === 'pending' && (locale === 'pl' ? 'Nowe' : 'Нове')}
+                                      {order.status === 'pending' && (locale === 'pl' ? 'Niepotwierdzone' : 'Непідтверджено')}
                                       {order.status === 'confirmed' && (locale === 'pl' ? 'Potwierdzone' : 'Підтверджено')}
                                       {order.status === 'preparing' && (locale === 'pl' ? 'W kuchni' : 'Готується')}
                                       {order.status === 'in_delivery' && (isPickup ? (locale === 'pl' ? 'Do odbioru' : 'Готово') : (locale === 'pl' ? 'W drodze' : 'В дорозі'))}
