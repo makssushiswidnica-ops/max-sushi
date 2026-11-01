@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { ShoppingBag, ArrowRight, Trash2, Utensils, CheckCircle2, AlertCircle, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Drawer } from '@/components/ui/Drawer';
 import { CartItem } from '@/components/cart/CartItem';
@@ -30,6 +30,16 @@ export function CartDrawer() {
       (p) => p.categoryId === 'dodatki' && p.isAvailable !== false
     );
   }, [allProducts]);
+
+  // Неперервна трикратна петля додатків для безшовного нескінченного гортання
+  const loopedAddons = React.useMemo(() => {
+    if (sauceAddons.length === 0) return [];
+    return [
+      ...sauceAddons.map((a) => ({ ...a, _cloneKey: `${a.id}-set0` })),
+      ...sauceAddons.map((a) => ({ ...a, _cloneKey: `${a.id}-set1` })),
+      ...sauceAddons.map((a) => ({ ...a, _cloneKey: `${a.id}-set2` })),
+    ];
+  }, [sauceAddons]);
 
   const subtotal = useCartStore((s) => s.getSubtotal)();
   const deliveryFee = useCartStore((s) => s.getDeliveryFee)();
@@ -90,26 +100,56 @@ export function CartDrawer() {
     }
   };
 
+  // Ініціалізація скролу в центр безшовної петлі при відкритті кошика
+  useEffect(() => {
+    if (isOpen && carouselRef.current && sauceAddons.length > 0) {
+      const timer = setTimeout(() => {
+        const el = carouselRef.current;
+        if (el) {
+          const singleSetWidth = el.scrollWidth / 3;
+          if (el.scrollLeft < 15) {
+            el.scrollLeft = singleSetWidth;
+          }
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, sauceAddons.length]);
+
+  // Невидиме безшовне коригування положення в центральний набір карток
+  const handleCarouselScroll = () => {
+    const el = carouselRef.current;
+    if (!el || sauceAddons.length === 0) return;
+    const singleSetWidth = el.scrollWidth / 3;
+    if (singleSetWidth <= 0) return;
+
+    if (el.scrollLeft < singleSetWidth * 0.25) {
+      el.scrollLeft += singleSetWidth;
+    } else if (el.scrollLeft > singleSetWidth * 1.75) {
+      el.scrollLeft -= singleSetWidth;
+    }
+  };
+
+  // Неперервне плавне гортання без різкого відмотування на початок
   const scrollCarousel = (direction: 'left' | 'right') => {
     const el = carouselRef.current;
-    if (!el) return;
-    const cardWidth = 130;
-    const maxScroll = el.scrollWidth - el.clientWidth;
-    if (maxScroll <= 0) return;
+    if (!el || sauceAddons.length === 0) return;
+    const singleSetWidth = el.scrollWidth / 3;
+    if (singleSetWidth <= 0) return;
 
-    if (direction === 'right') {
-      if (el.scrollLeft >= maxScroll - 20) {
-        el.scrollTo({ left: 0, behavior: 'smooth' });
-      } else {
-        el.scrollBy({ left: cardWidth * 1.5, behavior: 'smooth' });
-      }
-    } else {
-      if (el.scrollLeft <= 20) {
-        el.scrollTo({ left: maxScroll, behavior: 'smooth' });
-      } else {
-        el.scrollBy({ left: -cardWidth * 1.5, behavior: 'smooth' });
-      }
+    // Якщо наближаємось до меж, непомітно зміщуємо базу в центральний набір
+    if (direction === 'right' && el.scrollLeft >= singleSetWidth * 1.6) {
+      el.scrollLeft -= singleSetWidth;
+    } else if (direction === 'left' && el.scrollLeft <= singleSetWidth * 0.4) {
+      el.scrollLeft += singleSetWidth;
     }
+
+    const cardWidth = 130;
+    const scrollAmount = cardWidth * 1.5;
+    el.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth',
+    });
   };
 
   return (
@@ -237,15 +277,16 @@ export function CartDrawer() {
 
                   <div 
                     ref={carouselRef}
+                    onScroll={handleCarouselScroll}
                     onMouseDown={handleMouseDown}
                     onMouseLeave={handleMouseLeave}
                     onMouseUp={handleMouseUp}
                     onMouseMove={handleMouseMove}
                     onWheel={handleWheel}
-                    className="flex gap-2.5 overflow-x-auto py-2.5 px-3 scrollbar-none snap-x cursor-grab active:cursor-grabbing select-none scroll-smooth"
+                    className="flex gap-2.5 overflow-x-auto py-2.5 px-3 scrollbar-none snap-x cursor-grab active:cursor-grabbing select-none"
                     style={{ WebkitOverflowScrolling: 'touch' }}
                   >
-                  {sauceAddons.map((addon) => {
+                  {loopedAddons.map((addon) => {
                     const cartItem = items.find((i) => i.product.id === addon.id);
                     const qty = cartItem ? cartItem.quantity : 0;
                     const name = typeof addon.name === 'object'
@@ -254,7 +295,7 @@ export function CartDrawer() {
 
                     return (
                       <div
-                        key={addon.id}
+                        key={addon._cloneKey}
                         className={cn(
                           'w-[116px] sm:w-[124px] shrink-0 snap-start rounded-xl p-3 flex flex-col justify-between transition-all duration-200 border relative select-none',
                           qty > 0
