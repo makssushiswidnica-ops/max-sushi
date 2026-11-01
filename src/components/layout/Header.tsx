@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ShoppingBag, Phone, Clock, MapPin, User } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
-import { useCustomerStore } from '@/store/useCustomerStore';
+import { useCustomerStore, normalizePhone } from '@/store/useCustomerStore';
 import { useI18n } from '@/lib/i18nContext';
 import { brandTheme, getStoreStatus } from '@/config/theme';
 import { formatPrice, cn } from '@/lib/utils';
@@ -23,12 +23,71 @@ export function Header() {
   const [mounted, setMounted] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [hasNewAdminOrder, setHasNewAdminOrder] = useState(false);
+  const [customerOrderStatus, setCustomerOrderStatus] = useState<'pending' | 'kitchen' | 'in_delivery' | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Відстеження адмін-сесії та надходження нових замовлень у реальному часі
+  // Перевірка активного замовлення авторизованого клієнта
+  const checkCustomerOrderStatus = async () => {
+    if (!customer?.phone) {
+      setCustomerOrderStatus(null);
+      return;
+    }
+    const digits = normalizePhone(customer.phone).slice(-9);
+    if (!digits) {
+      setCustomerOrderStatus(null);
+      return;
+    }
+
+    try {
+      let activeStatus: 'pending' | 'kitchen' | 'in_delivery' | null = null;
+      if (isSupabaseConfigured) {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('status, created_at')
+          .ilike('phone', `%${digits}%`)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (!error && data && data.length > 0) {
+          const active = data.find((o: any) => o.status !== 'delivered' && o.status !== 'cancelled');
+          if (active) {
+            if (active.status === 'pending') activeStatus = 'pending';
+            else if (active.status === 'confirmed' || active.status === 'preparing') activeStatus = 'kitchen';
+            else if (active.status === 'in_delivery') activeStatus = 'in_delivery';
+          }
+        }
+      }
+
+      if (!activeStatus && typeof window !== 'undefined') {
+        const local = JSON.parse(localStorage.getItem('max-sushi-orders') || '[]');
+        if (Array.isArray(local)) {
+          const matching = local.filter((o: any) => normalizePhone(o.phone || '').includes(digits));
+          const active = matching.find((o: any) => o.status !== 'delivered' && o.status !== 'cancelled');
+          if (active) {
+            if (active.status === 'pending') activeStatus = 'pending';
+            else if (active.status === 'confirmed' || active.status === 'preparing') activeStatus = 'kitchen';
+            else if (active.status === 'in_delivery') activeStatus = 'in_delivery';
+          }
+        }
+      }
+
+      setCustomerOrderStatus(activeStatus);
+    } catch (err) {}
+  };
+
+  // Реактивне оновлення статусу замовлення при зміні профілю клієнта
+  useEffect(() => {
+    if (mounted && customer) {
+      checkCustomerOrderStatus();
+    } else if (!customer) {
+      setCustomerOrderStatus(null);
+    }
+  }, [mounted, customer]);
+
+  // Відстеження адмін-сесії та надходження замовлень у реальному часі
   useEffect(() => {
     if (!mounted) return;
 
@@ -99,8 +158,12 @@ export function Header() {
     const onAdminAuthChange = () => verifyAdmin();
     const onNewOrder = () => {
       if (isMounted) setHasNewAdminOrder(true);
+      checkCustomerOrderStatus();
     };
-    const onOrdersUpdate = () => checkPendingOrders();
+    const onOrdersUpdate = () => {
+      checkPendingOrders();
+      checkCustomerOrderStatus();
+    };
 
     window.addEventListener('admin-auth-changed', onAdminAuthChange);
     window.addEventListener('max-sushi-new-order', onNewOrder);
@@ -120,6 +183,7 @@ export function Header() {
             } else {
               checkPendingOrders();
             }
+            checkCustomerOrderStatus();
           }
         )
         .subscribe();
@@ -127,7 +191,8 @@ export function Header() {
 
     const interval = setInterval(() => {
       checkPendingOrders();
-    }, 25000);
+      checkCustomerOrderStatus();
+    }, 20000);
 
     return () => {
       isMounted = false;
@@ -148,6 +213,7 @@ export function Header() {
   const subtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
   const displayTotalCount = mounted ? totalCount : 0;
   const displaySubtotal = mounted ? subtotal : 0;
+
   // Захист від розбіжності часу SSR та клієнта:
   const defaultStatus = {
     isOpen: true,
@@ -166,10 +232,71 @@ export function Header() {
     }
   }, [totalCount, subtotal, mounted]);
 
+  // Підказка кнопки користувача
+  const getUserButtonTitle = () => {
+    if (isAdmin) {
+      return hasNewAdminOrder
+        ? (locale === 'pl' ? 'Nowe zamówienie! Kliknij, aby przejść do panelu' : 'Нове замовлення! Клікніть, щоб відкрити адмінку')
+        : (locale === 'pl' ? 'Panel administratora' : 'Панель адміністратора');
+    }
+    if (customer) {
+      if (customerOrderStatus === 'pending') {
+        return locale === 'pl' ? 'Twoje zamówienie oczekuje na potwierdzenie' : 'Ваше замовлення очікує підтвердження';
+      }
+      if (customerOrderStatus === 'kitchen') {
+        return locale === 'pl' ? 'Twoje zamówienie jest przygotowywane na kuchni' : 'Ваше замовлення готується на кухні';
+      }
+      if (customerOrderStatus === 'in_delivery') {
+        return locale === 'pl' ? 'Twoje zamówienie jest w drodze!' : 'Ваше замовлення в дорозі!';
+      }
+      return t.customer.myAccount;
+    }
+    return t.customer.loginTitle;
+  };
+
+  // Стиль рамки та фону кнопки користувача
+  const getUserButtonClassName = () => {
+    if (isAdmin && hasNewAdminOrder) {
+      return 'bg-[#1a0808] border-[#e50914] shadow-[0_0_12px_rgba(229,9,20,0.5)]';
+    }
+    if (!isAdmin && customer) {
+      if (customerOrderStatus === 'pending') {
+        return 'bg-[#1a0808] border-[#e50914] shadow-[0_0_12px_rgba(229,9,20,0.5)]';
+      }
+      if (customerOrderStatus === 'kitchen') {
+        return 'bg-[#1c1808] border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.5)]';
+      }
+      if (customerOrderStatus === 'in_delivery') {
+        return 'bg-[#0a1224] border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.5)]';
+      }
+      return 'bg-[#181824] hover:bg-[#202030] border-white/10 text-white shadow-sm';
+    }
+    return 'bg-[#131318] hover:bg-[#1a1a22] border-white/10 text-zinc-300 hover:text-white';
+  };
+
+  // Стиль і колір пульсації іконки без жодних крапок
+  const getUserIconClassName = () => {
+    if (isAdmin && hasNewAdminOrder) {
+      return 'text-[#e50914] animate-pulse drop-shadow-[0_0_8px_rgba(229,9,20,0.9)] scale-110';
+    }
+    if (!isAdmin && customer) {
+      if (customerOrderStatus === 'pending') {
+        return 'text-[#e50914] animate-pulse drop-shadow-[0_0_8px_rgba(229,9,20,0.9)] scale-110';
+      }
+      if (customerOrderStatus === 'kitchen') {
+        return 'text-amber-400 animate-pulse drop-shadow-[0_0_8px_rgba(251,191,36,0.9)] scale-110';
+      }
+      if (customerOrderStatus === 'in_delivery') {
+        return 'text-blue-500 animate-pulse drop-shadow-[0_0_8px_rgba(59,130,246,0.9)] scale-110';
+      }
+    }
+    return 'text-[#e50914]';
+  };
+
   return (
     <>
       <header className="sticky top-0 z-40 w-full glass-nav border-b border-white/10 transition-all">
-        {/* Верхня інформаційна стрічка: тепер видна і на мобільних телефонах */}
+        {/* Верхня інформаційна стрічка */}
         <div className="border-b border-white/5 bg-[#070709]/90 py-1.5 sm:py-2 text-[11px] sm:text-xs text-zinc-400">
           <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center justify-between">
             <div className="flex items-center gap-3 sm:gap-5">
@@ -219,15 +346,12 @@ export function Header() {
 
         {/* Головна панель навігації */}
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-15 sm:h-18 flex items-center justify-between">
-          {/* Логотип: повертає на самий верх сторінки */}
+          {/* Логотип */}
           <div className="flex items-center gap-2">
             <Link
               href={`/${locale}`}
               onClick={(e) => {
-                // Скидаємо відкриту категорію та пошук до початкового стану головної сторінки
                 window.dispatchEvent(new CustomEvent('reset-to-initial-catalog'));
-
-                // Якщо вже знаходимось на цій сторінці, миттєво переходимо на самий верх
                 if (window.location.pathname.startsWith(`/${locale}`)) {
                   e.preventDefault();
                   window.scrollTo({ top: 0, behavior: 'instant' });
@@ -257,9 +381,9 @@ export function Header() {
             </Link>
           </div>
 
-          {/* Права частина: Кнопка кабінету клієнта + Кнопка кошика */}
+          {/* Права частина: Кнопка кабінету клієнта / адміна + Кнопка кошика */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Кнопка кабінету клієнта / адміна (якщо адмін — перехід в адмінку, іконка пульсує червоним при замовленні) */}
+            {/* Кнопка кабінету клієнта / адміна (пульсує відповідно до статусу замовлення без крапок) */}
             <button
               onClick={() => {
                 if (isAdmin) {
@@ -268,53 +392,22 @@ export function Header() {
                   toggleCustomerDrawer();
                 }
               }}
-              aria-label={
-                isAdmin
-                  ? hasNewAdminOrder
-                    ? (locale === 'pl' ? 'Nowe zamówienie! Panel administratora' : 'Нове замовлення! Панель адміністратора')
-                    : (locale === 'pl' ? 'Panel administratora' : 'Панель адміністратора')
-                  : customer
-                  ? t.customer.myAccount
-                  : t.customer.loginTitle
-              }
-              title={
-                isAdmin
-                  ? hasNewAdminOrder
-                    ? (locale === 'pl' ? 'Nowe zamówienie! Kliknij, aby przejść do panelu' : 'Нове замовлення! Клікніть, щоб відкрити адмінку')
-                    : (locale === 'pl' ? 'Panel administratora' : 'Панель адміністратора')
-                  : customer
-                  ? t.customer.myAccount
-                  : t.customer.loginTitle
-              }
+              aria-label={getUserButtonTitle()}
+              title={getUserButtonTitle()}
               style={{
                 clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
               }}
               className={cn(
                 'relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center border transition-all cursor-pointer select-none active:scale-95 shrink-0',
-                isAdmin && hasNewAdminOrder
-                  ? 'bg-[#1a0808] border-[#e50914] shadow-[0_0_12px_rgba(229,9,20,0.5)]'
-                  : customer
-                  ? 'bg-[#181824] hover:bg-[#202030] border-emerald-500/40 text-white shadow-sm'
-                  : 'bg-[#131318] hover:bg-[#1a1a22] border-white/10 text-zinc-300 hover:text-white'
+                getUserButtonClassName()
               )}
             >
               <div className="relative flex items-center justify-center">
-                <User
-                  className={cn(
-                    'w-4 h-4 transition-all duration-300',
-                    isAdmin && hasNewAdminOrder
-                      ? 'text-[#e50914] animate-pulse drop-shadow-[0_0_8px_rgba(229,9,20,0.9)] scale-110'
-                      : 'text-[#e50914]'
-                  )}
-                />
-                {/* Зелена цятка для авторизованого клієнта */}
-                {!isAdmin && customer && (
-                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-[#181824]" />
-                )}
+                <User className={cn('w-4 h-4 transition-all duration-300', getUserIconClassName())} />
               </div>
             </button>
 
-            {/* Реактивна кнопка кошика з формою клинка та анімацією імпульсу */}
+            {/* Реактивна кнопка кошика */}
             <button
               onClick={toggleCart}
               id="cart-trigger-button"

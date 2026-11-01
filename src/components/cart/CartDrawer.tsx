@@ -93,13 +93,6 @@ export function CartDrawer() {
     carouselRef.current.scrollLeft = scrollLeftPos.current - walk;
   };
 
-  const handleWheel = (e: React.WheelEvent) => {
-    if (carouselRef.current && e.deltaY !== 0) {
-      // Дозволяємо прокрутку коліщатком мишки на комп'ютері
-      carouselRef.current.scrollLeft += e.deltaY;
-    }
-  };
-
   // Ініціалізація скролу в центр безшовної петлі при відкритті кошика
   useEffect(() => {
     if (isOpen && carouselRef.current && sauceAddons.length > 0) {
@@ -192,26 +185,28 @@ export function CartDrawer() {
         /* Кошик із товарами */
         <div className="flex flex-col h-full justify-between -m-5 sm:-m-6">
           <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
-            {/* Прогрес-бар безкоштовної доставки */}
-            <div className="p-3.5 rounded-xl bg-[#171722] border border-white/5 space-y-2">
-              <div className="flex items-center justify-between text-xs">
+            {/* Компактний статус-бар безкоштовної доставки в один рядок */}
+            <div className="px-3.5 py-2.5 rounded-xl bg-[#171722] border border-white/5 flex items-center justify-between gap-3">
+              <div className="text-xs shrink-0">
                 {remainingForFree > 0 ? (
-                  <span className="text-zinc-300">
+                  <span className="text-zinc-300 font-medium">
                     {t.cart.awayFromFreeDelivery.replace('{{amount}}', remainingForFree.toString())}
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
-                    <CheckCircle2 className="w-4 h-4" />
-                    {t.cart.qualifiesForFreeDelivery}
+                  <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>{locale === 'pl' ? 'Darmowa dostawa' : 'Безкоштовна доставка'}</span>
                   </span>
                 )}
-                <span className="font-bold text-white">
-                  {freeThreshold} zł
-                </span>
               </div>
-              <div className="w-full h-2 rounded-full bg-zinc-800 overflow-hidden">
+              <div className="flex-1 min-w-[60px] h-1.5 rounded-full bg-zinc-800 overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-amber-500 to-[#e50914] transition-all duration-300 rounded-full"
+                  className={cn(
+                    "h-full transition-all duration-300 rounded-full",
+                    remainingForFree <= 0
+                      ? "bg-emerald-500"
+                      : "bg-gradient-to-r from-amber-500 to-[#e50914]"
+                  )}
                   style={{ width: `${freeDeliveryProgress}%` }}
                 />
               </div>
@@ -282,7 +277,6 @@ export function CartDrawer() {
                     onMouseLeave={handleMouseLeave}
                     onMouseUp={handleMouseUp}
                     onMouseMove={handleMouseMove}
-                    onWheel={handleWheel}
                     className="flex gap-2.5 overflow-x-auto py-2.5 px-3 scrollbar-none snap-x cursor-grab active:cursor-grabbing select-none"
                     style={{ WebkitOverflowScrolling: 'touch' }}
                   >
