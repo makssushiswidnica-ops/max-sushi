@@ -98,6 +98,7 @@ export async function createOrder(order: Order): Promise<{ success: boolean; ord
       const existingHistory = JSON.parse(localStorage.getItem('max-sushi-orders') || '[]');
       existingHistory.unshift(order);
       localStorage.setItem('max-sushi-orders', JSON.stringify(existingHistory.slice(0, 20)));
+      window.dispatchEvent(new CustomEvent('max-sushi-new-order', { detail: order }));
     }
 
     return { success: true, orderId: order.id };

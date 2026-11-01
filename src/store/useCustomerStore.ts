@@ -147,6 +147,10 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
           password: password,
         });
       } catch (e) {}
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('max-sushi-is-admin', 'true');
+        window.dispatchEvent(new Event('admin-auth-changed'));
+      }
       return { type: 'admin' };
     }
 
@@ -161,6 +165,10 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
         if (!error && data?.session) {
           // Якщо це адмінський email або в сесії є права
           if (data.session.user.email?.toLowerCase().includes('makssushi') || data.session.user.email?.toLowerCase().includes('admin')) {
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('max-sushi-is-admin', 'true');
+              window.dispatchEvent(new Event('admin-auth-changed'));
+            }
             return { type: 'admin' };
           }
         }

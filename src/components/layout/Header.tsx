@@ -2,14 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ShoppingBag, Phone, Clock, MapPin, User } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 import { useCustomerStore } from '@/store/useCustomerStore';
 import { useI18n } from '@/lib/i18nContext';
 import { brandTheme, getStoreStatus } from '@/config/theme';
 import { formatPrice, cn } from '@/lib/utils';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 export function Header() {
+  const router = useRouter();
   const { locale, t } = useI18n();
   const toggleCart = useCartStore((s) => s.toggleOpen);
   const items = useCartStore((s) => s.items);
@@ -18,9 +21,127 @@ export function Header() {
   const customer = useCustomerStore((s) => s.customer);
 
   const [mounted, setMounted] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [hasNewAdminOrder, setHasNewAdminOrder] = useState(false);
+
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Відстеження адмін-сесії та надходження нових замовлень у реальному часі
+  useEffect(() => {
+    if (!mounted) return;
+
+    let isMounted = true;
+
+    const checkPendingOrders = async () => {
+      try {
+        let hasPending = false;
+        if (isSupabaseConfigured) {
+          const { data, error } = await supabase
+            .from('orders')
+            .select('id')
+            .eq('status', 'pending')
+            .limit(1);
+          if (!error && data && data.length > 0) {
+            hasPending = true;
+          }
+        }
+        if (!hasPending && typeof window !== 'undefined') {
+          const local = JSON.parse(localStorage.getItem('max-sushi-orders') || '[]');
+          if (Array.isArray(local) && local.some((o: any) => o.status === 'pending')) {
+            hasPending = true;
+          }
+        }
+        if (isMounted) setHasNewAdminOrder(hasPending);
+      } catch (err) {
+        console.warn('Check pending orders notice:', err);
+      }
+    };
+
+    const verifyAdmin = async () => {
+      let adminLogged = false;
+      try {
+        const { data } = await supabase.auth.getSession();
+        const email = data?.session?.user?.email?.toLowerCase() || '';
+        if (email === 'makssushiswidnica@gmail.com' || email.includes('admin') || email.includes('makssushi')) {
+          adminLogged = true;
+        }
+      } catch (e) {}
+
+      if (!adminLogged && typeof window !== 'undefined') {
+        adminLogged = localStorage.getItem('max-sushi-is-admin') === 'true';
+      }
+
+      if (isMounted) {
+        setIsAdmin(adminLogged);
+        if (adminLogged) {
+          checkPendingOrders();
+        }
+      }
+    };
+
+    verifyAdmin();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      const email = session?.user?.email?.toLowerCase() || '';
+      const adminActive = email === 'makssushiswidnica@gmail.com' || email.includes('admin') || email.includes('makssushi');
+      if (isMounted) {
+        setIsAdmin(adminActive);
+        if (adminActive) {
+          checkPendingOrders();
+        } else {
+          setHasNewAdminOrder(false);
+        }
+      }
+    });
+
+    const onAdminAuthChange = () => verifyAdmin();
+    const onNewOrder = () => {
+      if (isMounted) setHasNewAdminOrder(true);
+    };
+    const onOrdersUpdate = () => checkPendingOrders();
+
+    window.addEventListener('admin-auth-changed', onAdminAuthChange);
+    window.addEventListener('max-sushi-new-order', onNewOrder);
+    window.addEventListener('admin-orders-updated', onOrdersUpdate);
+    window.addEventListener('storage', onOrdersUpdate);
+
+    let channel: any = null;
+    if (isSupabaseConfigured) {
+      channel = supabase
+        .channel('header-admin-realtime')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'orders' },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              if (isMounted) setHasNewAdminOrder(true);
+            } else {
+              checkPendingOrders();
+            }
+          }
+        )
+        .subscribe();
+    }
+
+    const interval = setInterval(() => {
+      checkPendingOrders();
+    }, 25000);
+
+    return () => {
+      isMounted = false;
+      authListener?.subscription?.unsubscribe();
+      window.removeEventListener('admin-auth-changed', onAdminAuthChange);
+      window.removeEventListener('max-sushi-new-order', onNewOrder);
+      window.removeEventListener('admin-orders-updated', onOrdersUpdate);
+      window.removeEventListener('storage', onOrdersUpdate);
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+      clearInterval(interval);
+    };
+  }, [mounted]);
 
   // Реактивне обчислення напряму з items, щоб зміна кошика оновлювала хедер миттєво
   const totalCount = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -138,24 +259,56 @@ export function Header() {
 
           {/* Права частина: Кнопка кабінету клієнта + Кнопка кошика */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Кнопка кабінету клієнта / входу (лаконічна іконка користувача) */}
+            {/* Кнопка кабінету клієнта / адміна (якщо адмін — перехід в адмінку, іконка пульсує червоним при замовленні) */}
             <button
-              onClick={toggleCustomerDrawer}
-              aria-label={customer ? t.customer.myAccount : t.customer.loginTitle}
-              title={customer ? t.customer.myAccount : t.customer.loginTitle}
+              onClick={() => {
+                if (isAdmin) {
+                  router.push('/admin');
+                } else {
+                  toggleCustomerDrawer();
+                }
+              }}
+              aria-label={
+                isAdmin
+                  ? hasNewAdminOrder
+                    ? (locale === 'pl' ? 'Nowe zamówienie! Panel administratora' : 'Нове замовлення! Панель адміністратора')
+                    : (locale === 'pl' ? 'Panel administratora' : 'Панель адміністратора')
+                  : customer
+                  ? t.customer.myAccount
+                  : t.customer.loginTitle
+              }
+              title={
+                isAdmin
+                  ? hasNewAdminOrder
+                    ? (locale === 'pl' ? 'Nowe zamówienie! Kliknij, aby przejść do panelu' : 'Нове замовлення! Клікніть, щоб відкрити адмінку')
+                    : (locale === 'pl' ? 'Panel administratora' : 'Панель адміністратора')
+                  : customer
+                  ? t.customer.myAccount
+                  : t.customer.loginTitle
+              }
               style={{
                 clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
               }}
               className={cn(
-                'w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center border transition-all cursor-pointer select-none active:scale-95 shrink-0',
-                customer
+                'relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center border transition-all cursor-pointer select-none active:scale-95 shrink-0',
+                isAdmin && hasNewAdminOrder
+                  ? 'bg-[#1a0808] border-[#e50914] shadow-[0_0_12px_rgba(229,9,20,0.5)]'
+                  : customer
                   ? 'bg-[#181824] hover:bg-[#202030] border-emerald-500/40 text-white shadow-sm'
                   : 'bg-[#131318] hover:bg-[#1a1a22] border-white/10 text-zinc-300 hover:text-white'
               )}
             >
               <div className="relative flex items-center justify-center">
-                <User className="w-4 h-4 text-[#e50914]" />
-                {customer && (
+                <User
+                  className={cn(
+                    'w-4 h-4 transition-all duration-300',
+                    isAdmin && hasNewAdminOrder
+                      ? 'text-[#e50914] animate-pulse drop-shadow-[0_0_8px_rgba(229,9,20,0.9)] scale-110'
+                      : 'text-[#e50914]'
+                  )}
+                />
+                {/* Зелена цятка для авторизованого клієнта */}
+                {!isAdmin && customer && (
                   <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-[#181824]" />
                 )}
               </div>

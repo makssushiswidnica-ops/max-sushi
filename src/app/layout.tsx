@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import { Montserrat, Knewave, Unbounded, Dela_Gothic_One } from 'next/font/google';
 import localFont from 'next/font/local';
 import './globals.css';
@@ -66,8 +67,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pl" suppressHydrationWarning className={`${montserrat.variable} ${knewave.variable} ${delaGothicOne.variable} ${unbounded.variable} ${edoSZ.variable} dark antialiased`}>
-      <head>
-        <script
+      <body suppressHydrationWarning className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col font-sans selection:bg-[#e50914] selection:text-white">
+        <Script
+          id="bis-skin-cleanup"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
@@ -82,7 +85,6 @@ export default function RootLayout({
                     if (name === 'bis_skin_checked') return;
                     return origSetAttrNS.apply(this, arguments);
                   };
-                  // Observe mutations and immediately strip bis_skin_checked if already attached
                   if (typeof MutationObserver !== 'undefined') {
                     var observer = new MutationObserver(function(mutations) {
                       for (var i = 0; i < mutations.length; i++) {
@@ -99,8 +101,6 @@ export default function RootLayout({
             `,
           }}
         />
-      </head>
-      <body suppressHydrationWarning className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col font-sans selection:bg-[#e50914] selection:text-white">
         {children}
       </body>
     </html>

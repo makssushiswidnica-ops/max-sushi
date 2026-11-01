@@ -215,6 +215,13 @@ export default function AdminPage() {
       try {
         const { data } = await supabase.auth.getSession();
         setSession(data.session);
+        if (data.session?.user?.email) {
+          const em = data.session.user.email.toLowerCase();
+          if (em === 'makssushiswidnica@gmail.com' || em.includes('admin') || em.includes('makssushi')) {
+            localStorage.setItem('max-sushi-is-admin', 'true');
+            window.dispatchEvent(new Event('admin-auth-changed'));
+          }
+        }
       } catch (err) {
         console.warn('Session check error:', err);
       } finally {
@@ -226,6 +233,16 @@ export default function AdminPage() {
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, currentSession) => {
       setSession(currentSession);
+      if (currentSession?.user?.email) {
+        const em = currentSession.user.email.toLowerCase();
+        if (em === 'makssushiswidnica@gmail.com' || em.includes('admin') || em.includes('makssushi')) {
+          localStorage.setItem('max-sushi-is-admin', 'true');
+          window.dispatchEvent(new Event('admin-auth-changed'));
+        }
+      } else {
+        localStorage.removeItem('max-sushi-is-admin');
+        window.dispatchEvent(new Event('admin-auth-changed'));
+      }
       setLoading(false);
     });
 
@@ -1107,6 +1124,10 @@ export default function AdminPage() {
     try {
       await supabase.auth.signOut();
       setSession(null);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('max-sushi-is-admin');
+        window.dispatchEvent(new Event('admin-auth-changed'));
+      }
     } catch (err) {
       console.warn('Logout error:', err);
     }
