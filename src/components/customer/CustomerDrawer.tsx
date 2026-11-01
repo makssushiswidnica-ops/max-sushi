@@ -33,6 +33,22 @@ import { useI18n } from '@/lib/i18nContext';
 import { formatPrice, cn } from '@/lib/utils';
 import { Order, OrderAddress } from '@/types';
 
+// Перевірка, чи з цього комп'ютера чи телефона вже колись виконувався логін / реєстрація або замовлення
+const checkHadPreviousLogin = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  try {
+    if (localStorage.getItem('max-sushi-has-logged-in') === 'true') return true;
+    if (localStorage.getItem('max-sushi-last-identifier')) return true;
+    if (localStorage.getItem('max-sushi-is-admin') === 'true') return true;
+    if (localStorage.getItem('max-sushi-customer')) return true;
+    const db = JSON.parse(localStorage.getItem('max-sushi-customers-db') || '[]');
+    if (Array.isArray(db) && db.length > 0) return true;
+    const orders = JSON.parse(localStorage.getItem('max-sushi-orders') || '[]');
+    if (Array.isArray(orders) && orders.length > 0) return true;
+  } catch (e) {}
+  return false;
+};
+
 export function CustomerDrawer() {
   const { locale, t, changeLocale } = useI18n();
   const isOpen = useCustomerStore((s) => s.isOpen);
@@ -175,6 +191,33 @@ export function CustomerDrawer() {
     }
   }, [isOpen, customer, fetchCustomerOrders]);
 
+  // Якщо користувач не залогінений, але з цього пристрою вже був логін — пропонуємо вікно входу замість реєстрації
+  useEffect(() => {
+    if (checkHadPreviousLogin()) {
+      setAuthMode('login');
+      try {
+        const lastId = localStorage.getItem('max-sushi-last-identifier');
+        if (lastId && !loginIdentifier) {
+          setLoginIdentifier(lastId);
+        }
+      } catch (e) {}
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && !customer) {
+      if (checkHadPreviousLogin()) {
+        setAuthMode('login');
+        try {
+          const lastId = localStorage.getItem('max-sushi-last-identifier');
+          if (lastId && !loginIdentifier) {
+            setLoginIdentifier(lastId);
+          }
+        } catch (e) {}
+      }
+    }
+  }, [isOpen, customer]);
+
   // Очищення помилок при перемиканні режиму входу/реєстрації
   const toggleAuthMode = (mode: 'login' | 'register') => {
     setAuthMode(mode);
@@ -209,6 +252,10 @@ export function CustomerDrawer() {
         password: regPassword,
         email: regEmail,
       });
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('max-sushi-has-logged-in', 'true');
+        localStorage.setItem('max-sushi-last-identifier', regPhone.trim());
+      }
       // Очищення полів
       setRegPhone('');
       setRegName('');
@@ -239,6 +286,10 @@ export function CustomerDrawer() {
 
     setIsSubmitting(true);
     try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('max-sushi-has-logged-in', 'true');
+        localStorage.setItem('max-sushi-last-identifier', loginIdentifier.trim());
+      }
       const res = await loginUser(loginIdentifier, loginPassword);
 
       if (res.type === 'admin') {

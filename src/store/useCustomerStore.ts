@@ -107,6 +107,8 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     if (typeof window !== 'undefined') {
       localStorage.setItem('max-sushi-customers-db', JSON.stringify(db));
       localStorage.setItem('max-sushi-customer', JSON.stringify(newProfile));
+      localStorage.setItem('max-sushi-has-logged-in', 'true');
+      localStorage.setItem('max-sushi-last-identifier', cleanPhone);
     }
 
     // Також спробуємо оновити або зберегти в Supabase таблицю customers (якщо створена)
@@ -134,6 +136,12 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     const rawId = identifier.trim();
     const cleanPhone = normalizePhone(rawId);
     const cleanEmail = rawId.toLowerCase();
+
+    // Зберігаємо відмітку про вхід для повторних візитів
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('max-sushi-has-logged-in', 'true');
+      localStorage.setItem('max-sushi-last-identifier', rawId);
+    }
 
     // Перевірка 1: ВХІД В АДМІНКУ
     // Якщо це системний email та пароль адміна або обліковий запис у Supabase Auth
