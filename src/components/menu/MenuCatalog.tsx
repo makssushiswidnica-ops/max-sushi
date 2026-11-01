@@ -47,19 +47,27 @@ export function MenuCatalog() {
     };
   }, [setMenuProducts, setMenuCategories]);
 
-  // За замовчуванням відкривається збережена користувачем категорія або перший розділ
-  const [selectedCategory, setSelectedCategory] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
+  // За замовчуванням завжди відкривається перша категорія з каталогу (для 100% відповідності SSR та гідрації)
+  const [selectedCategory, setSelectedCategory] = useState<string>(
+    categoriesList[0]?.id || 'mini-maki'
+  );
+
+  // Відновлюємо збережену користувачем категорію виключно після завершення гідрації на клієнті
+  useEffect(() => {
+    try {
       const saved = sessionStorage.getItem('maks_active_category');
-      if (saved) return saved;
-    }
-    return categoriesList[0]?.id || 'mini-maki';
-  });
+      if (saved && saved !== selectedCategory && categoriesList.some((c) => c.id === saved)) {
+        setSelectedCategory(saved);
+      }
+    } catch {}
+  }, [categoriesList]);
 
   // Запам'ятовуємо обрану категорію при переходах по сайту, кошику чи модалках
   useEffect(() => {
     if (selectedCategory && typeof window !== 'undefined') {
-      sessionStorage.setItem('maks_active_category', selectedCategory);
+      try {
+        sessionStorage.setItem('maks_active_category', selectedCategory);
+      } catch {}
     }
   }, [selectedCategory]);
   const [isAllCategories, setIsAllCategories] = useState<boolean>(false);

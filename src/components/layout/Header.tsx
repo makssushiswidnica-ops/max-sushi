@@ -392,18 +392,18 @@ export function Header() {
                   toggleCustomerDrawer();
                 }
               }}
-              aria-label={getUserButtonTitle()}
-              title={getUserButtonTitle()}
+              aria-label={mounted ? getUserButtonTitle() : t.customer.loginTitle}
+              title={mounted ? getUserButtonTitle() : t.customer.loginTitle}
               style={{
                 clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
               }}
               className={cn(
                 'relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center border transition-all cursor-pointer select-none active:scale-95 shrink-0',
-                getUserButtonClassName()
+                mounted ? getUserButtonClassName() : 'bg-[#18181f]/80 border-white/10 hover:border-white/20'
               )}
             >
               <div className="relative flex items-center justify-center">
-                <User className={cn('w-4 h-4 transition-all duration-300', getUserIconClassName())} />
+                <User className={cn('w-4 h-4 transition-all duration-300', mounted ? getUserIconClassName() : 'text-zinc-400')} />
               </div>
             </button>
 

@@ -3769,23 +3769,35 @@ export default function AdminPage() {
           <div className="space-y-6 w-full min-w-0 max-w-full">
             {/* Верхня панель статистики: заголовок + фільтри періоду */}
             <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full min-w-0">
-              <div>
+              <div className="flex items-start justify-between gap-3 w-full sm:w-auto">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-[#e50914]/20 border border-[#e50914]/40 flex items-center justify-center text-[#e50914]">
+                  <div className="w-8 h-8 rounded-lg bg-[#e50914]/20 border border-[#e50914]/40 flex items-center justify-center text-[#e50914] shrink-0">
                     <BarChart3 className="w-4 h-4" />
                   </div>
-                  <h2 className="text-base sm:text-lg font-black text-white uppercase tracking-wide">
-                    Аналітика та Статистика Продажів
-                  </h2>
+                  <div>
+                    <h2 className="text-base sm:text-lg font-black text-white uppercase tracking-wide">
+                      Аналітика та Статистика Продажів
+                    </h2>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      Динаміка виручки, середній чек, популярні роли та піковий час замовлень
+                    </p>
+                  </div>
                 </div>
-                <p className="text-xs text-zinc-400 mt-1">
-                  Динаміка виручки, середній чек, популярні роли та піковий час замовлень
-                </p>
+
+                {/* Кнопка оновлення на мобільному поруч із заголовком, щоб не тіснити вкладки періоду */}
+                <button
+                  type="button"
+                  onClick={() => loadOrders(true)}
+                  title="Оновити дані"
+                  className="sm:hidden p-2 text-zinc-400 hover:text-white transition-colors cursor-pointer rounded-lg hover:bg-white/5 active:scale-95 shrink-0 -mr-1"
+                >
+                  <RefreshCw className={cn('w-4 h-4', isLoadingOrders && 'animate-spin text-[#e50914]')} />
+                </button>
               </div>
 
-              {/* Перемикач періоду (в дизайні як категорії в StickyNav з червоним підкресленням — компактно в 1 рядок на мобільному без скролу) */}
-              <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-0.5 sm:gap-2 pt-2 sm:pt-0 border-t border-white/5 sm:border-t-0">
-                <div className="flex items-center flex-1 sm:flex-initial justify-between sm:justify-start gap-0.5 sm:gap-1.5">
+              {/* Перемикач періоду (в дизайні як категорії в StickyNav з червоним підкресленням — рівномірно в 1 рядок на мобільному) */}
+              <div className="w-full sm:w-auto flex items-center pt-2 sm:pt-0 border-t border-white/5 sm:border-t-0">
+                <div className="grid grid-cols-4 sm:flex items-center w-full sm:w-auto gap-0.5 sm:gap-1.5">
                   {(
                     [
                       { id: 'today', label: 'Сьогодні' },
@@ -3801,9 +3813,9 @@ export default function AdminPage() {
                         type="button"
                         onClick={() => setStatsPeriod(p.id)}
                         className={cn(
-                          'relative px-1.5 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-[13px] font-bold tracking-tight sm:tracking-wide uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none active:scale-95 text-center',
+                          'relative px-1 sm:px-3 py-1.5 sm:py-2 text-[10.5px] xs:text-[11.5px] sm:text-[13px] font-bold tracking-tight uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none active:scale-95 text-center flex items-center justify-center',
                           isActive
-                            ? 'text-white font-black'
+                            ? 'text-white font-extrabold'
                             : 'text-zinc-400 hover:text-white'
                         )}
                       >
@@ -3811,7 +3823,7 @@ export default function AdminPage() {
                         {/* Неонова рубінова лінія підкреслення як у категоріях меню */}
                         <span
                           className={cn(
-                            'absolute bottom-0 left-1 right-1 sm:left-2 sm:right-2 h-[2.5px] rounded-full transition-all duration-300 ease-out',
+                            'absolute bottom-0 left-0.5 right-0.5 sm:left-2 sm:right-2 h-[2.5px] rounded-full transition-all duration-300 ease-out',
                             isActive
                               ? 'bg-gradient-to-r from-[#e50914] via-[#ff4d58] to-[#e50914] shadow-[0_0_12px_#e50914] opacity-100 scale-x-100'
                               : 'opacity-0 scale-x-50 pointer-events-none'
@@ -3822,15 +3834,15 @@ export default function AdminPage() {
                   })}
                 </div>
 
-                <div className="h-4 sm:h-5 w-[1px] bg-white/10 mx-0.5 sm:mx-1 shrink-0" />
-
+                {/* На комп'ютері розділювач та кнопка оновлення */}
+                <div className="hidden sm:block h-5 w-[1px] bg-white/10 mx-2 shrink-0" />
                 <button
                   type="button"
                   onClick={() => loadOrders(true)}
                   title="Оновити дані"
-                  className="p-1.5 text-zinc-400 hover:text-white transition-colors cursor-pointer rounded-lg hover:bg-white/5 active:scale-95 shrink-0"
+                  className="hidden sm:flex p-1.5 text-zinc-400 hover:text-white transition-colors cursor-pointer rounded-lg hover:bg-white/5 active:scale-95 shrink-0"
                 >
-                  <RefreshCw className={cn('w-3.5 h-3.5 sm:w-4 sm:h-4', isLoadingOrders && 'animate-spin text-[#e50914]')} />
+                  <RefreshCw className={cn('w-4 h-4', isLoadingOrders && 'animate-spin text-[#e50914]')} />
                 </button>
               </div>
             </div>
@@ -3880,6 +3892,11 @@ export default function AdminPage() {
                   {statsData.inProgressCount > 0 && (
                     <span className="px-1.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-400 font-medium whitespace-nowrap">
                       {statsData.inProgressCount} в роботі
+                    </span>
+                  )}
+                  {statsData.pendingCount > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-400 font-medium whitespace-nowrap animate-pulse">
+                      {statsData.pendingCount} {statsData.pendingCount === 1 ? 'нове' : 'нових'}
                     </span>
                   )}
                   {statsData.cancelledCount > 0 && (
@@ -3963,11 +3980,11 @@ export default function AdminPage() {
                   </div>
 
                   {/* Стовпчаста діаграма без скролу: адаптивні стовпці з акуратними відступами, що звужуються до тонких рисок */}
-                  <div className="pt-6 pb-2 w-full">
+                  <div className="pt-6 pb-2 w-full overflow-hidden">
                     <div className={cn(
                       'h-44 sm:h-52 flex items-end border-b border-white/10 pb-2 w-full',
                       statsData.chartBars.length <= 8
-                        ? 'justify-center gap-2.5 sm:gap-4 max-w-lg mx-auto'
+                        ? 'justify-center gap-2 sm:gap-4 max-w-lg mx-auto'
                         : statsData.chartBars.length <= 32
                         ? 'justify-center gap-1 sm:gap-1.5 w-full'
                         : 'justify-center gap-0.5 sm:gap-1 w-full'
@@ -3987,12 +4004,12 @@ export default function AdminPage() {
                           <div
                             key={bar.dateStr}
                             className={cn(
-                              'flex flex-col items-center justify-end h-full group/bar relative',
+                              'flex flex-col items-center justify-end h-full group/bar relative min-w-0',
                               totalBars <= 8
-                                ? 'flex-1 max-w-[48px] min-w-[28px]'
+                                ? 'flex-1 max-w-[48px]'
                                 : totalBars <= 32
-                                ? 'flex-1 max-w-[16px] sm:max-w-[22px] min-w-[4px]'
-                                : 'flex-1 max-w-[6px] sm:max-w-[10px] min-w-[2px]'
+                                ? 'flex-1 max-w-[16px] sm:max-w-[22px]'
+                                : 'flex-1 max-w-[6px] sm:max-w-[10px]'
                             )}
                           >
                             {/* Спливаюча підказка (Tooltip) при наведенні */}
