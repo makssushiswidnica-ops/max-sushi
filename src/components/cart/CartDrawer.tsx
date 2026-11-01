@@ -44,6 +44,16 @@ export function CartDrawer() {
     setIsCheckoutOpen(true);
   };
 
+  const handleAddMoreToOrder = () => {
+    setOpen(false);
+    const catalogEl = document.getElementById('catalog') || document.getElementById('menu') || document.querySelector('[data-menu-section]');
+    if (catalogEl) {
+      catalogEl.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 480, behavior: 'smooth' });
+    }
+  };
+
   // Рефи та методи для плавного скролу/перетягування каруселі додатків на компʼютері
   const carouselRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
@@ -381,6 +391,16 @@ export function CartDrawer() {
             >
               <span>{t.cart.checkout}</span>
               <ArrowRight className="w-4 h-4 stroke-[2.5]" />
+            </button>
+
+            {/* Кнопка "Додати ще щось", що закриває кошик і переносить до каталогу меню */}
+            <button
+              type="button"
+              onClick={handleAddMoreToOrder}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-white/5 hover:bg-white/10 active:scale-[0.99] text-zinc-300 hover:text-white border border-white/10 rounded-xl text-xs font-bold transition-all cursor-pointer select-none"
+            >
+              <Plus className="w-3.5 h-3.5 text-[#e50914]" />
+              <span>{t.customer.addMoreToOrder}</span>
             </button>
           </div>
         </div>

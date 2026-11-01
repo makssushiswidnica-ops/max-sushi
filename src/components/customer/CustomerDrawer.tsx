@@ -11,7 +11,6 @@ import {
   MapPin, 
   ShoppingBag, 
   RotateCcw, 
-  Edit3, 
   LogOut, 
   Check, 
   Clock, 
@@ -20,7 +19,12 @@ import {
   Home,
   CheckCircle2,
   ShieldCheck,
-  ArrowRight
+  ArrowRight,
+  ChevronDown,
+  ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+  Calendar
 } from 'lucide-react';
 import { Drawer } from '@/components/ui/Drawer';
 import { useCustomerStore } from '@/store/useCustomerStore';
@@ -79,6 +83,21 @@ export function CustomerDrawer() {
   // Історія замовлень
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+  const ORDERS_PER_PAGE = 4;
+
+  const toggleOrderExpand = (orderId: string) => {
+    setExpandedOrderIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(orderId)) {
+        next.delete(orderId);
+      } else {
+        next.add(orderId);
+      }
+      return next;
+    });
+  };
 
   // Синхронізація полів профілю при авторизації
   useEffect(() => {
@@ -216,19 +235,8 @@ export function CustomerDrawer() {
     setTimeout(() => setIsSavedSuccess(false), 2500);
   };
 
-  // Повторити замовлення: одразу в чек-аут
-  const handleDirectReorder = (order: Order) => {
-    if (!order.items || order.items.length === 0) return;
-    clearCart();
-    order.items.forEach((item) => {
-      addItem(item.product, item.quantity);
-    });
-    setOpen(false);
-    setIsCheckoutOpen(true);
-  };
-
-  // Редагувати і замовити: відкриває кошик
-  const handleEditAndReorder = (order: Order) => {
+  // Переглянути та замовити повторно: переносимо страви в кошик та відкриваємо кошик
+  const handleReviewAndReorder = (order: Order) => {
     if (!order.items || order.items.length === 0) return;
     clearCart();
     order.items.forEach((item) => {
@@ -238,19 +246,74 @@ export function CustomerDrawer() {
     setCartOpen(true);
   };
 
-  // Форматування дати
-  const formatOrderDate = (isoString: string) => {
+  // Форматування часу "HH:mm"
+  const formatOrderTime = (isoString: string) => {
     try {
       const d = new Date(isoString);
-      const day = d.getDate();
-      const month = d.getMonth() + 1;
       const hours = String(d.getHours()).padStart(2, '0');
       const minutes = String(d.getMinutes()).padStart(2, '0');
-      return `${day}.${month < 10 ? '0' + month : month}, ${hours}:${minutes}`;
+      return `${hours}:${minutes}`;
     } catch {
-      return isoString;
+      return '';
     }
   };
+
+  // Групування замовлень по даті
+  const getDateLabel = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      const now = new Date();
+
+      const isToday =
+        d.getDate() === now.getDate() &&
+        d.getMonth() === now.getMonth() &&
+        d.getFullYear() === now.getFullYear();
+
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const isYesterday =
+        d.getDate() === yesterday.getDate() &&
+        d.getMonth() === yesterday.getMonth() &&
+        d.getFullYear() === yesterday.getFullYear();
+
+      const day = d.getDate();
+      const month = d.getMonth() + 1;
+      const formattedMonth = month < 10 ? '0' + month : month;
+
+      if (isToday) {
+        return `${t.customer.today}, ${day}.${formattedMonth}`;
+      }
+      if (isYesterday) {
+        return `${t.customer.yesterday}, ${day}.${formattedMonth}`;
+      }
+      return `${day}.${formattedMonth}.${d.getFullYear()}`;
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Розрахунок сторінок та пагінації замовлень
+  const totalPages = Math.max(1, Math.ceil(orders.length / ORDERS_PER_PAGE));
+  const paginatedOrders = orders.slice(
+    (currentPage - 1) * ORDERS_PER_PAGE,
+    currentPage * ORDERS_PER_PAGE
+  );
+
+  // Групуємо замовлення поточної сторінки по календарних датах
+  const groupedOrders = paginatedOrders.reduce((acc, order) => {
+    const dateKey = order.createdAt ? order.createdAt.slice(0, 10) : 'other';
+    const existing = acc.find((g) => g.dateKey === dateKey);
+    if (existing) {
+      existing.orders.push(order);
+    } else {
+      acc.push({
+        dateKey,
+        label: getDateLabel(order.createdAt),
+        orders: [order],
+      });
+    }
+    return acc;
+  }, [] as { dateKey: string; label: string; orders: Order[] }[]);
 
   return (
     <Drawer
@@ -574,7 +637,7 @@ export function CustomerDrawer() {
             </button>
           </div>
 
-          {/* ВКЛАДКА 1: ІСТОРІЯ ЗАМОВЛЕНЬ */}
+          {/* ВКЛАДКА 1: ІСТОРІЯ ЗАМОВЛЕНЬ (ЗГОРНУТІ ПО ДАТАХ + ПАГІНАЦІЯ) */}
           {activeTab === 'orders' && (
             <div className="space-y-4">
               {isLoadingOrders ? (
@@ -604,104 +667,183 @@ export function CustomerDrawer() {
                   </button>
                 </div>
               ) : (
-                <div className="space-y-3.5">
-                  {orders.map((order) => {
-                    const isPickup = order.deliveryMethod === 'pickup';
-
-                    return (
-                      <div
-                        key={order.id}
-                        className="p-4 rounded-2xl bg-[#14141e] border border-white/10 hover:border-white/20 transition-all space-y-3 shadow-md"
-                      >
-                        {/* Верхній рядок: Номер, дата, статус */}
-                        <div className="flex items-center justify-between gap-2 border-b border-white/5 pb-2.5">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-black text-xs sm:text-sm text-white">
-                              #{order.id}
-                            </span>
-                            <span className="text-[11px] text-zinc-400 flex items-center gap-1 font-mono">
-                              <Clock className="w-3 h-3 text-zinc-500" />
-                              {formatOrderDate(order.createdAt)}
-                            </span>
-                          </div>
-
-                          <span
-                            className={cn(
-                              'px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border',
-                              order.status === 'pending' && 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-                              order.status === 'confirmed' && 'bg-blue-500/15 text-blue-300 border-blue-500/30',
-                              order.status === 'preparing' && 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-                              order.status === 'in_delivery' && 'bg-purple-500/15 text-purple-300 border-purple-500/30',
-                              order.status === 'delivered' && 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                            )}
-                          >
-                            {order.status === 'pending' && (locale === 'pl' ? 'Nowe' : 'Нове')}
-                            {order.status === 'confirmed' && (locale === 'pl' ? 'Potwierdzone' : 'Підтверджено')}
-                            {order.status === 'preparing' && (locale === 'pl' ? 'W kuchni' : 'Готується')}
-                            {order.status === 'in_delivery' && (isPickup ? (locale === 'pl' ? 'Do odbioru' : 'Готово до видачі') : (locale === 'pl' ? 'W drodze' : 'В дорозі'))}
-                            {order.status === 'delivered' && (locale === 'pl' ? 'Dostarczone' : 'Виконано')}
+                <div className="space-y-4">
+                  {/* Контейнер списку з адаптивною висотою без безкінечного розтягування */}
+                  <div className="max-h-[calc(100vh-270px)] sm:max-h-[520px] overflow-y-auto pr-1 space-y-4 scrollbar-thin">
+                    {groupedOrders.map((group) => (
+                      <div key={group.dateKey} className="space-y-2">
+                        {/* Заголовок групи дати */}
+                        <div className="flex items-center gap-2 pt-1 pb-0.5">
+                          <Calendar className="w-3.5 h-3.5 text-[#e50914] shrink-0" />
+                          <span className="text-[11px] font-black uppercase tracking-wider text-zinc-300">
+                            {group.label}
                           </span>
+                          <span className="h-[1px] flex-1 bg-white/10" />
                         </div>
 
-                        {/* Перелік страв */}
-                        <div className="space-y-1.5 text-xs text-zinc-300">
-                          {(order.items || []).map((item, idx) => {
-                            const name = typeof item.product?.name === 'object'
-                              ? (item.product.name[locale as 'uk' | 'pl'] || item.product.name.uk || item.product.name.pl)
-                              : (item.product?.name || 'Позиція');
+                        {/* Список карток замовлень за цю дату */}
+                        <div className="space-y-2">
+                          {group.orders.map((order) => {
+                            const isPickup = order.deliveryMethod === 'pickup';
+                            const isExpanded = expandedOrderIds.has(order.id);
+                            const itemsCount = (order.items || []).reduce((sum, item) => sum + item.quantity, 0);
 
                             return (
-                              <div key={idx} className="flex items-center justify-between gap-2">
-                                <span className="truncate text-zinc-200">
-                                  <span className="font-bold text-amber-400 mr-1.5">{item.quantity}×</span>
-                                  {name}
-                                </span>
-                                <span className="font-medium text-zinc-400 shrink-0">
-                                  {formatPrice((item.product?.price || 0) * item.quantity, locale)}
-                                </span>
+                              <div
+                                key={order.id}
+                                className="rounded-xl bg-[#14141e] border border-white/10 hover:border-white/20 transition-all overflow-hidden shadow-sm"
+                              >
+                                {/* Згорнутий компактний рядок (клікабельний) */}
+                                <button
+                                  type="button"
+                                  onClick={() => toggleOrderExpand(order.id)}
+                                  className="w-full p-3 sm:p-3.5 flex items-center justify-between gap-2 text-left cursor-pointer hover:bg-white/5 transition-colors select-none"
+                                >
+                                  {/* Зліва: Номер, час, статус */}
+                                  <div className="flex items-center gap-2 flex-wrap min-w-0">
+                                    <span className="font-mono font-black text-xs sm:text-sm text-white">
+                                      #{order.id}
+                                    </span>
+                                    <span className="text-[11px] text-zinc-400 font-mono">
+                                      {formatOrderTime(order.createdAt)}
+                                    </span>
+                                    <span
+                                      className={cn(
+                                        'px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shrink-0',
+                                        order.status === 'pending' && 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+                                        order.status === 'confirmed' && 'bg-blue-500/15 text-blue-300 border-blue-500/30',
+                                        order.status === 'preparing' && 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+                                        order.status === 'in_delivery' && 'bg-purple-500/15 text-purple-300 border-purple-500/30',
+                                        order.status === 'delivered' && 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                                      )}
+                                    >
+                                      {order.status === 'pending' && (locale === 'pl' ? 'Nowe' : 'Нове')}
+                                      {order.status === 'confirmed' && (locale === 'pl' ? 'Potwierdzone' : 'Підтверджено')}
+                                      {order.status === 'preparing' && (locale === 'pl' ? 'W kuchni' : 'Готується')}
+                                      {order.status === 'in_delivery' && (isPickup ? (locale === 'pl' ? 'Do odbioru' : 'Готово') : (locale === 'pl' ? 'W drodze' : 'В дорозі'))}
+                                      {order.status === 'delivered' && (locale === 'pl' ? 'Dostarczone' : 'Виконано')}
+                                    </span>
+                                  </div>
+
+                                  {/* Справа: кількість страв, ціна та стрілочка розгортання */}
+                                  <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                                    <span className="text-[11px] text-zinc-400 hidden xs:inline">
+                                      {itemsCount} {locale === 'pl' ? 'szt.' : 'шт.'}
+                                    </span>
+                                    <span className="font-black text-xs sm:text-sm text-white">
+                                      {formatPrice(order.total, locale)}
+                                    </span>
+                                    <div className={cn('text-zinc-400 transition-transform duration-200', isExpanded && 'rotate-180')}>
+                                      <ChevronDown className="w-4 h-4" />
+                                    </div>
+                                  </div>
+                                </button>
+
+                                {/* Розгорнуті деталі замовлення при кліку */}
+                                {isExpanded && (
+                                  <div className="p-3.5 pt-2 border-t border-white/5 space-y-3 bg-black/25 animate-in fade-in duration-150">
+                                    {/* Перелік страв */}
+                                    <div className="space-y-1.5 text-xs text-zinc-300 pt-1">
+                                      {(order.items || []).map((item, idx) => {
+                                        const name = typeof item.product?.name === 'object'
+                                          ? (item.product.name[locale as 'uk' | 'pl'] || item.product.name.uk || item.product.name.pl)
+                                          : (item.product?.name || 'Позиція');
+
+                                        return (
+                                          <div key={idx} className="flex items-center justify-between gap-2">
+                                            <span className="truncate text-zinc-200">
+                                              <span className="font-bold text-amber-400 mr-1.5">{item.quantity}×</span>
+                                              {name}
+                                            </span>
+                                            <span className="font-medium text-zinc-400 shrink-0">
+                                              {formatPrice((item.product?.price || 0) * item.quantity, locale)}
+                                            </span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+
+                                    {/* Адреса або самовивіз */}
+                                    <div className="text-[11px] text-zinc-400 flex items-center justify-between gap-2 pt-2 border-t border-white/5">
+                                      <div className="flex items-center gap-1.5 min-w-0">
+                                        <MapPin className="w-3.5 h-3.5 text-[#e50914] shrink-0" />
+                                        <span className="truncate">
+                                          {isPickup
+                                            ? (locale === 'pl' ? 'Odbiór osobisty (Parkowa 8)' : 'Самовивіз (Parkowa 8)')
+                                            : `вул. ${order.address?.street || ''} ${order.address?.house || ''}${order.address?.apartment ? `, кв. ${order.address?.apartment}` : ''}`}
+                                        </span>
+                                      </div>
+                                      <span className="font-black text-xs sm:text-sm text-[#e50914] shrink-0">
+                                        {formatPrice(order.total, locale)}
+                                      </span>
+                                    </div>
+
+                                    {/* Кнопка "Переглянути та замовити повторно" */}
+                                    <div className="pt-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleReviewAndReorder(order)}
+                                        style={{
+                                          clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                                        }}
+                                        className="w-full py-2.5 px-3 bg-[#e50914] hover:bg-[#f4222d] active:scale-[0.99] text-white text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-[#e50914]/30"
+                                      >
+                                        <RotateCcw className="w-3.5 h-3.5" />
+                                        <span>{t.customer.reviewAndReorder}</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
                         </div>
-
-                        {/* Адреса або самовивіз */}
-                        <div className="text-[11px] text-zinc-400 flex items-center gap-1.5 pt-1 border-t border-white/5">
-                          <MapPin className="w-3 h-3 text-[#e50914] shrink-0" />
-                          <span className="truncate">
-                            {isPickup
-                              ? (locale === 'pl' ? 'Odbiór osobisty (Parkowa 8)' : 'Самовивіз (Parkowa 8)')
-                              : `вул. ${order.address?.street || ''} ${order.address?.house || ''}${order.address?.apartment ? `, кв. ${order.address?.apartment}` : ''}`}
-                          </span>
-                          <span className="ml-auto font-black text-sm text-white">
-                            {formatPrice(order.total, locale)}
-                          </span>
-                        </div>
-
-                        {/* Дії: Повторити або Редагувати */}
-                        <div className="grid grid-cols-2 gap-2 pt-2">
-                          <button
-                            type="button"
-                            onClick={() => handleEditAndReorder(order)}
-                            className="py-2 px-2.5 rounded-xl bg-white/5 hover:bg-white/10 active:scale-95 text-zinc-300 hover:text-white border border-white/10 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                            title={t.customer.editAndReorder}
-                          >
-                            <Edit3 className="w-3.5 h-3.5 text-amber-400" />
-                            <span className="truncate">{t.customer.editAndReorder}</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleDirectReorder(order)}
-                            className="py-2 px-2.5 rounded-xl bg-[#e50914] hover:bg-[#f4222d] active:scale-95 text-white text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shadow-[#e50914]/30"
-                            title={t.customer.reorder}
-                          >
-                            <RotateCcw className="w-3.5 h-3.5" />
-                            <span className="truncate">{t.customer.reorder}</span>
-                          </button>
-                        </div>
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
+
+                  {/* Блок пагінації (сторінки) */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between pt-2.5 border-t border-white/10 text-xs select-none">
+                      <button
+                        type="button"
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none text-zinc-300 font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                        <span className="hidden xs:inline">{t.customer.prevPage}</span>
+                      </button>
+
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                          <button
+                            key={p}
+                            type="button"
+                            onClick={() => setCurrentPage(p)}
+                            className={cn(
+                              'w-6 h-6 sm:w-7 sm:h-7 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center',
+                              currentPage === p
+                                ? 'bg-[#e50914] text-white shadow-sm'
+                                : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white'
+                            )}
+                          >
+                            {p}
+                          </button>
+                        ))}
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none text-zinc-300 font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                      >
+                        <span className="hidden xs:inline">{t.customer.nextPage}</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
