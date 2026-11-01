@@ -50,7 +50,7 @@
     "delivery": "Dostawa",
     "free": "Gratis",
     "freeDeliveryFrom": "Darmowa dostawa od",
-    "awayFromFreeDelivery": "Brakuje Ci jeszcze {{amount}} zł do darmowej dostawy!",
+    "awayFromFreeDelivery": "{{amount}} zł do darmowej dostawy",
     "qualifiesForFreeDelivery": "Super! Masz darmową dostawę!",
     "chopsticks": "Pałeczki i sztućce",
     "chopsticksHelp": "Wybierz liczbę osób, dla których dołączymy pałeczki, sos sojowy, imbir i wasabi",

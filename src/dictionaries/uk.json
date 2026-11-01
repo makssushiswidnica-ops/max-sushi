@@ -50,7 +50,7 @@
     "delivery": "Доставка",
     "free": "Безкоштовно",
     "freeDeliveryFrom": "Безкоштовна доставка від",
-    "awayFromFreeDelivery": "Додайте ще {{amount}} zł до безкоштовної доставки!",
+    "awayFromFreeDelivery": "{{amount}} zł до безкоштовної доставки",
     "qualifiesForFreeDelivery": "Чудово! Ваша доставка безкоштовна!",
     "chopsticks": "Прибори та палички",
     "chopsticksHelp": "Вкажіть кількість персон для комплектації паличками, соєвим соусом, імбирем та васабі",

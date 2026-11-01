@@ -19,30 +19,42 @@ export function Drawer({ isOpen, onClose, title, children, className }: DrawerPr
     };
 
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      window.addEventListener('keydown', handleKeyDown);
-    }
+      const originalBodyOverflow = document.body.style.overflow;
+      const originalHtmlOverflow = document.documentElement.style.overflow;
+      const originalBodyTouch = document.body.style.touchAction;
 
-    return () => {
-      document.body.style.overflow = 'unset';
-      window.removeEventListener('keydown', handleKeyDown);
-    };
+      // Повне блокування прокрутки фонової сторінки як на ПК, так і на мобільних пристроях
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+
+      window.addEventListener('keydown', handleKeyDown);
+
+      return () => {
+        document.body.style.overflow = originalBodyOverflow;
+        document.documentElement.style.overflow = originalHtmlOverflow;
+        document.body.style.touchAction = originalBodyTouch;
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
+    <div className="fixed inset-0 z-50 overflow-hidden overscroll-none">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in"
+        className="fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in touch-none overscroll-none"
         onClick={onClose}
+        onWheel={(e) => e.preventDefault()}
+        onTouchMove={(e) => e.preventDefault()}
       />
 
       <div className="fixed inset-y-0 right-0 flex max-w-full pl-6 sm:pl-10 pointer-events-none overflow-x-hidden">
         <div
           className={cn(
-            'pointer-events-auto w-full max-w-md transform bg-[#101015] border-l border-white/10 shadow-2xl flex flex-col justify-between transition-transform duration-300 ease-in-out animate-in slide-in-from-right overflow-x-hidden',
+            'pointer-events-auto w-full max-w-md transform bg-[#101015] border-l border-white/10 shadow-2xl flex flex-col justify-between transition-transform duration-300 ease-in-out animate-in slide-in-from-right overflow-x-hidden overscroll-contain',
             className
           )}
         >
@@ -59,7 +71,7 @@ export function Drawer({ isOpen, onClose, title, children, className }: DrawerPr
           </div>
 
           {/* Body */}
-          <div className="flex-1 overflow-y-auto p-5 sm:p-6">{children}</div>
+          <div className="flex-1 overflow-y-auto p-5 sm:p-6 overscroll-contain">{children}</div>
         </div>
       </div>
     </div>
