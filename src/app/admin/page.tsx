@@ -3785,82 +3785,100 @@ export default function AdminPage() {
             {/* Картки головних KPI (4 картки) */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {/* Картка 1: Виручка */}
-              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-emerald-500/30 transition-all">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                    Виручка
-                  </span>
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                    <TrendingUp className="w-4 h-4" />
+              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-emerald-500/30 transition-all flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                      Виручка
+                    </span>
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                      <TrendingUp className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                    {formatPrice(statsData.totalRevenue, 'pl')}
                   </div>
                 </div>
-                <div className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                  {formatPrice(statsData.totalRevenue, 'pl')}
-                </div>
-                <div className="text-[11px] text-zinc-500 mt-1 flex items-center gap-1">
-                  <span>Чиста вартість: {formatPrice(statsData.totalSubtotal, 'pl')}</span>
+                <div className="text-[10px] sm:text-[11px] text-zinc-400 mt-2 flex items-center justify-between gap-1 pt-1.5 border-t border-white/5">
+                  <span className="text-zinc-500 whitespace-nowrap">Чиста вартість:</span>
+                  <span className="font-mono text-zinc-300 font-semibold whitespace-nowrap">{formatPrice(statsData.totalSubtotal, 'pl')}</span>
                 </div>
               </div>
 
               {/* Картка 2: Замовлення */}
-              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-blue-500/30 transition-all">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                    Замовлень
-                  </span>
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-                    <ShoppingBag className="w-4 h-4" />
+              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-blue-500/30 transition-all flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                      Замовлень
+                    </span>
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                      <ShoppingBag className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                    {statsData.ordersCount}
                   </div>
                 </div>
-                <div className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                  {statsData.ordersCount}
-                </div>
-                <div className="text-[11px] text-zinc-500 mt-1 flex items-center gap-1.5 truncate">
-                  <span className="text-emerald-400 font-semibold">{statsData.deliveredCount} дост.</span>
+                <div className="text-[10px] sm:text-[11px] mt-2 flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-white/5">
+                  <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-medium whitespace-nowrap">
+                    {statsData.deliveredCount} дост.
+                  </span>
                   {statsData.inProgressCount > 0 && (
-                    <span className="text-amber-400 font-semibold">• {statsData.inProgressCount} в роботі</span>
+                    <span className="px-1.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-400 font-medium whitespace-nowrap">
+                      {statsData.inProgressCount} в роботі
+                    </span>
                   )}
                   {statsData.cancelledCount > 0 && (
-                    <span className="text-red-400 font-semibold">• {statsData.cancelledCount} скас.</span>
+                    <span className="px-1.5 py-0.5 rounded-md bg-red-500/10 border border-red-500/20 text-red-400 font-medium whitespace-nowrap">
+                      {statsData.cancelledCount} скас.
+                    </span>
                   )}
                 </div>
               </div>
 
               {/* Картка 3: Середній чек */}
-              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-amber-500/30 transition-all">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                    Середній чек
-                  </span>
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-                    <Award className="w-4 h-4" />
+              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-amber-500/30 transition-all flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                      Середній чек
+                    </span>
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                      <Award className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                    {formatPrice(statsData.avgCheck, 'pl')}
                   </div>
                 </div>
-                <div className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                  {formatPrice(statsData.avgCheck, 'pl')}
-                </div>
-                <div className="text-[11px] text-zinc-500 mt-1">
+                <div className="text-[10px] sm:text-[11px] text-zinc-500 mt-2 truncate pt-1.5 border-t border-white/5">
                   На 1 успішне замовлення
                 </div>
               </div>
 
               {/* Картка 4: Клієнти та доставка */}
-              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-purple-500/30 transition-all">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                    Клієнтів
-                  </span>
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
-                    <Users className="w-4 h-4" />
+              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-purple-500/30 transition-all flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                      Клієнтів
+                    </span>
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                      <Users className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                    {statsData.uniqueClientsCount}
                   </div>
                 </div>
-                <div className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                  {statsData.uniqueClientsCount}
-                </div>
-                <div className="text-[11px] text-zinc-500 mt-1 flex items-center gap-1.5">
-                  <span className="text-zinc-300 font-medium">{statsData.deliveryPercent}% курʼєр</span>
-                  <span>•</span>
-                  <span className="text-zinc-400">{statsData.pickupPercent}% самовивіз</span>
+                <div className="text-[10px] sm:text-[11px] mt-2 flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-white/5">
+                  <span className="px-1.5 py-0.5 rounded-md bg-red-500/10 border border-red-500/20 text-red-400 font-medium whitespace-nowrap">
+                    {statsData.deliveryPercent}% курʼєр
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400 font-medium whitespace-nowrap">
+                    {statsData.pickupPercent}% самовивіз
+                  </span>
                 </div>
               </div>
             </div>
