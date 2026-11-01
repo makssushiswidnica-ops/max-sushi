@@ -4,6 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { 
   User, 
   Phone, 
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
   MapPin, 
   ShoppingBag, 
   RotateCcw, 
@@ -11,12 +15,12 @@ import {
   LogOut, 
   Check, 
   Clock, 
-  ChevronRight, 
   AlertCircle,
   Globe,
   Home,
   CheckCircle2,
-  Sparkles
+  ShieldCheck,
+  ArrowRight
 } from 'lucide-react';
 import { Drawer } from '@/components/ui/Drawer';
 import { useCustomerStore } from '@/store/useCustomerStore';
@@ -32,7 +36,8 @@ export function CustomerDrawer() {
   const customer = useCustomerStore((s) => s.customer);
   const activeTab = useCustomerStore((s) => s.activeTab);
   const setActiveTab = useCustomerStore((s) => s.setActiveTab);
-  const login = useCustomerStore((s) => s.login);
+  const registerCustomer = useCustomerStore((s) => s.registerCustomer);
+  const loginUser = useCustomerStore((s) => s.loginUser);
   const updateProfile = useCustomerStore((s) => s.updateProfile);
   const logout = useCustomerStore((s) => s.logout);
   const fetchCustomerOrders = useCustomerStore((s) => s.fetchCustomerOrders);
@@ -42,13 +47,26 @@ export function CustomerDrawer() {
   const setCartOpen = useCartStore((s) => s.setOpen);
   const setIsCheckoutOpen = useCartStore((s) => s.setIsCheckoutOpen);
 
-  // Стан для форми логіну
-  const [loginPhone, setLoginPhone] = useState('');
-  const [loginName, setLoginName] = useState('');
-  const [loginError, setLoginError] = useState('');
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  // Режим авторизації: вхід або реєстрація (за замовчуванням реєстрація для нових клієнтів або вхід)
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('register');
+  const [showPassword, setShowPassword] = useState(false);
 
-  // Стан для форми профілю
+  // Поля входу
+  const [loginIdentifier, setLoginIdentifier] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+
+  // Поля реєстрації
+  const [regPhone, setRegPhone] = useState('');
+  const [regName, setRegName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+
+  // Стан помилки та завантаження
+  const [authError, setAuthError] = useState('');
+  const [adminNotice, setAdminNotice] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Поля профілю для редагування
   const [profileName, setProfileName] = useState('');
   const [profilePhone, setProfilePhone] = useState('');
   const [street, setStreet] = useState('');
@@ -58,12 +76,11 @@ export function CustomerDrawer() {
   const [entryCode, setEntryCode] = useState('');
   const [isSavedSuccess, setIsSavedSuccess] = useState(false);
 
-  // Стан замовлень клієнта
+  // Історія замовлень
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
-  const [reorderNotice, setReorderNotice] = useState<string | null>(null);
 
-  // Синхронізація даних форми при зміні клієнта
+  // Синхронізація полів профілю при авторизації
   useEffect(() => {
     if (customer) {
       setProfileName(customer.name || '');
@@ -76,7 +93,7 @@ export function CustomerDrawer() {
     }
   }, [customer]);
 
-  // Завантаження історії замовлень при відкритті штори або зміні вкладки
+  // Завантаження замовлень клієнта при відкритті кабінету
   useEffect(() => {
     if (isOpen && customer) {
       setIsLoadingOrders(true);
@@ -90,30 +107,93 @@ export function CustomerDrawer() {
     }
   }, [isOpen, customer, fetchCustomerOrders]);
 
-  // Швидкий вхід
-  const handleLoginSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError('');
+  // Очищення помилок при перемиканні режиму входу/реєстрації
+  const toggleAuthMode = (mode: 'login' | 'register') => {
+    setAuthMode(mode);
+    setAuthError('');
+    setAdminNotice('');
+  };
 
-    const cleanPhone = loginPhone.replace(/[^\d+]/g, '');
-    if (!cleanPhone || cleanPhone.length < 7) {
-      setLoginError(locale === 'pl' ? 'Podaj prawidłowy numer telefonu' : 'Вкажіть коректний номер телефону');
+  // Обробка реєстрації нового клієнта
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    setAdminNotice('');
+
+    if (!regPhone.trim()) {
+      setAuthError(t.customer.phoneRequired);
+      return;
+    }
+    if (!regName.trim()) {
+      setAuthError(t.customer.nameRequired);
+      return;
+    }
+    if (!regPassword || regPassword.length < 4) {
+      setAuthError(t.customer.passwordTooShort);
       return;
     }
 
-    setIsLoggingIn(true);
+    setIsSubmitting(true);
     try {
-      await login(loginPhone, loginName);
-      setLoginPhone('');
-      setLoginName('');
+      await registerCustomer({
+        phone: regPhone,
+        name: regName,
+        password: regPassword,
+        email: regEmail,
+      });
+      // Очищення полів
+      setRegPhone('');
+      setRegName('');
+      setRegEmail('');
+      setRegPassword('');
     } catch (err: any) {
-      setLoginError(err?.message || 'Błąd logowania');
+      const msgKey = err?.message as keyof typeof t.customer;
+      setAuthError(t.customer[msgKey] || err?.message || 'Błąd rejestracji');
     } finally {
-      setIsLoggingIn(false);
+      setIsSubmitting(false);
     }
   };
 
-  // Збереження оновлень профілю та адреси
+  // Обробка входу (клієнт або адміністратор)
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    setAdminNotice('');
+
+    if (!loginIdentifier.trim()) {
+      setAuthError(locale === 'pl' ? 'Podaj numer telefonu lub e-mail' : 'Вкажіть номер телефону або e-mail');
+      return;
+    }
+    if (!loginPassword) {
+      setAuthError(locale === 'pl' ? 'Podaj hasło' : 'Введіть пароль');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await loginUser(loginIdentifier, loginPassword);
+
+      if (res.type === 'admin') {
+        // ВХІД АДМІНІСТРАТОРА
+        setAdminNotice(t.customer.adminRedirectNotice);
+        setTimeout(() => {
+          window.location.href = '/admin';
+        }, 600);
+        return;
+      }
+
+      // Успішний вхід клієнта
+      setLoginIdentifier('');
+      setLoginPassword('');
+    } catch (err: any) {
+      const msgKey = err?.message as keyof typeof t.customer;
+      setAuthError(t.customer[msgKey] || err?.message || 'Błąd logowania');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Збереження оновлень профілю
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customer) return;
@@ -136,33 +216,29 @@ export function CustomerDrawer() {
     setTimeout(() => setIsSavedSuccess(false), 2500);
   };
 
-  // 1. Повторити замовлення: додає позиції в кошик та відразу відкриває Checkout
+  // Повторити замовлення: одразу в чек-аут
   const handleDirectReorder = (order: Order) => {
     if (!order.items || order.items.length === 0) return;
-
     clearCart();
     order.items.forEach((item) => {
       addItem(item.product, item.quantity);
     });
-
     setOpen(false);
     setIsCheckoutOpen(true);
   };
 
-  // 2. Відредагувати і замовити: додає позиції в кошик та відкриває CartDrawer
+  // Редагувати і замовити: відкриває кошик
   const handleEditAndReorder = (order: Order) => {
     if (!order.items || order.items.length === 0) return;
-
     clearCart();
     order.items.forEach((item) => {
       addItem(item.product, item.quantity);
     });
-
     setOpen(false);
     setCartOpen(true);
   };
 
-  // Форматування дати замовлення
+  // Форматування дати
   const formatOrderDate = (isoString: string) => {
     try {
       const d = new Date(isoString);
@@ -186,84 +262,247 @@ export function CustomerDrawer() {
             <User className="w-4 h-4" />
           </div>
           <span className="font-brand tracking-wider text-base sm:text-lg">
-            {customer ? t.customer.myAccount : t.customer.loginTitle}
+            {customer 
+              ? t.customer.myAccount 
+              : authMode === 'register' ? t.customer.registerTitle : t.customer.loginTitle}
           </span>
         </div>
       }
     >
       {!customer ? (
-        /* ВХІД / РЕЄСТРАЦІЯ ЗА ТЕЛЕФОНОМ */
-        <div className="space-y-6 pt-2">
+        /* 1. БЛОК АВТОРИЗАЦІЇ ТА РЕЄСТРАЦІЇ */
+        <div className="space-y-5 pt-1">
+          {/* Перемикач Реєстрація / Вхід */}
+          <div className="grid grid-cols-2 p-1 bg-[#14141c] border border-white/10 rounded-xl">
+            <button
+              type="button"
+              onClick={() => toggleAuthMode('register')}
+              className={cn(
+                'py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer',
+                authMode === 'register'
+                  ? 'bg-[#e50914] text-white shadow-md shadow-[#e50914]/30'
+                  : 'text-zinc-400 hover:text-white'
+              )}
+            >
+              <span>{t.customer.registerButton}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => toggleAuthMode('login')}
+              className={cn(
+                'py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer',
+                authMode === 'login'
+                  ? 'bg-[#e50914] text-white shadow-md shadow-[#e50914]/30'
+                  : 'text-zinc-400 hover:text-white'
+              )}
+            >
+              <span>{t.customer.loginButton}</span>
+            </button>
+          </div>
+
+          {/* Банер заголовка */}
           <div className="p-4 rounded-2xl bg-gradient-to-br from-[#1c1c28] to-[#12121a] border border-white/10 shadow-lg relative overflow-hidden">
             <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-[#e50914]/10 rounded-full blur-xl pointer-events-none" />
             <h3 className="text-base font-black text-white uppercase tracking-wide">
-              {t.customer.loginTitle}
+              {authMode === 'register' ? t.customer.registerTitle : t.customer.loginTitle}
             </h3>
             <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-              {t.customer.loginSubtitle}
+              {authMode === 'register' ? t.customer.registerSubtitle : t.customer.loginSubtitle}
             </p>
           </div>
 
-          <form onSubmit={handleLoginSubmit} className="space-y-4">
-            {loginError && (
-              <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-                <span>{loginError}</span>
+          {/* Повідомлення про помилку */}
+          {authError && (
+            <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+              <span>{authError}</span>
+            </div>
+          )}
+
+          {/* Повідомлення перенаправлення в адмінку */}
+          {adminNotice && (
+            <div className="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-2 animate-in fade-in">
+              <ShieldCheck className="w-5 h-5 shrink-0 text-emerald-400 animate-pulse" />
+              <span className="font-bold">{adminNotice}</span>
+            </div>
+          )}
+
+          {/* ФОРМА РЕЄСТРАЦІЇ */}
+          {authMode === 'register' ? (
+            <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-[#e50914]" />
+                  <span>{t.customer.phone} *</span>
+                </label>
+                <input
+                  type="tel"
+                  value={regPhone}
+                  onChange={(e) => setRegPhone(e.target.value)}
+                  placeholder="+48 000 000 000"
+                  required
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#14141c] border border-white/10 focus:border-[#e50914] focus:ring-1 focus:ring-[#e50914] text-white text-sm placeholder:text-zinc-600 outline-hidden transition-all"
+                />
               </div>
-            )}
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-[#e50914]" />
-                <span>{t.customer.phone} *</span>
-              </label>
-              <input
-                type="tel"
-                value={loginPhone}
-                onChange={(e) => setLoginPhone(e.target.value)}
-                placeholder="+48 000 000 000"
-                required
-                className="w-full px-3.5 py-3 rounded-xl bg-[#14141c] border border-white/10 focus:border-[#e50914] focus:ring-1 focus:ring-[#e50914] text-white text-sm placeholder:text-zinc-600 outline-hidden transition-all"
-              />
-            </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-[#e50914]" />
+                  <span>{t.customer.name} *</span>
+                </label>
+                <input
+                  type="text"
+                  value={regName}
+                  onChange={(e) => setRegName(e.target.value)}
+                  placeholder={t.customer.namePlaceholder}
+                  required
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#14141c] border border-white/10 focus:border-[#e50914] focus:ring-1 focus:ring-[#e50914] text-white text-sm placeholder:text-zinc-600 outline-hidden transition-all"
+                />
+              </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-[#e50914]" />
-                <span>{t.customer.name}</span>
-              </label>
-              <input
-                type="text"
-                value={loginName}
-                onChange={(e) => setLoginName(e.target.value)}
-                placeholder={t.customer.namePlaceholder}
-                className="w-full px-3.5 py-3 rounded-xl bg-[#14141c] border border-white/10 focus:border-[#e50914] focus:ring-1 focus:ring-[#e50914] text-white text-sm placeholder:text-zinc-600 outline-hidden transition-all"
-              />
-            </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-zinc-500" />
+                  <span>{t.customer.emailOptional}</span>
+                </label>
+                <input
+                  type="email"
+                  value={regEmail}
+                  onChange={(e) => setRegEmail(e.target.value)}
+                  placeholder="twoj@email.com"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#14141c] border border-white/10 focus:border-[#e50914] focus:ring-1 focus:ring-[#e50914] text-white text-sm placeholder:text-zinc-600 outline-hidden transition-all"
+                />
+              </div>
 
-            <button
-              type="submit"
-              disabled={isLoggingIn}
-              style={{
-                clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
-              }}
-              className="w-full py-3.5 px-4 bg-[#e50914] hover:bg-[#f4222d] active:scale-[0.98] text-white font-black text-xs sm:text-sm uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-lg shadow-[#e50914]/30 flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {isLoggingIn ? (
-                <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  <User className="w-4 h-4" />
-                  <span>{t.customer.loginButton}</span>
-                </>
-              )}
-            </button>
-          </form>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-[#e50914]" />
+                  <span>{t.customer.password} *</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={regPassword}
+                    onChange={(e) => setRegPassword(e.target.value)}
+                    placeholder={t.customer.passwordPlaceholder}
+                    required
+                    className="w-full px-3.5 py-2.5 pr-10 rounded-xl bg-[#14141c] border border-white/10 focus:border-[#e50914] focus:ring-1 focus:ring-[#e50914] text-white text-sm placeholder:text-zinc-600 outline-hidden transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                style={{
+                  clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
+                }}
+                className="w-full mt-2 py-3 px-4 bg-[#e50914] hover:bg-[#f4222d] active:scale-[0.98] text-white font-black text-xs sm:text-sm uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-lg shadow-[#e50914]/30 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <User className="w-4 h-4" />
+                    <span>{t.customer.registerButton}</span>
+                  </>
+                )}
+              </button>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => toggleAuthMode('login')}
+                  className="text-xs text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  {t.customer.hasAccountAlready} <span className="text-[#e50914] font-bold underline">{t.customer.loginButton}</span>
+                </button>
+              </div>
+            </form>
+          ) : (
+            /* ФОРМА ВХОДУ (КЛІЄНТ АБО АДМІН) */
+            <form onSubmit={handleLoginSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-[#e50914]" />
+                  <span>{t.customer.identifier} *</span>
+                </label>
+                <input
+                  type="text"
+                  value={loginIdentifier}
+                  onChange={(e) => setLoginIdentifier(e.target.value)}
+                  placeholder={t.customer.identifierPlaceholder}
+                  required
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#14141c] border border-white/10 focus:border-[#e50914] focus:ring-1 focus:ring-[#e50914] text-white text-sm placeholder:text-zinc-600 outline-hidden transition-all"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-[#e50914]" />
+                  <span>{t.customer.password} *</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder={t.customer.passwordPlaceholder}
+                    required
+                    className="w-full px-3.5 py-2.5 pr-10 rounded-xl bg-[#14141c] border border-white/10 focus:border-[#e50914] focus:ring-1 focus:ring-[#e50914] text-white text-sm placeholder:text-zinc-600 outline-hidden transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                style={{
+                  clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
+                }}
+                className="w-full py-3 px-4 bg-[#e50914] hover:bg-[#f4222d] active:scale-[0.98] text-white font-black text-xs sm:text-sm uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-lg shadow-[#e50914]/30 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <ArrowRight className="w-4 h-4" />
+                    <span>{t.customer.loginButton}</span>
+                  </>
+                )}
+              </button>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => toggleAuthMode('register')}
+                  className="text-xs text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  {t.customer.noAccountYet} <span className="text-[#e50914] font-bold underline">{t.customer.registerButton}</span>
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       ) : (
-        /* ЗАЛОГІНЕНИЙ КАБІНЕТ КЛІЄНТА */
+        /* 2. ЗАЛОГІНЕНИЙ КАБІНЕТ КЛІЄНТА */
         <div className="space-y-5">
-          {/* Плашка вітання користувача */}
+          {/* Плашка вітання клієнта */}
           <div className="p-4 rounded-2xl bg-gradient-to-r from-[#171722] to-[#12121a] border border-white/10 flex items-center justify-between gap-3 shadow-md">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#e50914] to-rose-400 p-0.5 shadow-md shadow-[#e50914]/30 shrink-0">
@@ -368,14 +607,13 @@ export function CustomerDrawer() {
                 <div className="space-y-3.5">
                   {orders.map((order) => {
                     const isPickup = order.deliveryMethod === 'pickup';
-                    const itemsCount = (order.items || []).reduce((sum, item) => sum + item.quantity, 0);
 
                     return (
                       <div
                         key={order.id}
                         className="p-4 rounded-2xl bg-[#14141e] border border-white/10 hover:border-white/20 transition-all space-y-3 shadow-md"
                       >
-                        {/* Верхній рядок картки замовлення: Номер, дата, статус */}
+                        {/* Верхній рядок: Номер, дата, статус */}
                         <div className="flex items-center justify-between gap-2 border-b border-white/5 pb-2.5">
                           <div className="flex items-center gap-2">
                             <span className="font-mono font-black text-xs sm:text-sm text-white">
@@ -387,7 +625,6 @@ export function CustomerDrawer() {
                             </span>
                           </div>
 
-                          {/* Статус замовлення */}
                           <span
                             className={cn(
                               'px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border',
@@ -406,7 +643,7 @@ export function CustomerDrawer() {
                           </span>
                         </div>
 
-                        {/* Список страв замовлення */}
+                        {/* Перелік страв */}
                         <div className="space-y-1.5 text-xs text-zinc-300">
                           {(order.items || []).map((item, idx) => {
                             const name = typeof item.product?.name === 'object'
@@ -440,7 +677,7 @@ export function CustomerDrawer() {
                           </span>
                         </div>
 
-                        {/* Кнопки дій: 1) Повторити замовлення 2) Редагувати і замовити */}
+                        {/* Дії: Повторити або Редагувати */}
                         <div className="grid grid-cols-2 gap-2 pt-2">
                           <button
                             type="button"

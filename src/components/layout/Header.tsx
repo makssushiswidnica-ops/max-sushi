@@ -156,15 +156,16 @@ export function Header() {
               </button>
             </div>
 
-            {/* Кнопка кабінету клієнта */}
+            {/* Кнопка кабінету клієнта / входу (лаконічна іконка користувача) */}
             <button
               onClick={toggleCustomerDrawer}
+              aria-label={customer ? t.customer.myAccount : t.customer.loginTitle}
               title={customer ? t.customer.myAccount : t.customer.loginTitle}
               style={{
                 clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
               }}
               className={cn(
-                'flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 border text-xs sm:text-sm font-bold transition-all cursor-pointer select-none active:scale-95',
+                'w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center border transition-all cursor-pointer select-none active:scale-95 shrink-0',
                 customer
                   ? 'bg-[#181824] hover:bg-[#202030] border-emerald-500/40 text-white shadow-sm'
                   : 'bg-[#131318] hover:bg-[#1a1a22] border-white/10 text-zinc-300 hover:text-white'
@@ -176,9 +177,6 @@ export function Header() {
                   <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-[#181824]" />
                 )}
               </div>
-              <span className="hidden sm:inline max-w-[100px] truncate">
-                {customer ? (customer.name ? customer.name.split(' ')[0] : t.customer.account) : t.customer.account}
-              </span>
             </button>
 
             {/* Реактивна кнопка кошика з формою клинка та анімацією імпульсу */}

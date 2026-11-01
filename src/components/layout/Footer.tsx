@@ -32,12 +32,10 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-10 border-b border-white/5">
           {/* Бренд */}
           <div className="space-y-3">
-            {/* Клік по логотипу у футері відкриває адмін-панель */}
             <Link
-              href="/admin"
+              href={`/${locale}`}
               className="flex items-center gap-2.5 text-left cursor-pointer group"
-              title="Панель керування"
-              aria-label="Панель керування Maks Sushi"
+              aria-label="Maks Sushi"
             >
               <div className="relative w-8 h-8 rounded-full overflow-hidden border border-[#e50914] bg-black shrink-0 group-hover:scale-105 transition-transform">
                 <img

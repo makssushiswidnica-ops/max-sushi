@@ -9,7 +9,8 @@ interface CustomerState {
   setOpen: (open: boolean) => void;
   toggleOpen: () => void;
   setActiveTab: (tab: 'orders' | 'profile') => void;
-  login: (phone: string, name?: string) => Promise<CustomerProfile>;
+  registerCustomer: (params: { phone: string; name: string; password: string; email?: string }) => Promise<CustomerProfile>;
+  loginUser: (identifier: string, password: string) => Promise<{ type: 'admin' | 'customer'; profile?: CustomerProfile }>;
   updateProfile: (data: Partial<CustomerProfile>) => Promise<void>;
   logout: () => void;
   fetchCustomerOrders: () => Promise<Order[]>;
@@ -27,6 +28,18 @@ const getInitialCustomer = (): CustomerProfile | null => {
   return null;
 };
 
+// Завантаження бази зареєстрованих клієнтів з localStorage
+export const getStoredCustomersDb = (): CustomerProfile[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem('max-sushi-customers-db');
+    if (raw) return JSON.parse(raw);
+  } catch (e) {
+    console.warn('Failed to parse customers db:', e);
+  }
+  return [];
+};
+
 // Очищення та стандартизація телефонного номера (тільки цифри та знак +)
 export const normalizePhone = (phone: string): string => {
   return phone.replace(/[^\d+]/g, '').trim();
@@ -41,83 +54,173 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
   toggleOpen: () => set((state) => ({ isOpen: !state.isOpen })),
   setActiveTab: (tab) => set({ activeTab: tab }),
 
-  login: async (phone: string, name?: string) => {
+  // 1. РЕЄСТРАЦІЯ НОВОГО КЛІЄНТА
+  registerCustomer: async ({ phone, name, password, email }) => {
     const cleanPhone = phone.trim();
-    let customerName = name?.trim() || '';
-    let defaultAddress: OrderAddress | undefined = undefined;
+    const cleanName = name.trim();
+    const cleanEmail = email?.trim() || undefined;
 
-    // Спробуємо підтягнути імʼя та останню адресу з історії замовлень, якщо імʼя не вказано
-    try {
-      if (typeof window !== 'undefined') {
+    if (!cleanPhone) throw new Error('phoneRequired');
+    if (!cleanName) throw new Error('nameRequired');
+    if (!password || password.length < 4) throw new Error('passwordTooShort');
+
+    const db = getStoredCustomersDb();
+
+    // Перевірка на вже існуючий номер або e-mail
+    const existing = db.find(
+      (c) =>
+        normalizePhone(c.phone) === normalizePhone(cleanPhone) ||
+        (cleanEmail && c.email && c.email.toLowerCase() === cleanEmail.toLowerCase())
+    );
+
+    if (existing) {
+      throw new Error('userAlreadyExists');
+    }
+
+    // Спробуємо підтягнути збережену адресу з попередніх замовлень
+    let defaultAddress: OrderAddress | undefined = undefined;
+    if (typeof window !== 'undefined') {
+      try {
         const localOrders: Order[] = JSON.parse(localStorage.getItem('max-sushi-orders') || '[]');
         const matchingLocal = localOrders.find(
           (o) => normalizePhone(o.phone) === normalizePhone(cleanPhone)
         );
-        if (matchingLocal) {
-          if (!customerName && matchingLocal.name) customerName = matchingLocal.name;
-          if (matchingLocal.address?.street) defaultAddress = matchingLocal.address;
+        if (matchingLocal?.address?.street) {
+          defaultAddress = matchingLocal.address;
         }
-      }
-
-      // Перевіряємо в Supabase
-      if (isSupabaseConfigured) {
-        const { data: dbOrders } = await supabase
-          .from('orders')
-          .select('*')
-          .ilike('phone', `%${normalizePhone(cleanPhone).slice(-9)}%`)
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        if (dbOrders && dbOrders.length > 0) {
-          const latest = dbOrders[0];
-          if (!customerName && (latest.customer_name || latest.name)) {
-            customerName = latest.customer_name || latest.name;
-          }
-          if (!defaultAddress && latest.address?.street) {
-            defaultAddress = latest.address;
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('Auto-detect customer info notice:', e);
-    }
-
-    if (!customerName) {
-      customerName = 'Гість';
+      } catch (e) {}
     }
 
     const newProfile: CustomerProfile = {
       id: `cust_${Date.now()}`,
       phone: cleanPhone,
-      name: customerName,
+      name: cleanName,
+      email: cleanEmail,
+      password: password,
       defaultAddress,
       preferredLanguage: 'pl',
       savedAt: new Date().toISOString(),
     };
 
+    // Зберігаємо в базі користувачів
+    db.push(newProfile);
     if (typeof window !== 'undefined') {
+      localStorage.setItem('max-sushi-customers-db', JSON.stringify(db));
       localStorage.setItem('max-sushi-customer', JSON.stringify(newProfile));
     }
 
-    // Спроба збереження в таблицю Supabase `customers` (якщо існує)
+    // Також спробуємо оновити або зберегти в Supabase таблицю customers (якщо створена)
     if (isSupabaseConfigured) {
       try {
         await supabase.from('customers').upsert(
           {
             phone: cleanPhone,
-            name: customerName,
+            name: cleanName,
+            email: cleanEmail,
             address: defaultAddress,
             updated_at: new Date().toISOString(),
           },
           { onConflict: 'phone' }
         );
-      } catch (err) {
-        // Якщо таблиця customers ще не створена, продовжуємо без помилки
-      }
+      } catch (err) {}
     }
 
     set({ customer: newProfile });
     return newProfile;
+  },
+
+  // 2. УНІФІКОВАНИЙ ВХІД (КЛІЄНТ АБО АДМІНІСТРАТОР)
+  loginUser: async (identifier: string, password: string) => {
+    const rawId = identifier.trim();
+    const cleanPhone = normalizePhone(rawId);
+    const cleanEmail = rawId.toLowerCase();
+
+    // Перевірка 1: ВХІД В АДМІНКУ
+    // Якщо це системний email та пароль адміна або обліковий запис у Supabase Auth
+    const isDirectAdminCredentials =
+      cleanEmail === 'makssushiswidnica@gmail.com' && password === 'MaksSushi@2026';
+
+    if (isDirectAdminCredentials) {
+      try {
+        await supabase.auth.signInWithPassword({
+          email: 'makssushiswidnica@gmail.com',
+          password: password,
+        });
+      } catch (e) {}
+      return { type: 'admin' };
+    }
+
+    // Спроба входу через Supabase Auth для інших адмінів або зареєстрованих поштових акаунтів
+    if (rawId.includes('@') && isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: rawId,
+          password: password,
+        });
+
+        if (!error && data?.session) {
+          // Якщо це адмінський email або в сесії є права
+          if (data.session.user.email?.toLowerCase().includes('makssushi') || data.session.user.email?.toLowerCase().includes('admin')) {
+            return { type: 'admin' };
+          }
+        }
+      } catch (e) {}
+    }
+
+    // Перевірка 2: ВХІД КЛІЄНТА
+    const db = getStoredCustomersDb();
+    const customerMatch = db.find((c) => {
+      const phoneMatches = cleanPhone.length >= 7 && normalizePhone(c.phone) === cleanPhone;
+      const emailMatches = c.email && c.email.toLowerCase() === cleanEmail;
+      return phoneMatches || emailMatches;
+    });
+
+    if (customerMatch) {
+      if (customerMatch.password && customerMatch.password !== password) {
+        throw new Error('invalidPassword');
+      }
+
+      // Успішний вхід клієнта
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('max-sushi-customer', JSON.stringify(customerMatch));
+      }
+      set({ customer: customerMatch });
+      return { type: 'customer', profile: customerMatch };
+    }
+
+    // Якщо користувач ще не створив пароль, але робив замовлення раніше
+    if (cleanPhone.length >= 7) {
+      let foundOrderName = '';
+      if (typeof window !== 'undefined') {
+        try {
+          const localOrders: Order[] = JSON.parse(localStorage.getItem('max-sushi-orders') || '[]');
+          const matching = localOrders.find((o) => normalizePhone(o.phone).includes(cleanPhone.slice(-9)));
+          if (matching?.name) foundOrderName = matching.name;
+        } catch (e) {}
+      }
+
+      if (foundOrderName) {
+        // Створюємо профіль із введеним паролем для зручності
+        const autoProfile: CustomerProfile = {
+          id: `cust_${Date.now()}`,
+          phone: rawId,
+          name: foundOrderName,
+          email: rawId.includes('@') ? rawId : undefined,
+          password: password,
+          preferredLanguage: 'pl',
+          savedAt: new Date().toISOString(),
+        };
+        db.push(autoProfile);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('max-sushi-customers-db', JSON.stringify(db));
+          localStorage.setItem('max-sushi-customer', JSON.stringify(autoProfile));
+        }
+        set({ customer: autoProfile });
+        return { type: 'customer', profile: autoProfile };
+      }
+    }
+
+    throw new Error('userNotFound');
   },
 
   updateProfile: async (data: Partial<CustomerProfile>) => {
@@ -132,6 +235,16 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
 
     if (typeof window !== 'undefined') {
       localStorage.setItem('max-sushi-customer', JSON.stringify(updated));
+
+      // Оновлюємо також у базі зареєстрованих клієнтів
+      const db = getStoredCustomersDb();
+      const idx = db.findIndex((c) => c.id === current.id || normalizePhone(c.phone) === normalizePhone(current.phone));
+      if (idx !== -1) {
+        db[idx] = updated;
+      } else {
+        db.push(updated);
+      }
+      localStorage.setItem('max-sushi-customers-db', JSON.stringify(db));
     }
 
     if (isSupabaseConfigured && updated.phone) {
@@ -140,15 +253,14 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
           {
             phone: updated.phone,
             name: updated.name,
+            email: updated.email,
             address: updated.defaultAddress,
             language: updated.preferredLanguage,
             updated_at: new Date().toISOString(),
           },
           { onConflict: 'phone' }
         );
-      } catch (err) {
-        // Безшумний фолбек
-      }
+      } catch (err) {}
     }
 
     set({ customer: updated });

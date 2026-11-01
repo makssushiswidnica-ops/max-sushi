@@ -88,6 +88,8 @@ export interface CustomerProfile {
   id: string;
   name: string;
   phone: string;
+  email?: string;
+  password?: string;
   defaultAddress?: OrderAddress;
   preferredLanguage?: 'pl' | 'uk';
   savedAt: string;
