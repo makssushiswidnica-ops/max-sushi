@@ -91,12 +91,24 @@ export function CartDrawer() {
   };
 
   const scrollCarousel = (direction: 'left' | 'right') => {
-    if (carouselRef.current) {
-      const scrollAmount = 240;
-      carouselRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth',
-      });
+    const el = carouselRef.current;
+    if (!el) return;
+    const cardWidth = 130;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    if (maxScroll <= 0) return;
+
+    if (direction === 'right') {
+      if (el.scrollLeft >= maxScroll - 20) {
+        el.scrollTo({ left: 0, behavior: 'smooth' });
+      } else {
+        el.scrollBy({ left: cardWidth * 1.5, behavior: 'smooth' });
+      }
+    } else {
+      if (el.scrollLeft <= 20) {
+        el.scrollTo({ left: maxScroll, behavior: 'smooth' });
+      } else {
+        el.scrollBy({ left: -cardWidth * 1.5, behavior: 'smooth' });
+      }
     }
   };
 
@@ -189,48 +201,50 @@ export function CartDrawer() {
 
             {/* Горизонтальна свайп-стрічка соусів та додатків */}
             {sauceAddons.length > 0 && (
-              <div className="space-y-3 pt-3 pb-3 border-y border-white/5 my-2">
-                <div className="flex items-center justify-between">
+              <div className="space-y-2.5 pt-3 pb-3 border-y border-white/5 my-2">
+                <div className="flex items-center justify-between px-0.5">
                   <span className="text-xs font-bold text-white uppercase tracking-wider">
                     {locale === 'pl' ? 'Dodaj sosy i dodatki' : 'Додати соуси та додатки'}
                   </span>
-                  
-                  {/* Кнопки перемикання для компʼютера та підказка */}
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] text-zinc-400 font-medium hidden sm:inline-block mr-1">
-                      {locale === 'pl' ? 'Do smaku' : 'До смаку'}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => scrollCarousel('left')}
-                      aria-label="Вліво"
-                      title="Попередня"
-                      className="w-6 h-6 rounded-full bg-white/5 hover:bg-white/15 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer active:scale-95"
-                    >
-                      <ChevronLeft className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => scrollCarousel('right')}
-                      aria-label="Вправо"
-                      title="Наступна"
-                      className="w-6 h-6 rounded-full bg-white/5 hover:bg-white/15 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer active:scale-95"
-                    >
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  <span className="text-[11px] text-zinc-400 font-medium">
+                    {locale === 'pl' ? 'Do smaku' : 'До смаку'}
+                  </span>
                 </div>
 
-                <div 
-                  ref={carouselRef}
-                  onMouseDown={handleMouseDown}
-                  onMouseLeave={handleMouseLeave}
-                  onMouseUp={handleMouseUp}
-                  onMouseMove={handleMouseMove}
-                  onWheel={handleWheel}
-                  className="flex gap-3 overflow-x-auto py-2.5 px-5 sm:px-6 -mx-5 sm:-mx-6 scrollbar-none snap-x cursor-grab active:cursor-grabbing select-none"
-                  style={{ WebkitOverflowScrolling: 'touch' }}
-                >
+                {/* Контейнер каруселі зі стрілками по лівому та правому боках */}
+                <div className="relative group/addons">
+                  {/* Ліва напівпрозора кнопка-стрілка */}
+                  <button
+                    type="button"
+                    onClick={() => scrollCarousel('left')}
+                    aria-label="Вліво"
+                    title={locale === 'pl' ? 'W lewo' : 'Вліво'}
+                    className="absolute -left-1 sm:-left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/75 hover:bg-black/95 backdrop-blur-md text-white/90 hover:text-white border border-white/20 shadow-xl flex items-center justify-center transition-all cursor-pointer active:scale-90"
+                  >
+                    <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+                  </button>
+
+                  {/* Права напівпрозора кнопка-стрілка */}
+                  <button
+                    type="button"
+                    onClick={() => scrollCarousel('right')}
+                    aria-label="Вправо"
+                    title={locale === 'pl' ? 'W prawo' : 'Вправо'}
+                    className="absolute -right-1 sm:-right-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/75 hover:bg-black/95 backdrop-blur-md text-white/90 hover:text-white border border-white/20 shadow-xl flex items-center justify-center transition-all cursor-pointer active:scale-90"
+                  >
+                    <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+                  </button>
+
+                  <div 
+                    ref={carouselRef}
+                    onMouseDown={handleMouseDown}
+                    onMouseLeave={handleMouseLeave}
+                    onMouseUp={handleMouseUp}
+                    onMouseMove={handleMouseMove}
+                    onWheel={handleWheel}
+                    className="flex gap-2.5 overflow-x-auto py-2.5 px-3 scrollbar-none snap-x cursor-grab active:cursor-grabbing select-none scroll-smooth"
+                    style={{ WebkitOverflowScrolling: 'touch' }}
+                  >
                   {sauceAddons.map((addon) => {
                     const cartItem = items.find((i) => i.product.id === addon.id);
                     const qty = cartItem ? cartItem.quantity : 0;
@@ -317,7 +331,8 @@ export function CartDrawer() {
                   })}
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
             {/* Вибір кількості приборів та паличок */}
             <div className="p-4 rounded-xl bg-[#14141c] border border-white/5 space-y-2">
