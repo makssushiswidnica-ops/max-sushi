@@ -22,11 +22,12 @@ import {
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
 import { useCartStore } from '@/store/useCartStore';
+import { useCustomerStore } from '@/store/useCustomerStore';
 import { useI18n } from '@/lib/i18nContext';
 import { createOrder } from '@/lib/supabase';
 import { brandTheme } from '@/config/theme';
 import { formatPrice, cn } from '@/lib/utils';
-import { DeliveryMethod, PaymentMethod, Order } from '@/types';
+import { DeliveryMethod, PaymentMethod, Order, OrderAddress } from '@/types';
 
 // Схема валідації Zod
 const checkoutSchema = z.object({
@@ -77,6 +78,8 @@ export function CheckoutModal() {
   const clearCart = useCartStore((s) => s.clearCart);
   const personsCount = useCartStore((s) => s.personsCount);
   const prepWaitTimeMinutes = useCartStore((s) => s.prepWaitTimeMinutes) || 40;
+  const customer = useCustomerStore((s) => s.customer);
+  const updateProfile = useCustomerStore((s) => s.updateProfile);
 
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('delivery');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -200,6 +203,19 @@ export function CheckoutModal() {
     }
   }, [scheduledDate, bounds.tomorrowMinTimeString, bounds.todayMinTimeString, selectedScheduledTime]);
 
+  // Автоматичне автозаповнення контактів та адреси зі збереженого профілю клієнта
+  React.useEffect(() => {
+    if (isCheckoutOpen && customer) {
+      if (customer.name) setValue('name', customer.name);
+      if (customer.phone) setValue('phone', customer.phone);
+      if (customer.defaultAddress?.street) setValue('street', customer.defaultAddress.street);
+      if (customer.defaultAddress?.house) setValue('house', customer.defaultAddress.house);
+      if (customer.defaultAddress?.apartment) setValue('apartment', customer.defaultAddress.apartment);
+      if (customer.defaultAddress?.floor) setValue('floor', customer.defaultAddress.floor);
+      if (customer.defaultAddress?.entryCode) setValue('entryCode', customer.defaultAddress.entryCode);
+    }
+  }, [isCheckoutOpen, customer, setValue]);
+
   const onSubmit = async (values: CheckoutFormValues) => {
     // Якщо прийом замовлень на сьогодні завершено, забороняємо замовлення ASAP
     if (bounds.isTodayCutoffPassed && values.timingType === 'asap') {
@@ -249,6 +265,40 @@ export function CheckoutModal() {
       };
 
       await createOrder(orderData);
+
+      // Запам'ятовуємо або оновлюємо дані клієнта та адресу для майбутніх замовлень
+      try {
+        const addressObj: OrderAddress | undefined = values.deliveryMethod === 'delivery' && values.street ? {
+          street: values.street,
+          house: values.house || '',
+          apartment: values.apartment || undefined,
+          floor: values.floor || undefined,
+          entryCode: values.entryCode || undefined,
+        } : (customer?.defaultAddress);
+
+        if (customer) {
+          updateProfile({
+            name: values.name || customer.name,
+            phone: values.phone || customer.phone,
+            defaultAddress: addressObj,
+          });
+        } else {
+          // Якщо клієнт ще не був залогінений, зберігаємо профіль для миттєвого впізнання при наступному візиті
+          const autoProfile = {
+            id: `cust_${Date.now()}`,
+            name: values.name,
+            phone: values.phone,
+            defaultAddress: addressObj,
+            preferredLanguage: locale as 'pl' | 'uk',
+            savedAt: new Date().toISOString(),
+          };
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('max-sushi-customer', JSON.stringify(autoProfile));
+          }
+        }
+      } catch (e) {
+        console.warn('Customer auto-save notice:', e);
+      }
 
       // Запуск феєрверку конфеті
       try {

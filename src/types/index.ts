@@ -83,3 +83,12 @@ export interface Order extends CheckoutFormData {
   status: 'pending' | 'confirmed' | 'preparing' | 'in_delivery' | 'delivered';
   createdAt: string;
 }
+
+export interface CustomerProfile {
+  id: string;
+  name: string;
+  phone: string;
+  defaultAddress?: OrderAddress;
+  preferredLanguage?: 'pl' | 'uk';
+  savedAt: string;
+}

@@ -2,16 +2,20 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ShoppingBag, Phone, Clock, MapPin } from 'lucide-react';
+import { ShoppingBag, Phone, Clock, MapPin, User } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
+import { useCustomerStore } from '@/store/useCustomerStore';
 import { useI18n } from '@/lib/i18nContext';
 import { brandTheme, getStoreStatus } from '@/config/theme';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, cn } from '@/lib/utils';
 
 export function Header() {
   const { locale, t, changeLocale } = useI18n();
   const toggleCart = useCartStore((s) => s.toggleOpen);
   const items = useCartStore((s) => s.items);
+
+  const toggleCustomerDrawer = useCustomerStore((s) => s.toggleOpen);
+  const customer = useCustomerStore((s) => s.customer);
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -151,6 +155,31 @@ export function Header() {
                 UA
               </button>
             </div>
+
+            {/* Кнопка кабінету клієнта */}
+            <button
+              onClick={toggleCustomerDrawer}
+              title={customer ? t.customer.myAccount : t.customer.loginTitle}
+              style={{
+                clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+              }}
+              className={cn(
+                'flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 border text-xs sm:text-sm font-bold transition-all cursor-pointer select-none active:scale-95',
+                customer
+                  ? 'bg-[#181824] hover:bg-[#202030] border-emerald-500/40 text-white shadow-sm'
+                  : 'bg-[#131318] hover:bg-[#1a1a22] border-white/10 text-zinc-300 hover:text-white'
+              )}
+            >
+              <div className="relative flex items-center justify-center">
+                <User className="w-4 h-4 text-[#e50914]" />
+                {customer && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-[#181824]" />
+                )}
+              </div>
+              <span className="hidden sm:inline max-w-[100px] truncate">
+                {customer ? (customer.name ? customer.name.split(' ')[0] : t.customer.account) : t.customer.account}
+              </span>
+            </button>
 
             {/* Реактивна кнопка кошика з формою клинка та анімацією імпульсу */}
             <button

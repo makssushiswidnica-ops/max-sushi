@@ -7,6 +7,7 @@ import { I18nProvider } from '@/lib/i18nContext';
 import { Header } from '@/components/layout/Header';
 import { StickyNav } from '@/components/layout/StickyNav';
 import { CartDrawer } from '@/components/cart/CartDrawer';
+import { CustomerDrawer } from '@/components/customer/CustomerDrawer';
 import { ProductModal } from '@/components/menu/ProductModal';
 import { CheckoutModal } from '@/components/checkout/CheckoutModal';
 import { Footer } from '@/components/layout/Footer';
@@ -95,6 +96,7 @@ export default async function LocaleLayout({
         
         {/* Глобальні модальні вікна та шторки */}
         <CartDrawer />
+        <CustomerDrawer />
         <ProductModal />
         <CheckoutModal />
       </div>
