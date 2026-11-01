@@ -1067,6 +1067,46 @@ export default function AdminPage() {
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
+    // Визначення чи день є зачиненим (вихідним) закладу за графіком (наприклад, понеділок)
+    const isDayClosed = (date: Date) => {
+      const day = date.getDay(); // 0 = Нд, 1 = Пн, 2 = Вт, ...
+      const scheduleIdx = day === 0 ? 6 : day - 1;
+      return Boolean(brandTheme.contacts.schedule[scheduleIdx]?.isClosed);
+    };
+
+    const shortDayNamesUk = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+    const fullDayNamesUk = ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'Пʼятниця', 'Субота'];
+
+    // Кількість робочих днів для графіка (пропускаючи вихідні дні закладу)
+    const targetBarsCount = statsPeriod === 'today' ? 1 : statsPeriod === '30days' ? 14 : statsPeriod === 'all' ? 18 : 7;
+    const workingDaysList: Date[] = [];
+
+    let dayOffset = 0;
+    const maxLookbackDays = 60;
+
+    while (workingDaysList.length < targetBarsCount && dayOffset < maxLookbackDays) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOffset);
+      const isClosed = isDayClosed(d);
+
+      if (statsPeriod === 'today') {
+        workingDaysList.push(d);
+        break;
+      }
+
+      // Пропускаємо вихідні дні закладу (понеділки)
+      if (!isClosed) {
+        workingDaysList.push(d);
+      }
+      dayOffset++;
+    }
+
+    // Хронологічний порядок (зліва направо)
+    workingDaysList.reverse();
+
+    const startOfPeriod = workingDaysList.length > 0 
+      ? new Date(workingDaysList[0].getFullYear(), workingDaysList[0].getMonth(), workingDaysList[0].getDate()).getTime()
+      : startOfToday;
+
     const filtered = orders.filter((o) => {
       const orderTime = new Date(o.created_at).getTime();
       if (isNaN(orderTime)) return true;
@@ -1074,11 +1114,8 @@ export default function AdminPage() {
       if (statsPeriod === 'today') {
         return orderTime >= startOfToday;
       }
-      if (statsPeriod === '7days') {
-        return now.getTime() - orderTime <= 7 * 24 * 60 * 60 * 1000;
-      }
-      if (statsPeriod === '30days') {
-        return now.getTime() - orderTime <= 30 * 24 * 60 * 60 * 1000;
+      if (statsPeriod === '7days' || statsPeriod === '30days') {
+        return orderTime >= startOfPeriod;
       }
       return true;
     });
@@ -1165,16 +1202,23 @@ export default function AdminPage() {
 
     const maxDishCount = topDishes.length > 0 ? Math.max(...topDishes.map((d) => d.count)) : 1;
 
-    // Динаміка замовлень по днях для стовпчастого графіка
-    const daysMap = new Map<string, { label: string; dateStr: string; revenue: number; count: number }>();
-    const chartDays = statsPeriod === 'today' ? 1 : statsPeriod === '30days' ? 14 : 7;
+    // Динаміка замовлень по робочих днях для стовпчастого графіка (без вихідних днів закладу)
+    const daysMap = new Map<string, {
+      label: string;
+      dayName: string;
+      fullDateLabel: string;
+      dateStr: string;
+      revenue: number;
+      count: number;
+    }>();
 
-    for (let i = chartDays - 1; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+    workingDaysList.forEach((d) => {
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       const label = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
-      daysMap.set(key, { label, dateStr: key, revenue: 0, count: 0 });
-    }
+      const dayName = shortDayNamesUk[d.getDay()];
+      const fullDateLabel = `${fullDayNamesUk[d.getDay()]}, ${label}`;
+      daysMap.set(key, { label, dayName, fullDateLabel, dateStr: key, revenue: 0, count: 0 });
+    });
 
     validOrders.forEach((o) => {
       const d = new Date(o.created_at);
@@ -3833,7 +3877,7 @@ export default function AdminPage() {
                         Динаміка виручки
                       </h3>
                       <p className="text-[11px] text-zinc-400 mt-0.5">
-                        Розподіл замовлень та суми за днями
+                        Розподіл замовлень та виручки за робочими днями (вихідні пропускаються)
                       </p>
                     </div>
                     <span className="text-xs font-mono text-zinc-500">
@@ -3843,7 +3887,7 @@ export default function AdminPage() {
 
                   {/* Стовпчаста діаграма */}
                   <div className="pt-6 pb-2">
-                    <div className="h-44 sm:h-52 flex items-end justify-between gap-2 sm:gap-4 border-b border-white/10 pb-2">
+                    <div className="h-44 sm:h-52 flex items-end justify-between gap-1.5 sm:gap-4 border-b border-white/10 pb-2">
                       {statsData.chartBars.map((bar, idx) => {
                         const heightPercent = Math.max(
                           bar.revenue > 0 ? Math.round((bar.revenue / statsData.maxBarRevenue) * 100) : 4,
@@ -3858,8 +3902,10 @@ export default function AdminPage() {
                           >
                             {/* Спливаюча підказка (Tooltip) при наведенні */}
                             <div className="absolute -top-12 z-30 opacity-0 group-hover/bar:opacity-100 transition-opacity pointer-events-none bg-black/95 text-white text-[10px] px-2.5 py-1.5 rounded-lg border border-white/20 whitespace-nowrap shadow-xl">
-                              <p className="font-bold">{bar.label}</p>
-                              <p className="text-emerald-400 font-mono">{formatPrice(bar.revenue, 'pl')} ({bar.count} зам.)</p>
+                              <p className="font-bold">{bar.fullDateLabel}</p>
+                              <p className="text-emerald-400 font-mono">
+                                {formatPrice(bar.revenue, 'pl')} {bar.count > 0 ? `(${bar.count} зам.)` : '(0 зам.)'}
+                              </p>
                             </div>
 
                             {/* Стовпчик */}
@@ -3877,13 +3923,19 @@ export default function AdminPage() {
                               />
                             </div>
 
-                            {/* Дата під стовпчиком */}
-                            <span className={cn(
-                              'text-[10px] mt-2 font-mono',
+                            {/* Дата та день тижня під стовпчиком */}
+                            <div className={cn(
+                              'text-[10px] mt-2 font-mono text-center flex flex-col items-center leading-tight',
                               isLatest ? 'text-white font-bold' : 'text-zinc-500'
                             )}>
-                              {bar.label}
-                            </span>
+                              <span className={cn(
+                                'text-[9px] uppercase tracking-wider font-sans font-semibold',
+                                isLatest ? 'text-red-400' : 'text-zinc-400'
+                              )}>
+                                {bar.dayName}
+                              </span>
+                              <span className="text-[10px]">{bar.label}</span>
+                            </div>
                           </div>
                         );
                       })}
