@@ -47,8 +47,21 @@ export function MenuCatalog() {
     };
   }, [setMenuProducts, setMenuCategories]);
 
-  // За замовчуванням одразу відкривається перший розділ категорій (Міні Макі)
-  const [selectedCategory, setSelectedCategory] = useState<string>(categoriesList[0]?.id || 'mini-maki');
+  // За замовчуванням відкривається збережена користувачем категорія або перший розділ
+  const [selectedCategory, setSelectedCategory] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = sessionStorage.getItem('maks_active_category');
+      if (saved) return saved;
+    }
+    return categoriesList[0]?.id || 'mini-maki';
+  });
+
+  // Запам'ятовуємо обрану категорію при переходах по сайту, кошику чи модалках
+  useEffect(() => {
+    if (selectedCategory && typeof window !== 'undefined') {
+      sessionStorage.setItem('maks_active_category', selectedCategory);
+    }
+  }, [selectedCategory]);
   const [isAllCategories, setIsAllCategories] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState('');
   const catalogContentRef = useRef<HTMLDivElement>(null);

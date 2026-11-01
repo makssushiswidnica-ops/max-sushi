@@ -65,11 +65,11 @@ export function StickyNav({
   // Підрахунок кількості товарів у кожній категорії для випадаючого меню
   const categoryCounts = React.useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const cat of categories) {
+    for (const cat of categoriesData) {
       counts[cat.id] = products.filter((p) => p.categoryId === cat.id).length;
     }
     return counts;
-  }, []);
+  }, [categoriesData]);
 
   // Відкриття та фокус на інпуті
   const toggleSearch = () => {
@@ -176,41 +176,91 @@ export function StickyNav({
     return () => window.removeEventListener('scroll', handleScroll);
   }, [onSelectCategory]);
 
-  // Обчислення циклічного списку: активний елемент завжди строго в центрі,
-  // а попередні та наступні категорії безперервно зациклюються по колу
-  const activeIndex = categories.findIndex((c) => c.id === activeCategory);
+  // Обчислення циклічного списку для мобільного: активний елемент по центру
+  const activeIndex = categoriesData.findIndex((c) => c.id === activeCategory);
   const validIndex = activeIndex >= 0 ? activeIndex : 0;
-  const total = categories.length;
+  const total = categoriesData.length;
 
-  // Формуємо циклічний зріз: по 5 категорій ліворуч і по 5 праворуч від активної
+  // Формуємо циклічний зріз для мобільного
   const halfRange = 5;
-  const cyclicItems: { category: (typeof categories)[0]; offset: number }[] = [];
-  for (let offset = -halfRange; offset <= halfRange; offset++) {
-    const index = (validIndex + offset + total * 10) % total;
-    cyclicItems.push({ category: categories[index], offset });
+  const cyclicItems: { category: (typeof categoriesData)[0]; offset: number }[] = [];
+  if (total > 0) {
+    for (let offset = -halfRange; offset <= halfRange; offset++) {
+      const index = (validIndex + offset + total * 10) % total;
+      cyclicItems.push({ category: categoriesData[index], offset });
+    }
   }
 
-  // При зміні активної категорії центруємо контейнер навігації (плавно під час скролу сторінки)
-  useEffect(() => {
+  const isCartOpen = useCartStore((s) => s.isOpen);
+  const selectedProduct = useCartStore((s) => s.selectedProduct);
+
+  // Надійне центрування активної категорії на мобільному телефоні
+  const centerMobileCategory = useCallback((instant = false) => {
     if (navRef.current) {
       const centerBtn = navRef.current.querySelector<HTMLElement>('[data-is-center="true"]');
       if (centerBtn) {
         const container = navRef.current;
         const left = centerBtn.offsetLeft - container.offsetWidth / 2 + centerBtn.offsetWidth / 2;
-        // Якщо перехід викликано ручним кліком користувача — переходимо миттєво, а при звичайному скролі — плавно
         container.scrollTo({
           left,
-          behavior: isUserClicking.current ? 'instant' : 'smooth',
+          behavior: instant ? 'instant' : (isUserClicking.current ? 'instant' : 'smooth'),
         });
       }
     }
-  }, [activeCategory]);
+  }, []);
+
+  // 1. Центрування при зміні активної категорії
+  useEffect(() => {
+    centerMobileCategory(false);
+  }, [activeCategory, centerMobileCategory]);
+
+  // 2. Центрування при монтуванні та оновленні категорій
+  useEffect(() => {
+    const timer1 = setTimeout(() => centerMobileCategory(true), 60);
+    const timer2 = setTimeout(() => centerMobileCategory(true), 250);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, [categoriesData, activeCategory, centerMobileCategory]);
+
+  // 3. Відновлення положення при закритті кошика або модалки товару
+  const prevModalState = useRef({ cart: false, product: false });
+  useEffect(() => {
+    const wasOpen = prevModalState.current.cart || prevModalState.current.product;
+    const isNowOpen = isCartOpen || Boolean(selectedProduct);
+
+    if (wasOpen && !isNowOpen) {
+      setTimeout(() => centerMobileCategory(true), 50);
+      setTimeout(() => centerMobileCategory(true), 200);
+    }
+
+    prevModalState.current = { cart: isCartOpen, product: Boolean(selectedProduct) };
+  }, [isCartOpen, selectedProduct, centerMobileCategory]);
+
+  // 4. Відновлення при поверненні на екран (visibility change / focus / resize)
+  useEffect(() => {
+    const handleRestore = () => {
+      if (document.visibilityState === 'visible') {
+        setTimeout(() => centerMobileCategory(true), 50);
+      }
+    };
+    document.addEventListener('visibilitychange', handleRestore);
+    window.addEventListener('focus', handleRestore);
+    window.addEventListener('resize', handleRestore);
+    return () => {
+      document.removeEventListener('visibilitychange', handleRestore);
+      window.removeEventListener('focus', handleRestore);
+      window.removeEventListener('resize', handleRestore);
+    };
+  }, [centerMobileCategory]);
 
   const stepCategory = (direction: 'prev' | 'next') => {
+    if (total === 0) return;
     const newIndex = direction === 'next' 
       ? (validIndex + 1) % total 
       : (validIndex - 1 + total) % total;
-    scrollToCategory(categories[newIndex].id);
+    scrollToCategory(categoriesData[newIndex].id);
   };
 
   // Точне динамічне вимірювання висоти хедера для ідеального позиціонування sticky nav
@@ -233,7 +283,7 @@ export function StickyNav({
       style={{ top: `${headerHeight}px` }}
       className="sticky z-30 w-full bg-[#07070a]/95 backdrop-blur-xl border-b border-white/10 transition-all shadow-md shadow-black/40"
     >
-      <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 relative flex items-center h-14 sm:h-15">
+      <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 relative flex items-center justify-between min-h-14 md:min-h-[66px] py-1 md:py-2">
         {/* Кнопка випадаючого списку категорій: збільшена, зручна для пальців */}
         <div className="relative shrink-0 z-50 flex items-center my-auto" ref={dropdownRef}>
           <button
@@ -293,12 +343,12 @@ export function StickyNav({
                     {locale === 'pl' ? 'Wybierz kategorię' : 'Оберіть категорію'}
                   </span>
                   <span className="text-[11px] font-bold text-zinc-400 bg-white/5 px-2 py-0.5 rounded-full">
-                    {categories.length} {locale === 'pl' ? 'sekcji' : 'розділів'}
+                    {categoriesData.length} {locale === 'pl' ? 'sekcji' : 'розділів'}
                   </span>
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  {categories.map((cat) => {
+                  {categoriesData.map((cat) => {
                     const isActive = cat.id === activeCategory;
                     const count = categoryCounts[cat.id] || 0;
                     return (
@@ -350,31 +400,47 @@ export function StickyNav({
           )}
         </div>
 
-        {/* Розділювач між кнопкою меню та стрічкою категорій */}
-        <div className="h-5 w-[1px] bg-white/10 mr-1.5 sm:mr-2 shrink-0 hidden sm:block" />
+        {/* Розділювач біля кнопки меню (десктоп) */}
+        <div className="h-6 w-[1px] bg-white/10 mx-2 shrink-0 hidden md:block" />
 
-        {/* Контейнер стрічки категорій: на мобільному при відкритті пошуку плавно поступається місцем інпуту */}
+        {/* ДЕСКТОПНИЙ ВИГЛЯД: Усі категорії у 2 компактні рядки (hidden md:flex) */}
+        <div className="hidden md:flex flex-1 flex-wrap items-center justify-center gap-x-2 lg:gap-x-3.5 gap-y-1 sm:gap-y-1.5 py-1 px-1 min-w-0">
+          {categoriesData.map((category) => {
+            const isActive = category.id === activeCategory;
+            return (
+              <button
+                key={category.id}
+                type="button"
+                onClick={() => scrollToCategory(category.id)}
+                className={cn(
+                  'relative px-2.5 lg:px-3 py-1 text-xs lg:text-[13px] font-bold tracking-wide uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none flex items-center gap-1',
+                  isActive
+                    ? 'text-white font-black scale-105'
+                    : 'text-zinc-400 hover:text-white hover:scale-102'
+                )}
+              >
+                <span>{category.name[locale]}</span>
+                {isActive && (
+                  <span className="absolute bottom-0 left-1 right-1 h-[2px] rounded-full bg-gradient-to-r from-[#e50914] via-[#ff4d58] to-[#e50914] shadow-[0_0_10px_#e50914]" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* МОБІЛЬНИЙ ВИГЛЯД: Циклічна горизонтальна стрічка (flex md:hidden) */}
         <div className={cn(
-          "relative flex-1 min-w-0 items-center transition-all",
-          isSearchOpen ? "hidden sm:flex" : "flex"
+          "relative flex-1 min-w-0 items-center transition-all flex md:hidden",
+          isSearchOpen ? "hidden" : "flex"
         )}>
-          {/* Кнопка скролу вліво (попередня категорія по колу) - тільки десктоп */}
-          <button
-            onClick={() => stepCategory('prev')}
-            aria-label="Попередня категорія"
-            className="hidden md:flex items-center justify-center w-7 h-7 rounded-full bg-white/5 hover:bg-white/15 text-zinc-400 hover:text-white transition-all mr-1 cursor-pointer shrink-0 z-10"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
+          {/* М'які градієнтні маски виключно над стрічкою категорій */}
+          <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-[#07070a] to-transparent z-10" />
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[#07070a] to-transparent z-10" />
 
-          {/* М'які градієнтні маски виключно над стрічкою категорій, які не налізають на кнопку Меню */}
-          <div className="pointer-events-none absolute left-0 md:left-8 top-0 bottom-0 w-6 sm:w-8 bg-gradient-to-r from-[#07070a] to-transparent z-10" />
-          <div className="pointer-events-none absolute right-0 md:right-8 top-0 bottom-0 w-6 sm:w-8 bg-gradient-to-l from-[#07070a] to-transparent z-10" />
-
-          {/* Циклічна стрічка категорій: на мобільному скрол та тапи вимкнені, щоб уникнути конфліктів жестів */}
+          {/* Циклічна стрічка категорій на мобільному */}
           <div
             ref={navRef}
-            className="flex items-center gap-1 sm:gap-3 overflow-x-auto no-scrollbar scroll-smooth py-2 sm:py-2.5 w-full px-2 touch-none sm:touch-auto pointer-events-none sm:pointer-events-auto select-none"
+            className="flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth py-2 w-full px-2 touch-pan-x select-none"
             aria-label="Категорії меню"
           >
             {cyclicItems.map(({ category, offset }) => {
@@ -384,20 +450,19 @@ export function StickyNav({
                   key={`${category.id}-${offset}`}
                   data-is-center={isCenter ? 'true' : 'false'}
                   onClick={() => scrollToCategory(category.id)}
-                  tabIndex={-1}
                   className={cn(
-                    'relative px-3 sm:px-4 py-2 text-sm sm:text-base font-bold whitespace-nowrap transition-all duration-300 ease-out cursor-default sm:cursor-pointer shrink-0 select-none',
+                    'relative px-3 py-1.5 text-sm font-bold whitespace-nowrap transition-all duration-300 ease-out cursor-pointer shrink-0 select-none active:scale-95',
                     isCenter
                       ? 'text-white scale-105'
-                      : 'text-zinc-500 sm:hover:text-zinc-300 opacity-60 sm:hover:opacity-100 scale-100'
+                      : 'text-zinc-500 opacity-60 scale-100'
                   )}
                 >
                   <span className="relative z-10 transition-colors duration-300">{category.name[locale]}</span>
 
-                  {/* Неонова рубінова лінія підкреслення під центральним активним розділом з м'якою анімацією появи */}
+                  {/* Неонова рубінова лінія підкреслення під центральним активним розділом */}
                   <span
                     className={cn(
-                      'absolute bottom-0 left-3 right-3 h-[2.5px] rounded-full transition-all duration-300 ease-out',
+                      'absolute bottom-0 left-2 right-2 h-[2.5px] rounded-full transition-all duration-300 ease-out',
                       isCenter
                         ? 'bg-gradient-to-r from-[#e50914] via-[#ff4d58] to-[#e50914] shadow-[0_0_12px_#e50914] opacity-100 scale-x-100'
                         : 'opacity-0 scale-x-50 pointer-events-none'
@@ -407,20 +472,11 @@ export function StickyNav({
               );
             })}
           </div>
-
-          {/* Кнопка скролу вправо (наступна категорія по колу) */}
-          <button
-            onClick={() => stepCategory('next')}
-            aria-label="Наступна категорія"
-            className="hidden md:flex items-center justify-center w-7 h-7 rounded-full bg-white/5 hover:bg-white/15 text-zinc-400 hover:text-white transition-all ml-1 cursor-pointer shrink-0 z-10"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
         </div>
 
-        {/* Симетричний розділювач між стрічкою категорій та кнопкою пошуку (як ліворуч біля кнопки меню) */}
+        {/* Розділювач біля пошуку (десктоп) */}
         {!isSearchOpen && (
-          <div className="h-5 w-[1px] bg-white/10 ml-1.5 sm:ml-2 shrink-0 hidden sm:block" />
+          <div className="h-6 w-[1px] bg-white/10 mx-2 shrink-0 hidden md:block" />
         )}
 
         {/* Прозорий безпечний бекдроп для мобільного пошуку: при тапі за межами інпуту просто згортає пошук */}
