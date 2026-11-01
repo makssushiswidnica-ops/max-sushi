@@ -10,7 +10,7 @@ import { brandTheme, getStoreStatus } from '@/config/theme';
 import { formatPrice, cn } from '@/lib/utils';
 
 export function Header() {
-  const { locale, t, changeLocale } = useI18n();
+  const { locale, t } = useI18n();
   const toggleCart = useCartStore((s) => s.toggleOpen);
   const items = useCartStore((s) => s.items);
 
@@ -130,32 +130,8 @@ export function Header() {
             </Link>
           </div>
 
-          {/* Права частина: Перемикач мов (на всіх екранах) + Кнопка кошика */}
+          {/* Права частина: Кнопка кабінету клієнта + Кнопка кошика */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Селектор мов: тепер завжди видно в хедері (на мобільному і на ПК) */}
-            <div className="flex items-center bg-[#131318] border border-white/10 rounded-lg p-0.5 shadow-inner">
-              <button
-                onClick={() => changeLocale('pl')}
-                className={`px-2 py-1 text-[11px] font-bold rounded-md transition-all ${
-                  locale === 'pl'
-                    ? 'bg-[#e50914] text-white shadow-xs'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                PL
-              </button>
-              <button
-                onClick={() => changeLocale('uk')}
-                className={`px-2 py-1 text-[11px] font-bold rounded-md transition-all ${
-                  locale === 'uk'
-                    ? 'bg-[#e50914] text-white shadow-xs'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                UA
-              </button>
-            </div>
-
             {/* Кнопка кабінету клієнта / входу (лаконічна іконка користувача) */}
             <button
               onClick={toggleCustomerDrawer}

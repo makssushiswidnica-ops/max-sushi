@@ -977,7 +977,7 @@ export function CustomerDrawer() {
                         : 'bg-black/30 border-white/10 text-zinc-400 hover:text-white'
                     )}
                   >
-                    <span>Polski (domyślny)</span>
+                    <span>Polski</span>
                     {locale === 'pl' && <Check className="w-3.5 h-3.5" />}
                   </button>
 
