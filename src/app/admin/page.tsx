@@ -2249,8 +2249,7 @@ export default function AdminPage() {
 
             <Link
               href="/pl"
-              target="_blank"
-              title="Відкрити клієнтський сайт"
+              title="Перейти на клієнтський сайт"
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-zinc-300 hover:text-white bg-[#151520] hover:bg-[#1e1e2d] border border-white/10 rounded-lg transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5 text-[#e50914]" />
@@ -2330,7 +2329,6 @@ export default function AdminPage() {
               {/* Повернення на клієнтський сайт */}
               <Link
                 href="/pl"
-                target="_blank"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider text-zinc-300 hover:text-white bg-white/5 border border-white/5 transition-all"
               >
