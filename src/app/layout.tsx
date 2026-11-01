@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Montserrat, Knewave, Unbounded, Dela_Gothic_One } from 'next/font/google';
+import { Montserrat, Knewave, Unbounded, Dela_Gothic_One, Rubik_Wet_Paint } from 'next/font/google';
 import localFont from 'next/font/local';
 import './globals.css';
 import { BisSkinCleanup } from '@/components/common/BisSkinCleanup';
@@ -38,6 +38,13 @@ const edoSZ = localFont({
   display: 'swap',
 });
 
+const rubikWetPaint = Rubik_Wet_Paint({
+  subsets: ['latin', 'cyrillic'],
+  weight: ['400'],
+  variable: '--font-rubik-wet-paint',
+  display: 'swap',
+});
+
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
@@ -66,7 +73,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pl" suppressHydrationWarning className={`${montserrat.variable} ${knewave.variable} ${delaGothicOne.variable} ${unbounded.variable} ${edoSZ.variable} dark antialiased`}>
+    <html lang="pl" suppressHydrationWarning className={`${montserrat.variable} ${knewave.variable} ${delaGothicOne.variable} ${unbounded.variable} ${edoSZ.variable} ${rubikWetPaint.variable} dark antialiased`}>
       <body suppressHydrationWarning className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col font-sans selection:bg-[#e50914] selection:text-white">
         <BisSkinCleanup />
         {children}

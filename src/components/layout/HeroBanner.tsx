@@ -50,12 +50,12 @@ export function HeroBanner() {
       {/* Верхня частина з заголовком — відцентрована */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full pt-4 sm:pt-6">
         <div className="max-w-5xl mx-auto text-center px-2">
-          {/* Заголовок: для польської мови використовується Knewave, а для української — автентичний японський display-шрифт Dela Gothic One */}
+          {/* Заголовок: для польської мови використовується Knewave, а для української — Rubik Wet Paint */}
           <h1 
             style={{ 
               fontFamily: locale === 'pl'
                 ? 'var(--font-knewave), "Knewave", cursive, sans-serif'
-                : 'var(--font-dela-gothic), "Dela Gothic One", var(--font-unbounded), sans-serif',
+                : 'var(--font-rubik-wet-paint), "Rubik Wet Paint", cursive, sans-serif',
               WebkitTextStroke: '0.4px #09090b',
               paintOrder: 'stroke fill',
             }}
