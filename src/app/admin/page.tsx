@@ -3821,10 +3821,10 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Основний блок: Графік продажів + ТОП страв */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Ліва колонка (2/3): Графік динаміки + Пікові години */}
-              <div className="lg:col-span-2 space-y-6">
+            {/* Верхній блок графіків та топу страв: вирівняні по висоті на десктопі */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+              {/* Ліва частина (2/3): Графік динаміки + Пікові години */}
+              <div className="lg:col-span-2 space-y-6 flex flex-col justify-between">
                 {/* 1. Графік динаміки виручки по днях */}
                 <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-5 sm:p-6 space-y-4">
                   <div className="flex items-center justify-between">
@@ -3930,151 +3930,208 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Права колонка (1/3): ТОП страв + Оплати + Тип доставки */}
-              <div className="space-y-6">
-                {/* 1. ТОП-5 Найпопулярніших страв */}
-                <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-5 sm:p-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-                        ТОП страв за продажами
-                      </h3>
-                      <p className="text-[11px] text-zinc-400 mt-0.5">
-                        Фаворити клієнтів за обраний період
-                      </p>
+              {/* Права частина (1/3): ТОП страв (вирівняна по висоті в рівень з нижнім краєм пікових годин) */}
+              <div className="lg:col-span-1 flex flex-col">
+                <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-5 sm:p-6 flex flex-col justify-between h-full">
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                          ТОП страв за продажами
+                        </h3>
+                        <p className="text-[11px] text-zinc-400 mt-0.5">
+                          Фаворити клієнтів за обраний період
+                        </p>
+                      </div>
+                      <Award className="w-4 h-4 text-amber-400 shrink-0" />
                     </div>
-                    <Award className="w-4 h-4 text-amber-400" />
+
+                    {statsData.topDishes.length === 0 ? (
+                      <div className="py-20 text-center text-zinc-500 text-xs">
+                        Ще немає даних про продані страви
+                      </div>
+                    ) : (
+                      <div className="flex flex-col justify-between gap-2.5 sm:gap-3">
+                        {statsData.topDishes.map((dish, rank) => {
+                          const percent = Math.round((dish.count / statsData.maxDishCount) * 100);
+
+                          return (
+                            <div key={dish.id} className="p-2.5 sm:p-3 rounded-xl bg-[#14141f] border border-white/5 space-y-1.5">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <span className={cn(
+                                    'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0',
+                                    rank === 0 ? 'bg-amber-400 text-black' :
+                                    rank === 1 ? 'bg-zinc-300 text-black' :
+                                    rank === 2 ? 'bg-amber-700 text-white' :
+                                    'bg-white/10 text-zinc-400'
+                                  )}>
+                                    {rank + 1}
+                                  </span>
+                                  {dish.image ? (
+                                    <img
+                                      src={dish.image}
+                                      alt={dish.name}
+                                      className="w-8 h-8 rounded-lg object-cover shrink-0 border border-white/10"
+                                    />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-lg bg-black/40 border border-white/10 flex items-center justify-center text-xs shrink-0">
+                                      🍣
+                                    </div>
+                                  )}
+                                  <span className="text-xs font-bold text-white truncate">
+                                    {dish.name}
+                                  </span>
+                                </div>
+
+                                <div className="text-right shrink-0">
+                                  <span className="text-xs font-black text-white">{dish.count} шт.</span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between text-[10px] text-zinc-500">
+                                <span>Виручка: {formatPrice(dish.revenue, 'pl')}</span>
+                                <span>{percent}%</span>
+                              </div>
+
+                              <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
+                                <div
+                                  style={{ width: `${percent}%` }}
+                                  className={cn(
+                                    'h-full rounded-full transition-all',
+                                    rank === 0 ? 'bg-gradient-to-r from-amber-400 to-[#e50914]' : 'bg-[#e50914]'
+                                  )}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-
-                  {statsData.topDishes.length === 0 ? (
-                    <div className="py-8 text-center text-zinc-500 text-xs">
-                      Ще немає даних про продані страви
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {statsData.topDishes.map((dish, rank) => {
-                        const percent = Math.round((dish.count / statsData.maxDishCount) * 100);
-
-                        return (
-                          <div key={dish.id} className="p-2.5 rounded-xl bg-[#14141f] border border-white/5 space-y-1.5">
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className={cn(
-                                  'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0',
-                                  rank === 0 ? 'bg-amber-400 text-black' :
-                                  rank === 1 ? 'bg-zinc-300 text-black' :
-                                  rank === 2 ? 'bg-amber-700 text-white' :
-                                  'bg-white/10 text-zinc-400'
-                                )}>
-                                  {rank + 1}
-                                </span>
-                                {dish.image ? (
-                                  <img
-                                    src={dish.image}
-                                    alt={dish.name}
-                                    className="w-7 h-7 rounded-lg object-cover shrink-0 border border-white/10"
-                                  />
-                                ) : (
-                                  <div className="w-7 h-7 rounded-lg bg-black/40 border border-white/10 flex items-center justify-center text-[10px] shrink-0">
-                                    🍣
-                                  </div>
-                                )}
-                                <span className="text-xs font-bold text-white truncate">
-                                  {dish.name}
-                                </span>
-                              </div>
-
-                              <div className="text-right shrink-0">
-                                <span className="text-xs font-black text-white">{dish.count} шт.</span>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center justify-between text-[10px] text-zinc-500">
-                              <span>Сума: {formatPrice(dish.revenue, 'pl')}</span>
-                              <span>{percent}%</span>
-                            </div>
-
-                            <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
-                              <div
-                                style={{ width: `${percent}%` }}
-                                className={cn(
-                                  'h-full rounded-full transition-all',
-                                  rank === 0 ? 'bg-gradient-to-r from-amber-400 to-[#e50914]' : 'bg-[#e50914]'
-                                )}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
                 </div>
+              </div>
+            </div>
 
-                {/* 2. Способи оплати */}
-                <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-5 sm:p-6 space-y-3.5">
+            {/* Нижній блок: Способи оплати та Спосіб отримання (розміщені під піковими годинами) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* 1. Способи оплати (без зірочки для BLIK) */}
+              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-5 sm:p-6 space-y-4">
+                <div>
                   <h3 className="text-sm font-bold text-white uppercase tracking-wider">
                     Способи оплати
                   </h3>
-
-                  <div className="space-y-2.5">
-                    {[
-                      { key: 'blik', label: 'BLIK онлайн', icon: Sparkles, color: 'text-amber-400', bar: 'bg-amber-400', data: statsData.paymentStats.blik },
-                      { key: 'cash', label: 'Готівка', icon: Banknote, color: 'text-emerald-400', bar: 'bg-emerald-500', data: statsData.paymentStats.cash },
-                      { key: 'card', label: 'Картка / термінал', icon: CreditCard, color: 'text-blue-400', bar: 'bg-blue-500', data: statsData.paymentStats.card },
-                    ].map((m) => {
-                      const percent = statsData.totalRevenue > 0 ? Math.round((m.data.sum / statsData.totalRevenue) * 100) : 0;
-                      const Icon = m.icon;
-
-                      return (
-                        <div key={m.key} className="p-2.5 rounded-xl bg-[#14141f] border border-white/5 space-y-1.5">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="flex items-center gap-1.5 font-bold text-zinc-300">
-                              <Icon className={cn('w-3.5 h-3.5', m.color)} />
-                              {m.label}
-                            </span>
-                            <span className="font-mono font-bold text-white">
-                              {formatPrice(m.data.sum, 'pl')}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between text-[10px] text-zinc-500">
-                            <span>{m.data.count} замовлень</span>
-                            <span>{percent}%</span>
-                          </div>
-
-                          <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
-                            <div style={{ width: `${percent}%` }} className={cn('h-full rounded-full', m.bar)} />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">
+                    Структура платежів за обраний період
+                  </p>
                 </div>
 
-                {/* 3. Доставка vs Самовивіз */}
-                <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-5 sm:p-6 space-y-3">
+                <div className="space-y-3">
+                  {[
+                    {
+                      key: 'blik',
+                      label: 'BLIK онлайн',
+                      customBadge: (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-400/20 text-amber-400 border border-amber-400/30 tracking-wider">
+                          BLIK
+                        </span>
+                      ),
+                      bar: 'bg-amber-400',
+                      data: statsData.paymentStats.blik,
+                    },
+                    {
+                      key: 'cash',
+                      label: 'Готівка',
+                      customBadge: <Banknote className="w-4 h-4 text-emerald-400" />,
+                      bar: 'bg-emerald-500',
+                      data: statsData.paymentStats.cash,
+                    },
+                    {
+                      key: 'card',
+                      label: 'Картка / термінал курʼєру',
+                      customBadge: <CreditCard className="w-4 h-4 text-blue-400" />,
+                      bar: 'bg-blue-500',
+                      data: statsData.paymentStats.card,
+                    },
+                  ].map((m) => {
+                    const percent = statsData.totalRevenue > 0 ? Math.round((m.data.sum / statsData.totalRevenue) * 100) : 0;
+
+                    return (
+                      <div key={m.key} className="p-3 rounded-xl bg-[#14141f] border border-white/5 space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="flex items-center gap-2 font-bold text-zinc-300">
+                            {m.customBadge}
+                            <span>{m.label}</span>
+                          </span>
+                          <span className="font-mono font-bold text-white">
+                            {formatPrice(m.data.sum, 'pl')}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[11px] text-zinc-500">
+                          <span>{m.data.count} замовлень</span>
+                          <span>{percent}% від виручки</span>
+                        </div>
+
+                        <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                          <div style={{ width: `${percent}%` }} className={cn('h-full rounded-full', m.bar)} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 2. Спосіб отримання (Доставка курʼєром vs Самовивіз) */}
+              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-5 sm:p-6 space-y-4 flex flex-col justify-between">
+                <div>
                   <h3 className="text-sm font-bold text-white uppercase tracking-wider">
                     Спосіб отримання
                   </h3>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">
+                    Розподіл між доставкою курʼєром та самовивозом
+                  </p>
+                </div>
 
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <div className="p-3 rounded-xl bg-[#14141f] border border-white/5 space-y-1">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-300">
-                        <Truck className="w-3.5 h-3.5 text-[#e50914]" />
-                        <span>Курʼєр</span>
+                <div className="grid grid-cols-2 gap-3.5 my-auto">
+                  <div className="p-4 rounded-xl bg-[#14141f] border border-white/5 space-y-1.5">
+                    <div className="flex items-center gap-2 text-xs font-bold text-zinc-300">
+                      <div className="w-7 h-7 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-[#e50914]">
+                        <Truck className="w-4 h-4" />
                       </div>
-                      <p className="text-lg font-black text-white">{statsData.deliveryCount}</p>
-                      <p className="text-[10px] text-zinc-500">{statsData.deliveryPercent}% замовлень</p>
+                      <span>Курʼєрська доставка</span>
                     </div>
+                    <p className="text-2xl font-black text-white mt-1">{statsData.deliveryCount}</p>
+                    <p className="text-[11px] text-zinc-400">{statsData.deliveryPercent}% всіх замовлень</p>
+                  </div>
 
-                    <div className="p-3 rounded-xl bg-[#14141f] border border-white/5 space-y-1">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-300">
-                        <Store className="w-3.5 h-3.5 text-blue-400" />
-                        <span>Самовивіз</span>
+                  <div className="p-4 rounded-xl bg-[#14141f] border border-white/5 space-y-1.5">
+                    <div className="flex items-center gap-2 text-xs font-bold text-zinc-300">
+                      <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                        <Store className="w-4 h-4" />
                       </div>
-                      <p className="text-lg font-black text-white">{statsData.pickupCount}</p>
-                      <p className="text-[10px] text-zinc-500">{statsData.pickupPercent}% замовлень</p>
+                      <span>Самовивіз із закладу</span>
                     </div>
+                    <p className="text-2xl font-black text-white mt-1">{statsData.pickupCount}</p>
+                    <p className="text-[11px] text-zinc-400">{statsData.pickupPercent}% всіх замовлень</p>
+                  </div>
+                </div>
+
+                {/* Загальна шкала співвідношення */}
+                <div className="space-y-1.5 pt-2 border-t border-white/5">
+                  <div className="flex items-center justify-between text-[11px] text-zinc-400 font-medium">
+                    <span className="flex items-center gap-1.5 text-zinc-300">
+                      <span className="w-2 h-2 rounded-full bg-[#e50914]" />
+                      Доставка ({statsData.deliveryPercent}%)
+                    </span>
+                    <span className="flex items-center gap-1.5 text-zinc-300">
+                      <span className="w-2 h-2 rounded-full bg-blue-500" />
+                      Самовивіз ({statsData.pickupPercent}%)
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden flex">
+                    <div style={{ width: `${statsData.deliveryPercent}%` }} className="h-full bg-[#e50914] transition-all" />
+                    <div style={{ width: `${statsData.pickupPercent}%` }} className="h-full bg-blue-500 transition-all" />
                   </div>
                 </div>
               </div>
