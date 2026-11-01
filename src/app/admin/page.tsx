@@ -55,7 +55,11 @@ import {
   Copy,
   Minus,
   Timer,
-  Printer
+  Printer,
+  TrendingUp,
+  Award,
+  Users,
+  ArrowUpRight
 } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 import { cn, formatPrice } from '@/lib/utils';
@@ -150,6 +154,7 @@ export default function AdminPage() {
   const [copiedSql, setCopiedSql] = useState(false);
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
   const [collapsedHistoryDays, setCollapsedHistoryDays] = useState<Set<string>>(new Set());
+  const [statsPeriod, setStatsPeriod] = useState<'today' | '7days' | '30days' | 'all'>('7days');
   
   // Відстеження вже відомих замовлень, щоб перемикати на "Нові" ЛИШЕ один раз при надходженні нового
   const knownOrderIdsRef = useRef<Set<string>>(new Set());
@@ -1056,6 +1061,189 @@ export default function AdminPage() {
       setExpandedOrderIds(new Set(filteredOrders.map((o) => o.id)));
     }
   };
+
+  // Розрахунок детальної аналітики та статистики на основі замовлень
+  const statsData = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+    const filtered = orders.filter((o) => {
+      const orderTime = new Date(o.created_at).getTime();
+      if (isNaN(orderTime)) return true;
+
+      if (statsPeriod === 'today') {
+        return orderTime >= startOfToday;
+      }
+      if (statsPeriod === '7days') {
+        return now.getTime() - orderTime <= 7 * 24 * 60 * 60 * 1000;
+      }
+      if (statsPeriod === '30days') {
+        return now.getTime() - orderTime <= 30 * 24 * 60 * 60 * 1000;
+      }
+      return true;
+    });
+
+    const validOrders = filtered.filter((o) => o.status !== 'cancelled');
+    const totalRevenue = validOrders.reduce((acc, curr) => acc + (Number(curr.total) || 0), 0);
+    const totalSubtotal = validOrders.reduce((acc, curr) => acc + (Number(curr.subtotal) || 0), 0);
+    const totalDeliveryFees = validOrders.reduce((acc, curr) => acc + (Number(curr.delivery_fee ?? curr.deliveryFee ?? 0)), 0);
+    const ordersCount = validOrders.length;
+    const avgCheck = ordersCount > 0 ? Math.round((totalRevenue / ordersCount) * 100) / 100 : 0;
+
+    // Статуси
+    const deliveredCount = validOrders.filter((o) => o.status === 'delivered').length;
+    const inProgressCount = validOrders.filter((o) => o.status === 'confirmed' || o.status === 'preparing' || o.status === 'in_delivery').length;
+    const pendingCount = validOrders.filter((o) => o.status === 'pending').length;
+    const cancelledCount = filtered.filter((o) => o.status === 'cancelled').length;
+
+    // Доставка vs Самовивіз
+    const deliveryCount = validOrders.filter((o) => (o.delivery_method || o.deliveryMethod) === 'delivery').length;
+    const pickupCount = validOrders.filter((o) => (o.delivery_method || o.deliveryMethod) === 'pickup').length;
+    const deliveryPercent = ordersCount > 0 ? Math.round((deliveryCount / ordersCount) * 100) : 0;
+    const pickupPercent = ordersCount > 0 ? 100 - deliveryPercent : 0;
+
+    // Способи оплати
+    const paymentStats = {
+      blik: { count: 0, sum: 0, label: 'BLIK онлайн' },
+      cash: { count: 0, sum: 0, label: 'Готівка' },
+      card: { count: 0, sum: 0, label: 'Картка / термінал' },
+    };
+
+    validOrders.forEach((o) => {
+      const pm = (o.payment_method || o.paymentMethod || '').toLowerCase();
+      const amount = Number(o.total) || 0;
+      if (pm.includes('blik')) {
+        paymentStats.blik.count += 1;
+        paymentStats.blik.sum += amount;
+      } else if (pm.includes('cash') || pm.includes('gotowka') || pm.includes('готівка')) {
+        paymentStats.cash.count += 1;
+        paymentStats.cash.sum += amount;
+      } else {
+        paymentStats.card.count += 1;
+        paymentStats.card.sum += amount;
+      }
+    });
+
+    // Топ-5 популярних страв
+    const dishMap = new Map<string, { id: string; name: string; count: number; revenue: number; image?: string }>();
+
+    validOrders.forEach((o) => {
+      if (Array.isArray(o.items)) {
+        o.items.forEach((item) => {
+          if (!item?.product) return;
+          const p = item.product;
+          const id = String(p.id || 'unknown');
+          let name = 'Страва';
+          if (typeof p.name === 'object' && p.name) {
+            name = (p.name as any).uk || (p.name as any).pl || 'Страва';
+          } else if (typeof p.name === 'string') {
+            name = p.name;
+          }
+          const price = Number(p.price || 0);
+          const qty = Number(item.quantity || 1);
+
+          const existing = dishMap.get(id);
+          if (existing) {
+            existing.count += qty;
+            existing.revenue += price * qty;
+          } else {
+            dishMap.set(id, {
+              id,
+              name,
+              count: qty,
+              revenue: price * qty,
+              image: p.image,
+            });
+          }
+        });
+      }
+    });
+
+    const topDishes = Array.from(dishMap.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    const maxDishCount = topDishes.length > 0 ? Math.max(...topDishes.map((d) => d.count)) : 1;
+
+    // Динаміка замовлень по днях для стовпчастого графіка
+    const daysMap = new Map<string, { label: string; dateStr: string; revenue: number; count: number }>();
+    const chartDays = statsPeriod === 'today' ? 1 : statsPeriod === '30days' ? 14 : 7;
+
+    for (let i = chartDays - 1; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const label = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+      daysMap.set(key, { label, dateStr: key, revenue: 0, count: 0 });
+    }
+
+    validOrders.forEach((o) => {
+      const d = new Date(o.created_at);
+      if (isNaN(d.getTime())) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const item = daysMap.get(key);
+      if (item) {
+        item.revenue += Number(o.total) || 0;
+        item.count += 1;
+      }
+    });
+
+    const chartBars = Array.from(daysMap.values());
+    const maxBarRevenue = chartBars.length > 0 ? Math.max(...chartBars.map((b) => b.revenue), 100) : 100;
+
+    // Пікові години
+    const hoursStats = {
+      lunch: { label: '12:00 – 15:00', sub: 'Обідній час', count: 0, revenue: 0 },
+      day: { label: '15:00 – 18:00', sub: 'Денний час', count: 0, revenue: 0 },
+      evening: { label: '18:00 – 21:00', sub: 'Вечірній пік', count: 0, revenue: 0 },
+      other: { label: 'Інший час', sub: 'До / після', count: 0, revenue: 0 },
+    };
+
+    validOrders.forEach((o) => {
+      const d = new Date(o.created_at);
+      if (isNaN(d.getTime())) return;
+      const h = d.getHours();
+      const amount = Number(o.total) || 0;
+      if (h >= 12 && h < 15) {
+        hoursStats.lunch.count += 1;
+        hoursStats.lunch.revenue += amount;
+      } else if (h >= 15 && h < 18) {
+        hoursStats.day.count += 1;
+        hoursStats.day.revenue += amount;
+      } else if (h >= 18 && h <= 21) {
+        hoursStats.evening.count += 1;
+        hoursStats.evening.revenue += amount;
+      } else {
+        hoursStats.other.count += 1;
+        hoursStats.other.revenue += amount;
+      }
+    });
+
+    // Унікальні клієнти
+    const uniquePhones = new Set(validOrders.map((o) => (o.phone || '').replace(/[^\d]/g, '').slice(-9)).filter(Boolean));
+
+    return {
+      totalRevenue,
+      totalSubtotal,
+      totalDeliveryFees,
+      ordersCount,
+      avgCheck,
+      deliveredCount,
+      inProgressCount,
+      pendingCount,
+      cancelledCount,
+      deliveryCount,
+      pickupCount,
+      deliveryPercent,
+      pickupPercent,
+      paymentStats,
+      topDishes,
+      maxDishCount,
+      chartBars,
+      maxBarRevenue,
+      hoursStats,
+      uniqueClientsCount: uniquePhones.size,
+    };
+  }, [orders, statsPeriod]);
 
   // Автозавантаження меню, замовлень та Realtime підписка на Supabase
   useEffect(() => {
@@ -3495,21 +3683,401 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* 3. РОЗДІЛ: СТАТИСТИКА */}
+        {/* 3. РОЗДІЛ: СТАТИСТИКА ТА АНАЛІТИКА */}
         {activeTab === 'stats' && (
-          <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-6 sm:p-8">
-            <h2 className="text-lg font-black text-white uppercase tracking-wide mb-1">
-              Аналітика продажів
-            </h2>
-            <p className="text-xs text-zinc-400 mb-8">
-              Звіти по виручці, середньому чеку та найпопулярніших ролах
-            </p>
-            <div className="py-16 text-center text-zinc-400">
-              <BarChart3 className="w-10 h-10 text-[#e50914] mx-auto mb-3" />
-              <p className="text-sm font-bold text-white mb-1">Модуль аналітики</p>
-              <p className="text-xs text-zinc-500 max-w-md mx-auto">
-                Графіки та аналітика замовлень будуть активовані після перших замовлень.
-              </p>
+          <div className="space-y-6">
+            {/* Верхня панель статистики: заголовок + фільтри періоду */}
+            <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-[#e50914]/20 border border-[#e50914]/40 flex items-center justify-center text-[#e50914]">
+                    <BarChart3 className="w-4 h-4" />
+                  </div>
+                  <h2 className="text-base sm:text-lg font-black text-white uppercase tracking-wide">
+                    Аналітика та Статистика Продажів
+                  </h2>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  Динаміка виручки, середній чек, популярні роли та піковий час замовлень
+                </p>
+              </div>
+
+              {/* Перемикач періоду */}
+              <div className="flex items-center gap-1.5 p-1 bg-[#151520] border border-white/10 rounded-xl self-start sm:self-auto">
+                {(
+                  [
+                    { id: 'today', label: 'Сьогодні' },
+                    { id: '7days', label: '7 днів' },
+                    { id: '30days', label: '30 днів' },
+                    { id: 'all', label: 'Весь час' },
+                  ] as const
+                ).map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setStatsPeriod(p.id)}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer select-none',
+                      statsPeriod === p.id
+                        ? 'bg-[#e50914] text-white shadow-md shadow-[#e50914]/30'
+                        : 'text-zinc-400 hover:text-white'
+                    )}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => loadOrders(true)}
+                  title="Оновити дані"
+                  className="p-1.5 text-zinc-400 hover:text-white transition-colors cursor-pointer rounded-lg hover:bg-white/5 ml-1"
+                >
+                  <RefreshCw className={cn('w-3.5 h-3.5', isLoadingOrders && 'animate-spin text-[#e50914]')} />
+                </button>
+              </div>
+            </div>
+
+            {/* Картки головних KPI (4 картки) */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              {/* Картка 1: Виручка */}
+              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-emerald-500/30 transition-all">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                    Виручка
+                  </span>
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                    <TrendingUp className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                  {formatPrice(statsData.totalRevenue, 'pl')}
+                </div>
+                <div className="text-[11px] text-zinc-500 mt-1 flex items-center gap-1">
+                  <span>Чиста вартість: {formatPrice(statsData.totalSubtotal, 'pl')}</span>
+                </div>
+              </div>
+
+              {/* Картка 2: Замовлення */}
+              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-blue-500/30 transition-all">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                    Замовлень
+                  </span>
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                    <ShoppingBag className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                  {statsData.ordersCount}
+                </div>
+                <div className="text-[11px] text-zinc-500 mt-1 flex items-center gap-1.5 truncate">
+                  <span className="text-emerald-400 font-semibold">{statsData.deliveredCount} дост.</span>
+                  {statsData.inProgressCount > 0 && (
+                    <span className="text-amber-400 font-semibold">• {statsData.inProgressCount} в роботі</span>
+                  )}
+                  {statsData.cancelledCount > 0 && (
+                    <span className="text-red-400 font-semibold">• {statsData.cancelledCount} скас.</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Картка 3: Середній чек */}
+              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-amber-500/30 transition-all">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                    Середній чек
+                  </span>
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                    <Award className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                  {formatPrice(statsData.avgCheck, 'pl')}
+                </div>
+                <div className="text-[11px] text-zinc-500 mt-1">
+                  На 1 успішне замовлення
+                </div>
+              </div>
+
+              {/* Картка 4: Клієнти та доставка */}
+              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-purple-500/30 transition-all">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                    Клієнтів
+                  </span>
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                    <Users className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                  {statsData.uniqueClientsCount}
+                </div>
+                <div className="text-[11px] text-zinc-500 mt-1 flex items-center gap-1.5">
+                  <span className="text-zinc-300 font-medium">{statsData.deliveryPercent}% курʼєр</span>
+                  <span>•</span>
+                  <span className="text-zinc-400">{statsData.pickupPercent}% самовивіз</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Основний блок: Графік продажів + ТОП страв */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Ліва колонка (2/3): Графік динаміки + Пікові години */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* 1. Графік динаміки виручки по днях */}
+                <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-5 sm:p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                        Динаміка виручки
+                      </h3>
+                      <p className="text-[11px] text-zinc-400 mt-0.5">
+                        Розподіл замовлень та суми за днями
+                      </p>
+                    </div>
+                    <span className="text-xs font-mono text-zinc-500">
+                      макс. {formatPrice(statsData.maxBarRevenue, 'pl')}
+                    </span>
+                  </div>
+
+                  {/* Стовпчаста діаграма */}
+                  <div className="pt-6 pb-2">
+                    <div className="h-44 sm:h-52 flex items-end justify-between gap-2 sm:gap-4 border-b border-white/10 pb-2">
+                      {statsData.chartBars.map((bar, idx) => {
+                        const heightPercent = Math.max(
+                          bar.revenue > 0 ? Math.round((bar.revenue / statsData.maxBarRevenue) * 100) : 4,
+                          bar.count > 0 ? 8 : 4
+                        );
+                        const isLatest = idx === statsData.chartBars.length - 1;
+
+                        return (
+                          <div
+                            key={bar.dateStr}
+                            className="flex-1 flex flex-col items-center justify-end h-full group/bar relative"
+                          >
+                            {/* Спливаюча підказка (Tooltip) при наведенні */}
+                            <div className="absolute -top-12 z-30 opacity-0 group-hover/bar:opacity-100 transition-opacity pointer-events-none bg-black/95 text-white text-[10px] px-2.5 py-1.5 rounded-lg border border-white/20 whitespace-nowrap shadow-xl">
+                              <p className="font-bold">{bar.label}</p>
+                              <p className="text-emerald-400 font-mono">{formatPrice(bar.revenue, 'pl')} ({bar.count} зам.)</p>
+                            </div>
+
+                            {/* Стовпчик */}
+                            <div className="w-full max-w-[42px] bg-white/5 rounded-t-lg overflow-hidden flex flex-col justify-end h-full">
+                              <div
+                                style={{ height: `${heightPercent}%` }}
+                                className={cn(
+                                  'w-full transition-all duration-500 rounded-t-lg',
+                                  isLatest
+                                    ? 'bg-gradient-to-t from-[#e50914] to-[#ff4d58] shadow-md shadow-[#e50914]/40'
+                                    : bar.revenue > 0
+                                    ? 'bg-gradient-to-t from-[#8b1419] to-[#e50914] group-hover/bar:brightness-125'
+                                    : 'bg-white/10'
+                                )}
+                              />
+                            </div>
+
+                            {/* Дата під стовпчиком */}
+                            <span className={cn(
+                              'text-[10px] mt-2 font-mono',
+                              isLatest ? 'text-white font-bold' : 'text-zinc-500'
+                            )}>
+                              {bar.label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Піковий час замовлень */}
+                <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-5 sm:p-6 space-y-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                      Пікові години активності
+                    </h3>
+                    <p className="text-[11px] text-zinc-400 mt-0.5">
+                      Коли клієнти замовляють суші найчастіше
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {(Object.keys(statsData.hoursStats) as Array<keyof typeof statsData.hoursStats>).map((key) => {
+                      const h = statsData.hoursStats[key];
+                      const percent = statsData.ordersCount > 0 ? Math.round((h.count / statsData.ordersCount) * 100) : 0;
+
+                      return (
+                        <div key={key} className="p-3.5 rounded-xl bg-[#14141f] border border-white/5 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-mono font-bold text-white">{h.label}</span>
+                            <span className="text-[10px] font-bold text-zinc-400">{percent}%</span>
+                          </div>
+                          <p className="text-[11px] text-zinc-500">{h.sub}</p>
+                          <div className="text-sm font-black text-zinc-200">
+                            {h.count} зам.
+                          </div>
+                          <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden mt-1">
+                            <div
+                              style={{ width: `${percent}%` }}
+                              className="h-full bg-[#e50914] rounded-full transition-all"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Права колонка (1/3): ТОП страв + Оплати + Тип доставки */}
+              <div className="space-y-6">
+                {/* 1. ТОП-5 Найпопулярніших страв */}
+                <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-5 sm:p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                        ТОП страв за продажами
+                      </h3>
+                      <p className="text-[11px] text-zinc-400 mt-0.5">
+                        Фаворити клієнтів за обраний період
+                      </p>
+                    </div>
+                    <Award className="w-4 h-4 text-amber-400" />
+                  </div>
+
+                  {statsData.topDishes.length === 0 ? (
+                    <div className="py-8 text-center text-zinc-500 text-xs">
+                      Ще немає даних про продані страви
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {statsData.topDishes.map((dish, rank) => {
+                        const percent = Math.round((dish.count / statsData.maxDishCount) * 100);
+
+                        return (
+                          <div key={dish.id} className="p-2.5 rounded-xl bg-[#14141f] border border-white/5 space-y-1.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className={cn(
+                                  'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0',
+                                  rank === 0 ? 'bg-amber-400 text-black' :
+                                  rank === 1 ? 'bg-zinc-300 text-black' :
+                                  rank === 2 ? 'bg-amber-700 text-white' :
+                                  'bg-white/10 text-zinc-400'
+                                )}>
+                                  {rank + 1}
+                                </span>
+                                {dish.image ? (
+                                  <img
+                                    src={dish.image}
+                                    alt={dish.name}
+                                    className="w-7 h-7 rounded-lg object-cover shrink-0 border border-white/10"
+                                  />
+                                ) : (
+                                  <div className="w-7 h-7 rounded-lg bg-black/40 border border-white/10 flex items-center justify-center text-[10px] shrink-0">
+                                    🍣
+                                  </div>
+                                )}
+                                <span className="text-xs font-bold text-white truncate">
+                                  {dish.name}
+                                </span>
+                              </div>
+
+                              <div className="text-right shrink-0">
+                                <span className="text-xs font-black text-white">{dish.count} шт.</span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between text-[10px] text-zinc-500">
+                              <span>Сума: {formatPrice(dish.revenue, 'pl')}</span>
+                              <span>{percent}%</span>
+                            </div>
+
+                            <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
+                              <div
+                                style={{ width: `${percent}%` }}
+                                className={cn(
+                                  'h-full rounded-full transition-all',
+                                  rank === 0 ? 'bg-gradient-to-r from-amber-400 to-[#e50914]' : 'bg-[#e50914]'
+                                )}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Способи оплати */}
+                <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-5 sm:p-6 space-y-3.5">
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                    Способи оплати
+                  </h3>
+
+                  <div className="space-y-2.5">
+                    {[
+                      { key: 'blik', label: 'BLIK онлайн', icon: Sparkles, color: 'text-amber-400', bar: 'bg-amber-400', data: statsData.paymentStats.blik },
+                      { key: 'cash', label: 'Готівка', icon: Banknote, color: 'text-emerald-400', bar: 'bg-emerald-500', data: statsData.paymentStats.cash },
+                      { key: 'card', label: 'Картка / термінал', icon: CreditCard, color: 'text-blue-400', bar: 'bg-blue-500', data: statsData.paymentStats.card },
+                    ].map((m) => {
+                      const percent = statsData.totalRevenue > 0 ? Math.round((m.data.sum / statsData.totalRevenue) * 100) : 0;
+                      const Icon = m.icon;
+
+                      return (
+                        <div key={m.key} className="p-2.5 rounded-xl bg-[#14141f] border border-white/5 space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="flex items-center gap-1.5 font-bold text-zinc-300">
+                              <Icon className={cn('w-3.5 h-3.5', m.color)} />
+                              {m.label}
+                            </span>
+                            <span className="font-mono font-bold text-white">
+                              {formatPrice(m.data.sum, 'pl')}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between text-[10px] text-zinc-500">
+                            <span>{m.data.count} замовлень</span>
+                            <span>{percent}%</span>
+                          </div>
+
+                          <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
+                            <div style={{ width: `${percent}%` }} className={cn('h-full rounded-full', m.bar)} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 3. Доставка vs Самовивіз */}
+                <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-5 sm:p-6 space-y-3">
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                    Спосіб отримання
+                  </h3>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div className="p-3 rounded-xl bg-[#14141f] border border-white/5 space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-300">
+                        <Truck className="w-3.5 h-3.5 text-[#e50914]" />
+                        <span>Курʼєр</span>
+                      </div>
+                      <p className="text-lg font-black text-white">{statsData.deliveryCount}</p>
+                      <p className="text-[10px] text-zinc-500">{statsData.deliveryPercent}% замовлень</p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-[#14141f] border border-white/5 space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-300">
+                        <Store className="w-3.5 h-3.5 text-blue-400" />
+                        <span>Самовивіз</span>
+                      </div>
+                      <p className="text-lg font-black text-white">{statsData.pickupCount}</p>
+                      <p className="text-[10px] text-zinc-500">{statsData.pickupPercent}% замовлень</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
