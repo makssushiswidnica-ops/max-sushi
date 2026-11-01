@@ -3780,52 +3780,54 @@ export default function AdminPage() {
                 </p>
               </div>
 
-              {/* Перемикач періоду (в дизайні як категорії в StickyNav з червоним підкресленням) */}
-              <div className="flex items-center gap-1 sm:gap-2 self-start sm:self-auto overflow-x-auto no-scrollbar max-w-full pb-1 sm:pb-0">
-                {(
-                  [
-                    { id: 'today', label: 'Сьогодні' },
-                    { id: '7days', label: '7 днів' },
-                    { id: '30days', label: '30 днів' },
-                    { id: 'all', label: 'Весь час' },
-                  ] as const
-                ).map((p) => {
-                  const isActive = statsPeriod === p.id;
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => setStatsPeriod(p.id)}
-                      className={cn(
-                        'relative px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-[13px] font-bold tracking-wide uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none active:scale-95',
-                        isActive
-                          ? 'text-white font-black'
-                          : 'text-zinc-400 hover:text-white'
-                      )}
-                    >
-                      <span className="relative z-10">{p.label}</span>
-                      {/* Неонова рубінова лінія підкреслення як у категоріях меню */}
-                      <span
+              {/* Перемикач періоду (в дизайні як категорії в StickyNav з червоним підкресленням — компактно в 1 рядок на мобільному без скролу) */}
+              <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-0.5 sm:gap-2 pt-2 sm:pt-0 border-t border-white/5 sm:border-t-0">
+                <div className="flex items-center flex-1 sm:flex-initial justify-between sm:justify-start gap-0.5 sm:gap-1.5">
+                  {(
+                    [
+                      { id: 'today', label: 'Сьогодні' },
+                      { id: '7days', label: '7 днів' },
+                      { id: '30days', label: '30 днів' },
+                      { id: 'all', label: 'Весь час' },
+                    ] as const
+                  ).map((p) => {
+                    const isActive = statsPeriod === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setStatsPeriod(p.id)}
                         className={cn(
-                          'absolute bottom-0 left-2 right-2 h-[2.5px] rounded-full transition-all duration-300 ease-out',
+                          'relative px-1.5 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-[13px] font-bold tracking-tight sm:tracking-wide uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none active:scale-95 text-center',
                           isActive
-                            ? 'bg-gradient-to-r from-[#e50914] via-[#ff4d58] to-[#e50914] shadow-[0_0_12px_#e50914] opacity-100 scale-x-100'
-                            : 'opacity-0 scale-x-50 pointer-events-none'
+                            ? 'text-white font-black'
+                            : 'text-zinc-400 hover:text-white'
                         )}
-                      />
-                    </button>
-                  );
-                })}
+                      >
+                        <span className="relative z-10">{p.label}</span>
+                        {/* Неонова рубінова лінія підкреслення як у категоріях меню */}
+                        <span
+                          className={cn(
+                            'absolute bottom-0 left-1 right-1 sm:left-2 sm:right-2 h-[2.5px] rounded-full transition-all duration-300 ease-out',
+                            isActive
+                              ? 'bg-gradient-to-r from-[#e50914] via-[#ff4d58] to-[#e50914] shadow-[0_0_12px_#e50914] opacity-100 scale-x-100'
+                              : 'opacity-0 scale-x-50 pointer-events-none'
+                          )}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
 
-                <div className="h-5 w-[1px] bg-white/10 mx-1 shrink-0" />
+                <div className="h-4 sm:h-5 w-[1px] bg-white/10 mx-0.5 sm:mx-1 shrink-0" />
 
                 <button
                   type="button"
                   onClick={() => loadOrders(true)}
                   title="Оновити дані"
-                  className="p-1.5 text-zinc-400 hover:text-white transition-colors cursor-pointer rounded-lg hover:bg-white/5 active:scale-95"
+                  className="p-1.5 text-zinc-400 hover:text-white transition-colors cursor-pointer rounded-lg hover:bg-white/5 active:scale-95 shrink-0"
                 >
-                  <RefreshCw className={cn('w-4 h-4', isLoadingOrders && 'animate-spin text-[#e50914]')} />
+                  <RefreshCw className={cn('w-3.5 h-3.5 sm:w-4 sm:h-4', isLoadingOrders && 'animate-spin text-[#e50914]')} />
                 </button>
               </div>
             </div>
