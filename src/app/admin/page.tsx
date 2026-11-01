@@ -1080,32 +1080,35 @@ export default function AdminPage() {
     const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
     // Збираємо робочі дні для графіка відповідно до обраного періоду:
-    // Якщо обрано 'today' — показуємо 7 днів (сьогодні + попередні робочі дні), щоб була видна динаміка у порівнянні з тижнем!
+    // 7 робочих днів для 'today' та '7days', 30 робочих днів для '30days', або всі робочі дні для 'all'.
+    // Вихідні дні закладу (понеділки) пропускаються, рахуються виключно РЕАЛЬНІ РОБОЧІ ДНІ.
     const workingDaysList: Date[] = [];
+    const targetWorkingDays = 
+      statsPeriod === 'today' || statsPeriod === '7days' ? 7 : 
+      statsPeriod === '30days' ? 30 : 
+      0; // 'all'
 
-    if (statsPeriod === 'today' || statsPeriod === '7days') {
-      // 7 днів: сьогодні + попередні робочі дні (пропускаючи зачинені понеділки)
-      workingDaysList.push(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
+    if (targetWorkingDays > 0) {
+      if (isDayClosed(now)) {
+        workingDaysList.push(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
+      }
 
-      let offset = 1;
-      while (workingDaysList.length < 7 && offset < 14) {
+      let offset = isDayClosed(now) ? 1 : 0;
+      const maxSearchDays = targetWorkingDays * 2 + 10;
+      let count = 0;
+
+      while (count < targetWorkingDays && offset < maxSearchDays) {
         const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - offset);
         if (!isDayClosed(d)) {
           workingDaysList.push(d);
+          count++;
         }
         offset++;
       }
+
       workingDaysList.reverse();
-    } else if (statsPeriod === '30days') {
-      // Повні 30 днів (пропускаючи вихідні понеділки -> ~26 робочих днів)
-      for (let i = 29; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-        if (i === 0 || !isDayClosed(d)) {
-          workingDaysList.push(d);
-        }
-      }
     } else {
-      // 'all' — Весь час від найпершого замовлення до сьогодні (пропускаючи понеділки)
+      // 'all' — Усі робочі дні закладу від найпершого замовлення до сьогодні (пропускаючи зачинені понеділки)
       const validOrderTimestamps = orders
         .map((o) => new Date(o.created_at).getTime())
         .filter((t) => !isNaN(t) && t > 0);
@@ -3946,8 +3949,12 @@ export default function AdminPage() {
                       </h3>
                       <p className="text-[11px] text-zinc-400 mt-0.5">
                         {statsPeriod === 'today'
-                          ? 'Динаміка за 7 днів (сьогодні виділено бурштиновим)'
-                          : 'Розподіл замовлень та виручки за днями (сьогодні виділено бурштиновим)'}
+                          ? 'Динаміка за 7 останніх робочих днів (сьогодні виділено бурштиновим)'
+                          : statsPeriod === '7days'
+                          ? 'Динаміка за 7 останніх робочих днів (сьогодні виділено бурштиновим)'
+                          : statsPeriod === '30days'
+                          ? 'Динаміка за 30 останніх робочих днів (сьогодні виділено бурштиновим)'
+                          : 'Динаміка за всі робочі дні закладу (сьогодні виділено бурштиновим)'}
                       </p>
                     </div>
                     <span className="text-xs font-mono text-zinc-500 whitespace-nowrap">
