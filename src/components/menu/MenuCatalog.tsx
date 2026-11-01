@@ -66,11 +66,13 @@ export function MenuCatalog() {
   const [searchQuery, setSearchQuery] = useState('');
   const catalogContentRef = useRef<HTMLDivElement>(null);
 
-  // Знаходимо поточну категорію та сусідні для кнопок пагінації "Попередня / Наступна"
+  // Знаходимо поточну категорію та сусідні для кнопок пагінації та свайпів (повна циклічність)
+  const totalCats = categoriesList.length;
   const currentIndex = categoriesList.findIndex((c) => c.id === selectedCategory);
-  const activeCategoryObj = categoriesList[currentIndex] || categoriesList[0];
-  const prevCategory = currentIndex > 0 ? categoriesList[currentIndex - 1] : null;
-  const nextCategory = currentIndex < categoriesList.length - 1 ? categoriesList[currentIndex + 1] : null;
+  const validCatIndex = currentIndex >= 0 ? currentIndex : 0;
+  const activeCategoryObj = categoriesList[validCatIndex] || categoriesList[0];
+  const prevCategory = totalCats > 1 ? categoriesList[(validCatIndex - 1 + totalCats) % totalCats] : null;
+  const nextCategory = totalCats > 1 ? categoriesList[(validCatIndex + 1) % totalCats] : null;
 
   // Обробка жестів свайпу вліво/вправо на екрані для перемикання категорій
   const touchStartX = useRef<number | null>(null);
@@ -170,6 +172,32 @@ export function MenuCatalog() {
     return () => window.removeEventListener('reset-to-initial-catalog', handleReset);
   }, [categoriesList]);
 
+  // Синхронізація активної категорії з модалки перегляду страв (якщо гортав страви і закрив)
+  useEffect(() => {
+    const handleSync = (e: Event) => {
+      const customEvent = e as CustomEvent<{ categoryId: string; productId?: string }>;
+      if (customEvent.detail?.categoryId) {
+        setIsAllCategories(false);
+        setSelectedCategory(customEvent.detail.categoryId);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('maks_active_category', customEvent.detail.categoryId);
+        }
+        setTimeout(() => {
+          if (customEvent.detail.productId) {
+            const cardEl = document.getElementById(`product-card-${customEvent.detail.productId}`);
+            if (cardEl) {
+              cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              return;
+            }
+          }
+          scrollToCatalogTop();
+        }, 120);
+      }
+    };
+    window.addEventListener('sync-category-from-modal', handleSync);
+    return () => window.removeEventListener('sync-category-from-modal', handleSync);
+  }, [scrollToCatalogTop]);
+
   const handleSearchChange = useCallback((query: string) => {
     setSearchQuery(query);
   }, []);
@@ -240,7 +268,7 @@ export function MenuCatalog() {
             ) : (
               <div className={PRODUCT_CONTAINER_CLASS}>
                 {filteredProducts.map((product) => (
-                  <div key={product.id} className={PRODUCT_ITEM_CLASS}>
+                  <div key={product.id} id={`product-card-${product.id}`} className={PRODUCT_ITEM_CLASS}>
                     <ProductCard product={product} />
                   </div>
                 ))}
@@ -313,7 +341,7 @@ export function MenuCatalog() {
             {/* Сітка товарів вибраної категорії: неповні ряди автоматично центруються */}
             <div className={PRODUCT_CONTAINER_CLASS}>
               {currentCategoryProducts.map((product) => (
-                <div key={product.id} className={PRODUCT_ITEM_CLASS}>
+                <div key={product.id} id={`product-card-${product.id}`} className={PRODUCT_ITEM_CLASS}>
                   <ProductCard product={product} />
                 </div>
               ))}

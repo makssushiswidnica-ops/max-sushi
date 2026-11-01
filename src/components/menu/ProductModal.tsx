@@ -89,13 +89,26 @@ export function ProductModal() {
     setIsAdded(false);
   }, [currentIndex, activeProducts, setSelectedProduct]);
 
-  // Закриття модалки
+  // Закриття модалки з синхронізацією категорії з поточної відкритої страви
   const handleClose = useCallback(() => {
+    if (selectedProduct?.categoryId) {
+      window.dispatchEvent(
+        new CustomEvent('sync-category-from-modal', {
+          detail: {
+            categoryId: selectedProduct.categoryId,
+            productId: selectedProduct.id,
+          },
+        })
+      );
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('maks_active_category', selectedProduct.categoryId);
+      }
+    }
     setSelectedProduct(null);
     setModalQuantity(1);
     setCurrentImageIndex(0);
     setIsAdded(false);
-  }, [setSelectedProduct]);
+  }, [selectedProduct, setSelectedProduct]);
 
   // Обробка клавіатури: Escape для закриття, стрілки вліво/вправо для гортання карток
   useEffect(() => {
@@ -236,15 +249,15 @@ export function ProductModal() {
           {/* Мобільна верхня панель тільки для додатків без фото з урахуванням Safari Notch */}
           {selectedProduct.categoryId === 'dodatki' && (
             <div className="sm:hidden flex items-center justify-between px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] border-b border-white/5 bg-[#16161e] shrink-0">
-              <div className="flex items-center gap-2 bg-black/50 backdrop-blur-md px-3 py-1 rounded-full">
-                <button onClick={handlePrevCard} className="text-zinc-300 hover:text-white active:scale-90 p-0.5">
-                  <ChevronLeft className="w-3.5 h-3.5" />
+              <div className="flex items-center gap-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]">
+                <button onClick={handlePrevCard} className="text-zinc-300 hover:text-white active:scale-90 p-1 cursor-pointer">
+                  <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
                 </button>
-                <span className="text-xs font-mono font-bold text-white">
+                <span className="text-xs font-mono font-black text-white">
                   {currentIndex + 1} / {activeProducts.length || 1}
                 </span>
-                <button onClick={handleNextCard} className="text-zinc-300 hover:text-white active:scale-90 p-0.5">
-                  <ChevronRight className="w-3.5 h-3.5" />
+                <button onClick={handleNextCard} className="text-zinc-300 hover:text-white active:scale-90 p-1 cursor-pointer">
+                  <ChevronRight className="w-4 h-4 stroke-[2.5]" />
                 </button>
               </div>
               <button
@@ -258,55 +271,57 @@ export function ProductModal() {
 
           {/* Внутрішній вміст: на мобільному фото зверху, опис по центру, кнопки знизу. На десктопі 2 колонки */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 flex flex-col sm:flex-row sm:p-5 gap-0 sm:gap-6 items-stretch scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            {/* Колонка з фотографією: на мобільному зверху з плаваючими напівпрозорими лічильником і хрестиком під "чубчик" (safe-area-inset-top) */}
+            {/* Колонка з фотографією: на мобільному зверху з плаваючими лічильником у верхньому лівому куті без фону і хрестиком справа */}
             {selectedProduct.categoryId !== 'dodatki' && (
               <div
                 onTouchStart={handlePhotoTouchStart}
                 onTouchEnd={handlePhotoTouchEnd}
-                className="relative w-full sm:w-1/2 h-[calc(34dvh+env(safe-area-inset-top,0px))] max-h-[calc(260px+env(safe-area-inset-top,0px))] min-h-[calc(190px+env(safe-area-inset-top,0px))] sm:max-h-none sm:min-h-0 sm:h-full pt-[env(safe-area-inset-top,0px)] flex items-center justify-center bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.08)_0%,_#07070b_70%)] border-b sm:border-b-0 sm:border border-white/10 rounded-none overflow-hidden shrink-0 shadow-md shadow-black/80"
+                className="relative w-full sm:w-1/2 h-[38dvh] max-h-[330px] min-h-[230px] sm:max-h-none sm:min-h-0 sm:h-full pt-[calc(2.25rem+env(safe-area-inset-top,0px))] pb-3 px-3 sm:p-6 flex items-center justify-center bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.08)_0%,_#07070b_70%)] border-b sm:border-b-0 sm:border border-white/10 rounded-none shrink-0 shadow-md shadow-black/80"
               >
                 {/* Мобільна плаваюча кнопка закриття (хрестик) поверх фото під статус-баром */}
                 <button
                   onClick={handleClose}
                   aria-label="Закрити"
-                  className="sm:hidden absolute top-[calc(0.75rem+env(safe-area-inset-top,0px))] right-3 z-30 w-9 h-9 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white/90 active:scale-90 transition-all cursor-pointer shadow-md"
+                  className="sm:hidden absolute top-[calc(0.75rem+env(safe-area-inset-top,0px))] right-3 z-30 w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white/90 active:scale-90 transition-all cursor-pointer shadow-md"
                 >
                   <X className="w-4 h-4 stroke-[2.5]" />
                 </button>
 
-                {/* Мобільний плаваючий компактний лічильник позицій поверх фото під статус-баром */}
-                <div className="sm:hidden absolute top-[calc(0.75rem+env(safe-area-inset-top,0px))] left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-black/50 backdrop-blur-md px-3 py-1 rounded-full shadow-md">
+                {/* Мобільний плаваючий лічильник позицій у верхньому лівому куті БЕЗ ФОНУ */}
+                <div className="sm:hidden absolute top-[calc(0.75rem+env(safe-area-inset-top,0px))] left-3 z-30 flex items-center gap-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] select-none">
                   <button
                     onClick={handlePrevCard}
-                    className="text-zinc-300 hover:text-white active:scale-90 p-0.5"
+                    className="text-zinc-300 hover:text-white active:scale-90 p-1 cursor-pointer transition-colors"
                     aria-label="Попередній"
                   >
-                    <ChevronLeft className="w-3.5 h-3.5" />
+                    <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
                   </button>
-                  <span className="text-[11px] font-mono font-bold text-white tracking-wider select-none">
+                  <span className="text-xs font-mono font-black text-white tracking-wider">
                     {currentIndex + 1} / {activeProducts.length || 1}
                   </span>
                   <button
                     onClick={handleNextCard}
-                    className="text-zinc-300 hover:text-white active:scale-90 p-0.5"
+                    className="text-zinc-300 hover:text-white active:scale-90 p-1 cursor-pointer transition-colors"
                     aria-label="Наступний"
                   >
-                    <ChevronRight className="w-3.5 h-3.5" />
+                    <ChevronRight className="w-4 h-4 stroke-[2.5]" />
                   </button>
                 </div>
 
-                {/* Маркетинговий бейдж (ВЕГАН, ХІТ тощо) поверх фото під статус-баром */}
+                {/* Маркетинговий бейдж (ВЕГАН, ХІТ тощо) у лівому нижньому кутку фото */}
                 {selectedProduct.badge && (
-                  <div className="absolute top-[calc(0.75rem+env(safe-area-inset-top,0px))] left-3 z-20 pointer-events-none">
+                  <div className="absolute bottom-3 left-3 z-20 pointer-events-none">
                     <ProductBadge badge={selectedProduct.badge} locale={locale} />
                   </div>
                 )}
 
-                {/* Фото ролу з об'ємною тінню */}
+                {/* Фото ролу з об'ємною тінню та каліброваним масштабом на мобільному, щоб нічого не зрізалося */}
                 {productImages.length > 0 && productImages[currentImageIndex] ? (
                   <div
-                    className="w-full h-full flex items-center justify-center animate-in fade-in duration-200 p-2"
-                    style={{ transform: `scale(${getProductZoom(selectedProduct)})` }}
+                    className="w-full h-full flex items-center justify-center animate-in fade-in duration-200 p-2 sm:p-4"
+                    style={{
+                      transform: `scale(${typeof window !== 'undefined' && window.innerWidth < 640 ? Math.min(getProductZoom(selectedProduct) * 0.88, 1.3) : getProductZoom(selectedProduct)})`,
+                    }}
                   >
                     <img
                       key={productImages[currentImageIndex]}
@@ -314,7 +329,7 @@ export function ProductModal() {
                       alt={`${selectedProduct.name[locale]} — ${locale === 'pl' ? 'Maks Sushi Świdnica sushi na dowóz' : 'Maks Sushi Свідниця суші з доставкою'}`}
                       title={`${selectedProduct.name[locale]} — Maks Sushi`}
                       decoding="async"
-                      className="w-full h-full object-contain filter drop-shadow-[0_8px_20px_rgba(0,0,0,0.95)]"
+                      className="w-full h-full max-h-full max-w-full object-contain filter drop-shadow-[0_8px_20px_rgba(0,0,0,0.95)]"
                     />
                   </div>
                 ) : (
