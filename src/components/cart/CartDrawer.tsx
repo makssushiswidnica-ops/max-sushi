@@ -259,7 +259,7 @@ export function CartDrawer() {
                     onClick={() => scrollCarousel('left')}
                     aria-label="Вліво"
                     title={locale === 'pl' ? 'W lewo' : 'Вліво'}
-                    className="absolute -left-1 sm:-left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/75 hover:bg-black/95 backdrop-blur-md text-white/90 hover:text-white border border-white/20 shadow-xl flex items-center justify-center transition-all cursor-pointer active:scale-90"
+                    className="absolute -left-1 sm:-left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/35 hover:bg-black/65 backdrop-blur-md text-white/70 hover:text-white border border-white/15 hover:border-white/30 shadow-md flex items-center justify-center transition-all cursor-pointer active:scale-90 opacity-75 hover:opacity-100"
                   >
                     <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
                   </button>
@@ -270,7 +270,7 @@ export function CartDrawer() {
                     onClick={() => scrollCarousel('right')}
                     aria-label="Вправо"
                     title={locale === 'pl' ? 'W prawo' : 'Вправо'}
-                    className="absolute -right-1 sm:-right-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/75 hover:bg-black/95 backdrop-blur-md text-white/90 hover:text-white border border-white/20 shadow-xl flex items-center justify-center transition-all cursor-pointer active:scale-90"
+                    className="absolute -right-1 sm:-right-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/35 hover:bg-black/65 backdrop-blur-md text-white/70 hover:text-white border border-white/15 hover:border-white/30 shadow-md flex items-center justify-center transition-all cursor-pointer active:scale-90 opacity-75 hover:opacity-100"
                   >
                     <ChevronRight className="w-4 h-4 stroke-[2.5]" />
                   </button>
