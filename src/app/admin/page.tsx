@@ -2733,7 +2733,7 @@ export default function AdminPage() {
       )}
 
       {/* Головна робоча зона */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 min-w-0 max-w-full">
         {/* 0. ПОЧАТКОВИЙ ЕКРАН: 3 КАРТКИ (МЕНЮ, ЗАМОВЛЕННЯ, СТАТИСТИКА) - на мобілці компактно вміщуються в 1 екран */}
         {activeTab === 'dashboard' && (
           <div className="space-y-4 sm:space-y-8 animate-in fade-in zoom-in-95 duration-200">
@@ -3763,9 +3763,9 @@ export default function AdminPage() {
 
         {/* 3. РОЗДІЛ: СТАТИСТИКА ТА АНАЛІТИКА */}
         {activeTab === 'stats' && (
-          <div className="space-y-6">
+          <div className="space-y-6 w-full min-w-0 max-w-full">
             {/* Верхня панель статистики: заголовок + фільтри періоду */}
-            <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full min-w-0">
               <div>
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-[#e50914]/20 border border-[#e50914]/40 flex items-center justify-center text-[#e50914]">
@@ -3932,12 +3932,12 @@ export default function AdminPage() {
             </div>
 
             {/* Верхній блок графіків та топу страв: вирівняні по висоті на десктопі */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch w-full min-w-0 max-w-full">
               {/* Ліва частина (2/3): Графік динаміки + Пікові години */}
-              <div className="lg:col-span-2 space-y-6 flex flex-col justify-between">
+              <div className="lg:col-span-2 space-y-6 flex flex-col justify-between w-full min-w-0 max-w-full">
                 {/* 1. Графік динаміки виручки по днях */}
-                <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-5 sm:p-6 space-y-4">
-                  <div className="flex items-center justify-between">
+                <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-6 space-y-4 w-full min-w-0 max-w-full overflow-hidden">
+                  <div className="flex items-center justify-between gap-2">
                     <div>
                       <h3 className="text-sm font-bold text-white uppercase tracking-wider">
                         Динаміка виручки
@@ -3946,16 +3946,16 @@ export default function AdminPage() {
                         Розподіл замовлень та виручки за робочими днями (вихідні пропускаються)
                       </p>
                     </div>
-                    <span className="text-xs font-mono text-zinc-500">
+                    <span className="text-xs font-mono text-zinc-500 whitespace-nowrap">
                       макс. {formatPrice(statsData.maxBarRevenue, 'pl')}
                     </span>
                   </div>
 
                   {/* Стовпчаста діаграма зі скролом при великій кількості стовпчиків */}
-                  <div className="pt-6 pb-2">
+                  <div className="pt-6 pb-2 w-full min-w-0 max-w-full overflow-hidden">
                     <div
                       ref={chartScrollRef}
-                      className="overflow-x-auto pb-2 scroll-smooth select-none"
+                      className="w-full max-w-full overflow-x-auto pb-2 scroll-smooth select-none"
                       style={{
                         scrollbarWidth: 'thin',
                         scrollbarColor: 'rgba(255, 255, 255, 0.25) rgba(255, 255, 255, 0.05)',
@@ -4079,8 +4079,8 @@ export default function AdminPage() {
               </div>
 
               {/* Права частина (1/3): ТОП страв (вирівняна по висоті в рівень з нижнім краєм пікових годин) */}
-              <div className="lg:col-span-1 flex flex-col">
-                <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-5 sm:p-6 flex flex-col justify-between h-full">
+              <div className="lg:col-span-1 flex flex-col w-full min-w-0 max-w-full">
+                <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-6 flex flex-col justify-between h-full w-full min-w-0 overflow-hidden">
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <div>
@@ -4162,9 +4162,9 @@ export default function AdminPage() {
             </div>
 
             {/* Нижній блок: Способи оплати та Спосіб отримання (розміщені під піковими годинами) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full min-w-0 max-w-full">
               {/* 1. Способи оплати (без зірочки для BLIK) */}
-              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-5 sm:p-6 space-y-4">
+              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-6 space-y-4 w-full min-w-0 overflow-hidden">
                 <div>
                   <h3 className="text-sm font-bold text-white uppercase tracking-wider">
                     Способи оплати
@@ -4231,7 +4231,7 @@ export default function AdminPage() {
               </div>
 
               {/* 2. Спосіб отримання (Доставка курʼєром vs Самовивіз) */}
-              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-5 sm:p-6 space-y-4 flex flex-col justify-between">
+              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-6 space-y-4 flex flex-col justify-between w-full min-w-0 overflow-hidden">
                 <div>
                   <h3 className="text-sm font-bold text-white uppercase tracking-wider">
                     Спосіб отримання
