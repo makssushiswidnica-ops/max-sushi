@@ -154,6 +154,13 @@ export function CustomerDrawer() {
     }
   }, [customer]);
 
+  // Скидання розкритої картки при відкритті кабінету, зміні вкладок або сторінок
+  useEffect(() => {
+    if (isOpen) {
+      setExpandedOrderId(null);
+    }
+  }, [isOpen, activeTab, currentPage]);
+
   // Завантаження замовлень клієнта при відкритті кабінету
   useEffect(() => {
     if (isOpen && customer) {
