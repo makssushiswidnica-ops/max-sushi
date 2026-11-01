@@ -151,6 +151,10 @@ export default function AdminPage() {
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
   const [collapsedHistoryDays, setCollapsedHistoryDays] = useState<Set<string>>(new Set());
   
+  // Відстеження вже відомих замовлень, щоб перемикати на "Нові" ЛИШЕ один раз при надходженні нового
+  const knownOrderIdsRef = useRef<Set<string>>(new Set());
+  const isFirstOrdersLoadRef = useRef(true);
+
   // Час очікування приготування / доставки від закладу (глобальний через store)
   const prepWaitTimeMinutes = useCartStore((s) => s.prepWaitTimeMinutes);
   const setPrepWaitTimeMinutes = useCartStore((s) => s.setPrepWaitTimeMinutes);
@@ -429,9 +433,24 @@ export default function AdminPage() {
       setOrders(loaded);
       setOrderRlsNotice(rlsIssue);
 
-      // Якщо є нове замовлення, за замовчуванням активуємо вкладку "Нові"
-      if (loaded.some((o) => o.status === 'pending')) {
-        setOrderStatusFilter('pending');
+      // Перемикаємо на вкладку "Нові" ЛИШЕ один раз при отриманні дійсно нового замовлення
+      if (isFirstOrdersLoadRef.current) {
+        isFirstOrdersLoadRef.current = false;
+        knownOrderIdsRef.current = new Set(loaded.map((o) => o.id));
+        if (loaded.some((o) => o.status === 'pending')) {
+          setOrderStatusFilter('pending');
+        }
+      } else {
+        const hasBrandNewPendingOrder = loaded.some(
+          (o) => o.status === 'pending' && !knownOrderIdsRef.current.has(o.id)
+        );
+
+        if (hasBrandNewPendingOrder) {
+          setOrderStatusFilter('pending');
+          playOrderSound();
+        }
+
+        knownOrderIdsRef.current = new Set(loaded.map((o) => o.id));
       }
     } catch (err) {
       console.warn('Failed to load orders:', err);
@@ -585,14 +604,40 @@ export default function AdminPage() {
     );
   };
 
+  // Форматування запланованого часу замовлення у конкретну дату (наприклад "1.11, 13:00") замість абстрактного "Jutro"
+  const formatScheduledBadgeTime = (order: AdminOrder): string => {
+    const scheduled = order.scheduled_time || order.scheduledTime;
+    if (!scheduled) return '';
+
+    const timeMatch = scheduled.match(/(\d{1,2}):(\d{2})/);
+    if (!timeMatch) return scheduled;
+
+    const timeStr = `${timeMatch[1].padStart(2, '0')}:${timeMatch[2].padStart(2, '0')}`;
+    const isTomorrow =
+      order.scheduled_date === 'tomorrow' ||
+      order.scheduledDate === 'tomorrow' ||
+      /завтра|jutro|tomorrow/i.test(scheduled);
+
+    const targetDate = new Date(order.created_at);
+    if (isNaN(targetDate.getTime())) {
+      return scheduled;
+    }
+
+    if (isTomorrow) {
+      targetDate.setDate(targetDate.getDate() + 1);
+    }
+
+    const day = targetDate.getDate();
+    const month = targetDate.getMonth() + 1;
+    return `${day}.${month < 10 ? '0' + month : month}, ${timeStr}`;
+  };
+
   // Друк чека замовлення для кухні
   const handlePrintKitchenReceipt = (order: AdminOrder) => {
     const isPickup = order.delivery_method === 'pickup' || order.deliveryMethod === 'pickup';
     const scheduled = order.scheduled_time || order.scheduledTime;
     const isScheduled = (order.timing_type === 'scheduled' || order.timingType === 'scheduled') && Boolean(scheduled);
-    const isTomorrow = order.scheduled_date === 'tomorrow' || order.scheduledDate === 'tomorrow' || (typeof scheduled === 'string' && scheduled.toLowerCase().includes('jutro'));
-    const cleanTime = typeof scheduled === 'string' ? scheduled.replace(/^jutro,?\s*/i, '') : scheduled;
-    const timingBadge = isScheduled ? `НА ЧАС: ${isTomorrow ? 'ЗАВТРА ' : ''}${cleanTime}` : 'ЯКНАЙШВИДШЕ';
+    const timingBadge = isScheduled ? `НА ЧАС: ${formatScheduledBadgeTime(order)}` : 'ЯКНАЙШВИДШЕ';
     const addressStr = order.address
       ? `вул. ${order.address.street || ''} ${order.address.house || ''}${order.address.apartment ? `, кв. ${order.address.apartment}` : ''}${order.address.floor ? `, пов. ${order.address.floor}` : ''}${order.address.entryCode ? `, код ${order.address.entryCode}` : ''}`
       : 'Адреса не вказана';
@@ -1652,9 +1697,9 @@ export default function AdminPage() {
       >
         {/* Верхня плашка картки: Номер замовлення, статус, час, видалення */}
         <div className="flex flex-col gap-2 pb-3.5 border-b border-white/5">
-          {/* Рядок 1: Номер замовлення, статус та плашка таймінгу (з flex-wrap для запобігання накладанню на мобільних) */}
-          <div className="flex flex-wrap items-center justify-between gap-x-2.5 gap-y-1.5">
-            <div className="flex items-center gap-2 flex-wrap">
+          {/* Рядок 1: Номер замовлення, статус та плашка таймінгу (flex-col на мобільних для 100% захисту від накладання) */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2 flex-wrap min-w-0">
               <span className="text-base sm:text-lg font-black text-white tracking-wide">
                 #{order.id}
               </span>
@@ -1663,7 +1708,7 @@ export default function AdminPage() {
               {!isKitchen && !isInDelivery && !isDelivered && orderStatusFilter !== 'in_progress' && orderStatusFilter !== 'in_delivery' && orderStatusFilter !== 'delivered' && (
                 <span
                   className={cn(
-                    'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-black border',
+                    'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-black border shrink-0',
                     order.status === 'pending' && 'bg-rose-500/15 text-rose-400 border-rose-500/40',
                     order.status === 'confirmed' && 'bg-blue-500/15 text-blue-400 border-blue-500/40',
                     order.status === 'preparing' && 'bg-amber-500/15 text-amber-400 border-amber-500/40',
@@ -1694,7 +1739,7 @@ export default function AdminPage() {
             </div>
 
             {/* Бейдж бажаного часу / зворотній відлік для кухні */}
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5 shrink-0">
               {((order.timing_type === 'scheduled' || order.timingType === 'scheduled') && (order.scheduled_time || order.scheduledTime)) ? (
                 <span 
                   style={{
@@ -1702,8 +1747,8 @@ export default function AdminPage() {
                   }}
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/25 border border-amber-500/60 text-amber-300 font-black text-xs shadow-xs"
                 >
-                  <Clock className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-                  <span>НА ЧАС: {order.scheduled_time || order.scheduledTime}</span>
+                  <Clock className="w-3.5 h-3.5 text-amber-400 animate-pulse shrink-0" />
+                  <span>НА ЧАС: {formatScheduledBadgeTime(order)}</span>
                 </span>
               ) : (!isKitchen && !isInDelivery && !isDelivered && orderStatusFilter !== 'in_progress' && orderStatusFilter !== 'in_delivery' && orderStatusFilter !== 'delivered') ? (
                 <span 
@@ -3115,10 +3160,9 @@ export default function AdminPage() {
                   className="flex items-center bg-[#151522] border border-amber-500/40 p-1 sm:p-1.5 gap-1.5 shadow-md shadow-black/60 select-none"
                   title="Час приготування/доставки для клієнтів (за замовчуванням 40 хв)"
                 >
-                  <div className="flex items-center gap-1 pl-1.5 pr-1 text-amber-400 font-black text-[10px] sm:text-xs uppercase tracking-wider">
+                  <div className="flex items-center gap-1 pl-1.5 pr-1 text-amber-400 font-black text-[10px] sm:text-xs uppercase tracking-wider whitespace-nowrap">
                     <Timer className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                    <span className="hidden sm:inline">Час очікування:</span>
-                    <span className="sm:hidden">Час:</span>
+                    <span>Час очікування:</span>
                   </div>
 
                   {/* Кнопка швидкого зменшення (-5 хв) */}
