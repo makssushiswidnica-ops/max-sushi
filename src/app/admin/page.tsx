@@ -155,18 +155,6 @@ export default function AdminPage() {
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
   const [collapsedHistoryDays, setCollapsedHistoryDays] = useState<Set<string>>(new Set());
   const [statsPeriod, setStatsPeriod] = useState<'today' | '7days' | '30days' | 'all'>('7days');
-  const chartScrollRef = useRef<HTMLDivElement>(null);
-  
-  // Автоматичне прокручування графіка виручки праворуч (до найновіших дат) при зміні періоду
-  useEffect(() => {
-    if (chartScrollRef.current) {
-      setTimeout(() => {
-        if (chartScrollRef.current) {
-          chartScrollRef.current.scrollLeft = chartScrollRef.current.scrollWidth;
-        }
-      }, 50);
-    }
-  }, [statsPeriod]);
   
   // Відстеження вже відомих замовлень, щоб перемикати на "Нові" ЛИШЕ один раз при надходженні нового
   const knownOrderIdsRef = useRef<Set<string>>(new Set());
@@ -3953,91 +3941,81 @@ export default function AdminPage() {
                     </span>
                   </div>
 
-                  {/* Стовпчаста діаграма зі скролом при великій кількості стовпчиків */}
-                  <div className="pt-6 pb-2 w-full min-w-0 max-w-full overflow-hidden">
-                    <div
-                      ref={chartScrollRef}
-                      className="w-full max-w-full overflow-x-auto pb-2 scroll-smooth select-none"
-                      style={{
-                        scrollbarWidth: 'thin',
-                        scrollbarColor: 'rgba(255, 255, 255, 0.25) rgba(255, 255, 255, 0.05)',
-                      }}
-                    >
-                      <div className={cn(
-                        'h-44 sm:h-52 flex items-end border-b border-white/10 pb-2',
-                        statsData.chartBars.length <= 8
-                          ? 'w-full justify-between gap-1.5 sm:gap-4'
-                          : 'min-w-max justify-start gap-1.5 sm:gap-2.5 px-1'
-                      )}>
-                        {statsData.chartBars.map((bar, idx) => {
-                          const heightPercent = Math.max(
-                            bar.revenue > 0 ? Math.round((bar.revenue / statsData.maxBarRevenue) * 100) : 4,
-                            bar.count > 0 ? 8 : 4
-                          );
-                          const isLatest = idx === statsData.chartBars.length - 1;
+                  {/* Стовпчаста діаграма без скролу: адаптивні стовпці з акуратними відступами, що звужуються до тонких рисок */}
+                  <div className="pt-6 pb-2 w-full">
+                    <div className={cn(
+                      'h-44 sm:h-52 flex items-end border-b border-white/10 pb-2 w-full',
+                      statsData.chartBars.length <= 8
+                        ? 'justify-center gap-2.5 sm:gap-4 max-w-lg mx-auto'
+                        : statsData.chartBars.length <= 32
+                        ? 'justify-center gap-1 sm:gap-1.5 w-full'
+                        : 'justify-center gap-0.5 sm:gap-1 w-full'
+                    )}>
+                      {statsData.chartBars.map((bar, idx) => {
+                        const heightPercent = Math.max(
+                          bar.revenue > 0 ? Math.round((bar.revenue / statsData.maxBarRevenue) * 100) : 4,
+                          bar.count > 0 ? 8 : 4
+                        );
+                        const isLatest = idx === statsData.chartBars.length - 1;
 
-                          return (
-                            <div
-                              key={bar.dateStr}
-                              className={cn(
-                                'flex flex-col items-center justify-end h-full group/bar relative',
-                                statsData.chartBars.length <= 8
-                                  ? 'flex-1 max-w-[42px]'
-                                  : 'w-7 sm:w-8 shrink-0'
-                              )}
-                            >
-                              {/* Спливаюча підказка (Tooltip) при наведенні */}
-                              <div className="absolute -top-12 z-30 opacity-0 group-hover/bar:opacity-100 transition-opacity pointer-events-none bg-black/95 text-white text-[10px] px-2.5 py-1.5 rounded-lg border border-white/20 whitespace-nowrap shadow-xl">
-                                <p className="font-bold">{bar.fullDateLabel}</p>
-                                <p className="text-emerald-400 font-mono">
-                                  {formatPrice(bar.revenue, 'pl')} {bar.count > 0 ? `(${bar.count} зам.)` : '(0 зам.)'}
-                                </p>
-                              </div>
+                        const totalBars = statsData.chartBars.length;
+                        const isManyBars = totalBars > 10;
+                        const step = totalBars > 25 ? Math.ceil(totalBars / 6) : totalBars > 14 ? 3 : 1;
+                        const showLabel = !isManyBars || idx === 0 || idx === totalBars - 1 || idx % step === 0;
 
-                              {/* Стовпчик */}
-                              <div className="w-full bg-white/5 rounded-t-lg overflow-hidden flex flex-col justify-end h-full">
-                                <div
-                                  style={{ height: `${heightPercent}%` }}
-                                  className={cn(
-                                    'w-full transition-all duration-500 rounded-t-lg',
-                                    isLatest
-                                      ? 'bg-gradient-to-t from-[#e50914] to-[#ff4d58] shadow-md shadow-[#e50914]/40'
-                                      : bar.revenue > 0
-                                      ? 'bg-gradient-to-t from-[#8b1419] to-[#e50914] group-hover/bar:brightness-125'
-                                      : 'bg-white/10'
-                                  )}
-                                />
-                              </div>
-
-                              {/* Дата та день тижня під стовпчиком */}
-                              <div className={cn(
-                                'text-[10px] mt-2 font-mono text-center flex flex-col items-center leading-tight whitespace-nowrap',
-                                isLatest ? 'text-white font-bold' : 'text-zinc-500'
-                              )}>
-                                <span className={cn(
-                                  'text-[8px] sm:text-[9px] uppercase tracking-wider font-sans font-semibold',
-                                  isLatest ? 'text-red-400' : 'text-zinc-400'
-                                )}>
-                                  {bar.dayName}
-                                </span>
-                                <span className="text-[9px] sm:text-[10px]">{bar.label}</span>
-                              </div>
+                        return (
+                          <div
+                            key={bar.dateStr}
+                            className={cn(
+                              'flex flex-col items-center justify-end h-full group/bar relative',
+                              totalBars <= 8
+                                ? 'flex-1 max-w-[48px] min-w-[28px]'
+                                : totalBars <= 32
+                                ? 'flex-1 max-w-[16px] sm:max-w-[22px] min-w-[4px]'
+                                : 'flex-1 max-w-[6px] sm:max-w-[10px] min-w-[2px]'
+                            )}
+                          >
+                            {/* Спливаюча підказка (Tooltip) при наведенні */}
+                            <div className="absolute -top-12 z-30 opacity-0 group-hover/bar:opacity-100 transition-opacity pointer-events-none bg-black/95 text-white text-[10px] px-2.5 py-1.5 rounded-lg border border-white/20 whitespace-nowrap shadow-xl">
+                              <p className="font-bold">{bar.fullDateLabel}</p>
+                              <p className="text-emerald-400 font-mono">
+                                {formatPrice(bar.revenue, 'pl')} {bar.count > 0 ? `(${bar.count} зам.)` : '(0 зам.)'}
+                              </p>
                             </div>
-                          );
-                        })}
-                      </div>
-                    </div>
 
-                    {/* Підказка щодо горизонтального скролу, якщо стовпчиків багато */}
-                    {statsData.chartBars.length > 8 && (
-                      <div className="flex items-center justify-between text-[10px] text-zinc-500 pt-2 px-1">
-                        <span className="flex items-center gap-1 text-zinc-400">
-                          <span>←</span>
-                          <span>Прокрутіть для перегляду попередніх днів</span>
-                        </span>
-                        <span className="font-mono text-zinc-400">{statsData.chartBars.length} роб. дн.</span>
-                      </div>
-                    )}
+                            {/* Стовпчик */}
+                            <div className="w-full bg-white/5 rounded-t-sm sm:rounded-t-md overflow-hidden flex flex-col justify-end h-full">
+                              <div
+                                style={{ height: `${heightPercent}%` }}
+                                className={cn(
+                                  'w-full transition-all duration-500 rounded-t-sm sm:rounded-t-md',
+                                  isLatest
+                                    ? 'bg-gradient-to-t from-[#e50914] to-[#ff4d58] shadow-md shadow-[#e50914]/40'
+                                    : bar.revenue > 0
+                                    ? 'bg-gradient-to-t from-[#8b1419] to-[#e50914] group-hover/bar:brightness-125'
+                                    : 'bg-white/10'
+                                )}
+                              />
+                            </div>
+
+                            {/* Дата та день тижня під стовпчиком (ховається для проміжних днів, коли стовпчиків багато) */}
+                            <div className={cn(
+                              'text-[10px] mt-2 font-mono text-center flex flex-col items-center leading-tight whitespace-nowrap',
+                              isLatest ? 'text-white font-bold' : 'text-zinc-500',
+                              !showLabel && 'opacity-0 pointer-events-none select-none'
+                            )}>
+                              <span className={cn(
+                                'text-[8px] sm:text-[9px] uppercase tracking-wider font-sans font-semibold',
+                                isLatest ? 'text-red-400' : 'text-zinc-400'
+                              )}>
+                                {bar.dayName}
+                              </span>
+                              <span className="text-[9px] sm:text-[10px]">{bar.label}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 
