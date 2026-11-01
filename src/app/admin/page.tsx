@@ -1077,24 +1077,30 @@ export default function AdminPage() {
     const shortDayNamesUk = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
     const fullDayNamesUk = ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'Пʼятниця', 'Субота'];
 
-    // Збираємо робочі дні для графіка відповідно до обраного періоду (пропускаючи вихідні закладу)
+    const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    // Збираємо робочі дні для графіка відповідно до обраного періоду:
+    // Якщо обрано 'today' — показуємо 7 днів (сьогодні + попередні робочі дні), щоб була видна динаміка у порівнянні з тижнем!
     const workingDaysList: Date[] = [];
 
-    if (statsPeriod === 'today') {
+    if (statsPeriod === 'today' || statsPeriod === '7days') {
+      // 7 днів: сьогодні + попередні робочі дні (пропускаючи зачинені понеділки)
       workingDaysList.push(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
-    } else if (statsPeriod === '7days') {
-      // 7 календарних днів (пропускаючи понеділки)
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+
+      let offset = 1;
+      while (workingDaysList.length < 7 && offset < 14) {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - offset);
         if (!isDayClosed(d)) {
           workingDaysList.push(d);
         }
+        offset++;
       }
+      workingDaysList.reverse();
     } else if (statsPeriod === '30days') {
       // Повні 30 днів (пропускаючи вихідні понеділки -> ~26 робочих днів)
       for (let i = 29; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-        if (!isDayClosed(d)) {
+        if (i === 0 || !isDayClosed(d)) {
           workingDaysList.push(d);
         }
       }
@@ -1119,7 +1125,7 @@ export default function AdminPage() {
 
       for (let i = diffDays; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-        if (!isDayClosed(d)) {
+        if (i === 0 || !isDayClosed(d)) {
           workingDaysList.push(d);
         }
       }
@@ -1230,6 +1236,7 @@ export default function AdminPage() {
       dayName: string;
       fullDateLabel: string;
       dateStr: string;
+      isToday: boolean;
       revenue: number;
       count: number;
     }>();
@@ -1239,10 +1246,15 @@ export default function AdminPage() {
       const label = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
       const dayName = shortDayNamesUk[d.getDay()];
       const fullDateLabel = `${fullDayNamesUk[d.getDay()]}, ${label}`;
-      daysMap.set(key, { label, dayName, fullDateLabel, dateStr: key, revenue: 0, count: 0 });
+      const isToday = key === todayKey;
+      daysMap.set(key, { label, dayName, fullDateLabel, dateStr: key, isToday, revenue: 0, count: 0 });
     });
 
-    validOrders.forEach((o) => {
+    // Для графіка динаміки беремо всі некасовані замовлення за дні на графіку,
+    // щоб у режимі "Сьогодні" відображався реальний контекст 7 днів!
+    const chartOrders = orders.filter((o) => o.status !== 'cancelled');
+
+    chartOrders.forEach((o) => {
       const d = new Date(o.created_at);
       if (isNaN(d.getTime())) return;
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -3933,7 +3945,9 @@ export default function AdminPage() {
                         Динаміка виручки
                       </h3>
                       <p className="text-[11px] text-zinc-400 mt-0.5">
-                        Розподіл замовлень та виручки за робочими днями (вихідні пропускаються)
+                        {statsPeriod === 'today'
+                          ? 'Динаміка за 7 днів (сьогодні виділено бурштиновим)'
+                          : 'Розподіл замовлень та виручки за днями (сьогодні виділено бурштиновим)'}
                       </p>
                     </div>
                     <span className="text-xs font-mono text-zinc-500 whitespace-nowrap">
@@ -3956,7 +3970,6 @@ export default function AdminPage() {
                           bar.revenue > 0 ? Math.round((bar.revenue / statsData.maxBarRevenue) * 100) : 4,
                           bar.count > 0 ? 8 : 4
                         );
-                        const isLatest = idx === statsData.chartBars.length - 1;
 
                         const totalBars = statsData.chartBars.length;
                         const isManyBars = totalBars > 10;
@@ -3977,7 +3990,15 @@ export default function AdminPage() {
                           >
                             {/* Спливаюча підказка (Tooltip) при наведенні */}
                             <div className="absolute -top-12 z-30 opacity-0 group-hover/bar:opacity-100 transition-opacity pointer-events-none bg-black/95 text-white text-[10px] px-2.5 py-1.5 rounded-lg border border-white/20 whitespace-nowrap shadow-xl">
-                              <p className="font-bold">{bar.fullDateLabel}</p>
+                              <p className="font-bold flex items-center gap-1.5">
+                                {bar.isToday && (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block animate-pulse" />
+                                )}
+                                <span>{bar.fullDateLabel}</span>
+                                {bar.isToday && (
+                                  <span className="text-amber-400 font-black">(Сьогодні)</span>
+                                )}
+                              </p>
                               <p className="text-emerald-400 font-mono">
                                 {formatPrice(bar.revenue, 'pl')} {bar.count > 0 ? `(${bar.count} зам.)` : '(0 зам.)'}
                               </p>
@@ -3989,8 +4010,10 @@ export default function AdminPage() {
                                 style={{ height: `${heightPercent}%` }}
                                 className={cn(
                                   'w-full transition-all duration-500 rounded-t-sm sm:rounded-t-md',
-                                  isLatest
-                                    ? 'bg-gradient-to-t from-[#e50914] to-[#ff4d58] shadow-md shadow-[#e50914]/40'
+                                  bar.isToday
+                                    ? bar.revenue > 0
+                                      ? 'bg-gradient-to-t from-amber-500 via-amber-400 to-yellow-300 shadow-md shadow-amber-500/50'
+                                      : 'bg-gradient-to-t from-amber-500/30 to-amber-400/60 border-t-2 border-amber-400'
                                     : bar.revenue > 0
                                     ? 'bg-gradient-to-t from-[#8b1419] to-[#e50914] group-hover/bar:brightness-125'
                                     : 'bg-white/10'
@@ -4001,16 +4024,18 @@ export default function AdminPage() {
                             {/* Дата та день тижня під стовпчиком (ховається для проміжних днів, коли стовпчиків багато) */}
                             <div className={cn(
                               'text-[10px] mt-2 font-mono text-center flex flex-col items-center leading-tight whitespace-nowrap',
-                              isLatest ? 'text-white font-bold' : 'text-zinc-500',
+                              bar.isToday ? 'text-amber-300 font-bold' : 'text-zinc-500',
                               !showLabel && 'opacity-0 pointer-events-none select-none'
                             )}>
                               <span className={cn(
                                 'text-[8px] sm:text-[9px] uppercase tracking-wider font-sans font-semibold',
-                                isLatest ? 'text-red-400' : 'text-zinc-400'
+                                bar.isToday ? 'text-amber-400 font-black' : 'text-zinc-400'
                               )}>
-                                {bar.dayName}
+                                {bar.isToday ? 'Сьогодні' : bar.dayName}
                               </span>
-                              <span className="text-[9px] sm:text-[10px]">{bar.label}</span>
+                              <span className={cn('text-[9px] sm:text-[10px]', bar.isToday && 'font-black text-amber-300')}>
+                                {bar.label}
+                              </span>
                             </div>
                           </div>
                         );
