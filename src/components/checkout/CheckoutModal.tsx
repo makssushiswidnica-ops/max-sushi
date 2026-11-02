@@ -18,6 +18,8 @@ import {
   Phone,
   MessageSquare,
   Check,
+  AlertCircle,
+  Zap,
 } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
@@ -126,12 +128,15 @@ export function CheckoutModal() {
   const total = useCartStore((s) => s.getTotal)(isPickup, selectedZone);
 
   // Розрахунок обмежень для вибору часу:
-  // Якщо на годиннику більше ніж час закриття мінус час виконання (prepWaitTimeMinutes + 15 хв для доставки),
-  // прийом замовлень на сьогодні блокується та пропонується вибір на завтра.
+  // - Понеділок: вихідний день (ресторан зачинено весь день).
+  // - Якщо на годиннику більше ніж час закриття мінус час виконання (prepWaitTimeMinutes + 15 хв для доставки),
+  //   прийом замовлень на сьогодні блокується та автоматично пропонується вибір на завтра.
   const getSchedulingBounds = () => {
     const requiredWait = isPickup ? prepWaitTimeMinutes : prepWaitTimeMinutes + 15;
     const now = new Date();
-    const day = now.getDay();
+    const day = now.getDay(); // 0: Неділя, 1: Понеділок, 2: Вівторок...
+    const isTodayClosed = day === 1; // Понеділок — завжди вихідний день!
+
     const todayClosingHour = (day === 5 || day === 6) ? 22 : 21; // Пт, Сб до 22:00, інші дні до 21:00
 
     // Час закриття закладу сьогодні в мілісекундах
@@ -145,8 +150,8 @@ export function CheckoutModal() {
       0
     ).getTime();
 
-    // Дедлайн прийому замовлень на сьогодні: якщо поточний час + очікування перевищує час закриття
-    const isTodayCutoffPassed = (now.getTime() + requiredWait * 60000) >= todayClosingMs;
+    // Дедлайн прийому замовлень на сьогодні: якщо сьогодні вихідний (понеділок) або поточний час + очікування перевищує час закриття
+    const isTodayCutoffPassed = isTodayClosed || (now.getTime() + requiredWait * 60000) >= todayClosingMs;
 
     // Розрахунок мінімального часу для замовлення на сьогодні
     const minDate = new Date(now.getTime() + requiredWait * 60000);
@@ -175,6 +180,7 @@ export function CheckoutModal() {
     return {
       requiredWait,
       todayClosingHour,
+      isTodayClosed,
       isTodayCutoffPassed,
       todayMinTimeString,
       todayMaxTimeString,
@@ -245,20 +251,36 @@ export function CheckoutModal() {
 
   // Автоматичне автозаповнення контактів та адреси зі збереженого профілю клієнта
   React.useEffect(() => {
-    if (isCheckoutOpen && customer) {
-      if (customer.name) setValue('name', maskName(customer.name));
-      if (customer.phone) setValue('phone', maskPhone(customer.phone));
-      if (customer.defaultAddress?.zone) {
-        const z = (customer.defaultAddress.zone === 'suburb_10km' || customer.defaultAddress.zone === 'suburb_5km') ? 'suburb' : customer.defaultAddress.zone;
-        setSelectedZone(z as DeliveryZoneId);
-        setValue('zone', z);
+    if (isCheckoutOpen) {
+      if (customer) {
+        if (customer.name) setValue('name', maskName(customer.name));
+        if (customer.phone) setValue('phone', maskPhone(customer.phone));
+
+        // Автовибір зони зі збережених даних клієнта
+        let clientZone: DeliveryZoneId = 'city';
+        const savedZone = customer.defaultAddress?.zone;
+        const savedCity = customer.defaultAddress?.city?.trim();
+
+        if (savedZone === 'suburb' || savedZone === 'suburb_10km' || savedZone === 'suburb_5km') {
+          clientZone = 'suburb';
+        } else if (savedCity && savedCity.toLowerCase() !== 'świdnica' && savedCity.toLowerCase() !== 'swidnica') {
+          clientZone = 'suburb';
+        }
+
+        setSelectedZone(clientZone);
+        setValue('zone', clientZone);
+
+        if (customer.defaultAddress?.city) setValue('city', maskCity(customer.defaultAddress.city));
+        if (customer.defaultAddress?.street) setValue('street', maskStreet(customer.defaultAddress.street));
+        if (customer.defaultAddress?.house) setValue('house', maskHouse(customer.defaultAddress.house));
+        if (customer.defaultAddress?.apartment) setValue('apartment', maskApartment(customer.defaultAddress.apartment));
+        if (customer.defaultAddress?.floor) setValue('floor', maskFloor(customer.defaultAddress.floor));
+        if (customer.defaultAddress?.entryCode) setValue('entryCode', maskEntryCode(customer.defaultAddress.entryCode));
+      } else {
+        // За замовчуванням завжди Свідниця
+        setSelectedZone('city');
+        setValue('zone', 'city');
       }
-      if (customer.defaultAddress?.city) setValue('city', maskCity(customer.defaultAddress.city));
-      if (customer.defaultAddress?.street) setValue('street', maskStreet(customer.defaultAddress.street));
-      if (customer.defaultAddress?.house) setValue('house', maskHouse(customer.defaultAddress.house));
-      if (customer.defaultAddress?.apartment) setValue('apartment', maskApartment(customer.defaultAddress.apartment));
-      if (customer.defaultAddress?.floor) setValue('floor', maskFloor(customer.defaultAddress.floor));
-      if (customer.defaultAddress?.entryCode) setValue('entryCode', maskEntryCode(customer.defaultAddress.entryCode));
     }
   }, [isCheckoutOpen, customer, setValue]);
 
@@ -835,29 +857,34 @@ export function CheckoutModal() {
                 type="button"
                 disabled={bounds.isTodayCutoffPassed}
                 onClick={() => {
+                  if (bounds.isTodayCutoffPassed) return;
                   setValue('timingType', 'asap');
                   setValue('scheduledTime', '');
                 }}
                 style={{
                   clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
                 }}
-                className={`flex flex-col items-start justify-center p-2.5 sm:p-3 border text-left cursor-pointer transition-all select-none ${
+                className={cn(
+                  'flex flex-col items-start justify-center p-2.5 sm:p-3 border text-left transition-all select-none',
                   bounds.isTodayCutoffPassed
                     ? 'opacity-40 cursor-not-allowed bg-zinc-900/40 border-white/5'
                     : selectedTiming === 'asap'
-                      ? 'bg-[#e50914]/15 border-[#e50914] text-white shadow-xs'
-                      : 'bg-[#171720] border-white/5 text-zinc-400 hover:text-white'
-                }`}
+                    ? 'bg-[#e50914]/15 border-[#e50914] text-white shadow-xs cursor-pointer'
+                    : 'bg-[#171720] border-white/5 text-zinc-400 hover:text-white cursor-pointer'
+                )}
               >
                 <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm text-white">
+                  <Zap className={cn('w-3.5 h-3.5', bounds.isTodayCutoffPassed ? 'text-zinc-500' : 'text-[#e50914]')} />
                   <span>{locale === 'pl' ? 'Jak najszybciej' : 'Якнайшвидше'}</span>
                 </div>
                 <span className="text-[10px] text-zinc-400 mt-0.5">
-                  {bounds.isTodayCutoffPassed
+                  {bounds.isTodayClosed
+                    ? (locale === 'pl' ? 'Dziś nieczynne' : 'Сьогодні вихідний')
+                    : bounds.isTodayCutoffPassed
                     ? (locale === 'pl' ? 'Niedostępne dzisiaj' : 'Недоступно сьогодні')
                     : isPickup
-                      ? `~${prepWaitTimeMinutes} ${locale === 'pl' ? 'min' : 'хв'}`
-                      : `~${prepWaitTimeMinutes + 15} ${locale === 'pl' ? 'min' : 'хв'}`}
+                    ? `~${prepWaitTimeMinutes} ${locale === 'pl' ? 'min' : 'хв'}`
+                    : `~${prepWaitTimeMinutes + 15} ${locale === 'pl' ? 'min' : 'хв'}`}
                 </span>
               </button>
 
@@ -878,29 +905,48 @@ export function CheckoutModal() {
                 style={{
                   clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
                 }}
-                className={`flex flex-col items-start justify-center p-2.5 sm:p-3 border text-left cursor-pointer transition-all select-none ${
+                className={cn(
+                  'flex flex-col items-start justify-center p-2.5 sm:p-3 border text-left cursor-pointer transition-all select-none',
                   selectedTiming === 'scheduled'
                     ? 'bg-[#e50914]/15 border-[#e50914] text-white shadow-xs'
                     : 'bg-[#171720] border-white/5 text-zinc-400 hover:text-white'
-                }`}
+                )}
               >
                 <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm text-white">
                   <Clock className="w-3.5 h-3.5 text-amber-400" />
                   <span>
-                    {bounds.isTodayCutoffPassed
+                    {bounds.isTodayClosed || bounds.isTodayCutoffPassed
                       ? (locale === 'pl' ? 'Zamówienie na jutro' : 'Замовлення на завтра')
                       : (locale === 'pl' ? 'Na wybraną godzinę' : 'На обраний час')}
                   </span>
                 </div>
                 <span className="text-[10px] text-zinc-400 mt-0.5">
-                  {locale === 'pl' ? 'Wcześniejsze zamówienie' : 'Попереднє замовлення'}
+                  {bounds.isTodayClosed
+                    ? (locale === 'pl' ? 'Na jutro od 12:00' : 'На завтра з 12:00')
+                    : (locale === 'pl' ? 'Wcześniejsze zamówienie' : 'Попереднє замовлення')}
                 </span>
               </button>
             </div>
 
-            {/* Сповіщення про завершення прийому на сьогодні */}
-            {bounds.isTodayCutoffPassed && (
-              <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 text-xs flex items-center gap-2">
+            {/* Сповіщення про вихідний день (Понеділок) */}
+            {bounds.isTodayClosed ? (
+              <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs flex items-start gap-2.5 animate-in fade-in duration-200">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
+                <div className="space-y-0.5">
+                  <p className="font-bold text-rose-300">
+                    {locale === 'pl'
+                      ? 'Dzisiaj mamy nieczynne (Poniedziałek — dzień wolny)'
+                      : 'Сьогодні заклад зачинено (Понеділок — вихідний день)'}
+                  </p>
+                  <p className="text-[11px] text-zinc-300 leading-relaxed">
+                    {locale === 'pl'
+                      ? 'W poniedziałki odpoczywamy. Przyjmujemy zamówienia na jutro (Wtorek) od 12:00!'
+                      : 'По понеділках заклад відпочиває. Приймаємо замовлення на завтра (Вівторок) з 12:00!'}
+                  </p>
+                </div>
+              </div>
+            ) : bounds.isTodayCutoffPassed && (
+              <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 text-xs flex items-center gap-2 animate-in fade-in duration-200">
                 <Clock className="w-4 h-4 shrink-0 text-amber-400" />
                 <span>
                   {locale === 'pl'
@@ -919,23 +965,28 @@ export function CheckoutModal() {
                     {locale === 'pl' ? 'Dzień realizacji:' : 'День замовлення:'}
                   </span>
                   <div className="flex items-center gap-1 bg-[#0a0a0f] p-0.5 rounded-lg border border-white/10">
-                    {!bounds.isTodayCutoffPassed && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setScheduledDate('today');
-                          setValue('scheduledTime', bounds.todayMinTimeString);
-                        }}
-                        className={cn(
-                          'px-2.5 py-1 text-xs font-bold rounded transition-all cursor-pointer',
-                          scheduledDate === 'today'
-                            ? 'bg-[#e50914] text-white shadow-xs'
-                            : 'text-zinc-400 hover:text-white'
-                        )}
-                      >
-                        {locale === 'pl' ? 'Dzisiaj' : 'Сьогодні'}
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      disabled={bounds.isTodayClosed || bounds.isTodayCutoffPassed}
+                      onClick={() => {
+                        if (bounds.isTodayClosed || bounds.isTodayCutoffPassed) return;
+                        setScheduledDate('today');
+                        setValue('scheduledTime', bounds.todayMinTimeString);
+                      }}
+                      className={cn(
+                        'px-2.5 py-1 text-xs font-bold rounded transition-all select-none',
+                        (bounds.isTodayClosed || bounds.isTodayCutoffPassed)
+                          ? 'opacity-40 text-zinc-500 cursor-not-allowed line-through'
+                          : scheduledDate === 'today'
+                          ? 'bg-[#e50914] text-white shadow-xs cursor-pointer'
+                          : 'text-zinc-400 hover:text-white cursor-pointer'
+                      )}
+                    >
+                      {locale === 'pl'
+                        ? bounds.isTodayClosed ? 'Dzisiaj (Nieczynne)' : 'Dzisiaj'
+                        : bounds.isTodayClosed ? 'Сьогодні (Вихідний)' : 'Сьогодні'}
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => {
