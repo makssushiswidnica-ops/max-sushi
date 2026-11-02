@@ -145,13 +145,13 @@ export function ProductModal() {
 
   if (!selectedProduct) return null;
 
-  // Додавання до кошика
+  // Додавання до кошика (не закриваємо модалку, залишаємо користувача в картці)
   const handleAddToCart = () => {
     addItem(selectedProduct, modalQuantity);
     setIsAdded(true);
     setTimeout(() => {
-      handleClose();
-    }, 600);
+      setIsAdded(false);
+    }, 1500);
   };
 
   // Свайп по галереї фотографій ролу
@@ -340,12 +340,12 @@ export function ProductModal() {
                   </div>
                 )}
 
-                {/* Фото ролу з об'ємною тінню та каліброваним масштабом на десктопі й мобільному */}
+                {/* Фото ролу з об'ємною тінню та збільшеним масштабом зблизька */}
                 {productImages.length > 0 && productImages[currentImageIndex] ? (
                   <div
-                    className="w-full h-full flex items-center justify-center animate-in fade-in duration-200 p-2 sm:p-4"
+                    className="w-full h-full flex items-center justify-center animate-in fade-in duration-200 p-1 sm:p-3"
                     style={{
-                      transform: `scale(${typeof window !== 'undefined' && window.innerWidth < 640 ? Math.min(getProductZoom(selectedProduct) * 0.88, 1.25) : Math.min(getProductZoom(selectedProduct), 1.45)})`,
+                      transform: `scale(${Math.min(getProductZoom(selectedProduct) * 1.35, 3.2)})`,
                     }}
                   >
                     <img

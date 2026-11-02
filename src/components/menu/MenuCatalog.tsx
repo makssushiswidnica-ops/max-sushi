@@ -141,21 +141,53 @@ export function MenuCatalog() {
   const prevCategory = totalCats > 1 ? categoriesWithPromo[(validCatIndex - 1 + totalCats) % totalCats] : null;
   const nextCategory = totalCats > 1 ? categoriesWithPromo[(validCatIndex + 1) % totalCats] : null;
 
+  // Страви поточної категорії
+  const currentCategoryProducts = useMemo(() => {
+    if (selectedCategory === 'promocje') {
+      return promoProducts;
+    }
+    return productsList.filter((p) => p.categoryId === selectedCategory);
+  }, [selectedCategory, promoProducts, productsList]);
+
   // Обробка жестів свайпу вліво/вправо на екрані для перемикання категорій
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const touchStartTime = useRef<number>(0);
+  const isTouchAtFirstItem = useRef<boolean>(false);
+
+  // Перевірка: чи знаходиться користувач на першій позиції категорії (щоб не перемикати свайпом, коли гортає список внизу)
+  const checkIsAtFirstItem = useCallback(() => {
+    if (typeof window === 'undefined') return true;
+    const firstProduct = currentCategoryProducts[0];
+    if (!firstProduct) return true;
+    const firstCardEl = document.getElementById(`product-card-${firstProduct.id}`);
+    if (!firstCardEl) return true;
+    const rect = firstCardEl.getBoundingClientRect();
+    const headerEl = document.querySelector('header') as HTMLElement | null;
+    const stickyNavEl = document.querySelector('.sticky.z-30') as HTMLElement | null;
+    const topOffset = (headerEl?.offsetHeight || 105) + (stickyNavEl?.offsetHeight || 56);
+    // Перша картка має бути видимою у верхній частині контенту (не проскролена вгору)
+    return rect.top >= (topOffset - 80) && rect.bottom > topOffset;
+  }, [currentCategoryProducts]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (isAllCategories || isFiltering) return;
+    // Дозволяємо горизонтальний свайп лише якщо користувач на першій позиції категорії
+    if (!checkIsAtFirstItem()) {
+      touchStartX.current = null;
+      touchStartY.current = null;
+      isTouchAtFirstItem.current = false;
+      return;
+    }
     const touch = e.touches[0];
     touchStartX.current = touch.clientX;
     touchStartY.current = touch.clientY;
     touchStartTime.current = Date.now();
+    isTouchAtFirstItem.current = true;
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null || touchStartY.current === null) return;
+    if (!isTouchAtFirstItem.current || touchStartX.current === null || touchStartY.current === null) return;
     if (isAllCategories || isFiltering) return;
 
     const touch = e.changedTouches[0];
@@ -165,6 +197,7 @@ export function MenuCatalog() {
 
     touchStartX.current = null;
     touchStartY.current = null;
+    isTouchAtFirstItem.current = false;
 
     // Свайп: швидкий (< 600ms), довжина > 50px, та чітко горизонтальний (горизонталь переважає вертикаль у 1.4 рази)
     if (duration < 600 && Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.4) {
@@ -298,12 +331,6 @@ export function MenuCatalog() {
   }, [searchQuery, locale, productsList]);
 
   const isFiltering = searchQuery.trim().length > 0;
-  const currentCategoryProducts = useMemo(() => {
-    if (selectedCategory === 'promocje') {
-      return promoProducts;
-    }
-    return productsList.filter((p) => p.categoryId === selectedCategory);
-  }, [selectedCategory, promoProducts, productsList]);
 
   return (
     <div>
