@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useCartStore } from '@/store/useCartStore';
 import { useI18n } from '@/lib/i18nContext';
-import { formatPrice, getEffectivePrice } from '@/lib/utils';
+import { formatPrice, getEffectivePrice, cn } from '@/lib/utils';
 import { fetchMenuData } from '@/lib/menuService';
 import {
   Plus,
@@ -18,6 +18,7 @@ import {
   Gift,
 } from 'lucide-react';
 import { ProductBadge } from '@/components/menu/ProductBadge';
+import { CornerRibbon } from '@/components/menu/CornerRibbon';
 import { getProductZoom } from '@/lib/imageZoom';
 import { useSettingsStore } from '@/store/useSettingsStore';
 
@@ -280,7 +281,7 @@ export function ProductModal() {
               <div
                 onTouchStart={handlePhotoTouchStart}
                 onTouchEnd={handlePhotoTouchEnd}
-                className="relative w-full sm:w-1/2 sm:max-w-[calc(50%-0.75rem)] sm:flex-1 sm:min-w-0 h-[38dvh] max-h-[330px] min-h-[230px] sm:max-h-none sm:min-h-0 sm:h-full pt-[calc(2.25rem+env(safe-area-inset-top,0px))] pb-3 px-3 sm:p-6 sm:pt-6 flex items-center justify-center bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.08)_0%,_#07070b_70%)] border-b sm:border-b-0 sm:border border-white/10 rounded-none overflow-hidden shrink-0 shadow-md shadow-black/80"
+                className="relative w-full sm:w-1/2 sm:max-w-[calc(50%-0.75rem)] sm:flex-1 sm:min-w-0 h-[38dvh] max-h-[330px] min-h-[230px] sm:max-h-none sm:min-h-0 sm:h-full pt-[calc(0.75rem+env(safe-area-inset-top,0px))] pb-3 px-3 sm:p-6 sm:pt-6 flex items-center justify-center bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.08)_0%,_#07070b_70%)] border-b sm:border-b-0 sm:border border-white/10 rounded-none overflow-hidden shrink-0 shadow-md shadow-black/80"
               >
                 {/* Мобільна плаваюча кнопка закриття (хрестик) поверх фото під статус-баром */}
                 <button
@@ -291,33 +292,41 @@ export function ProductModal() {
                   <X className="w-4 h-4 stroke-[2.5]" />
                 </button>
 
-                {/* Мобільний плаваючий лічильник позицій у верхньому лівому куті БЕЗ ФОНУ */}
-                <div className="sm:hidden absolute top-[calc(0.75rem+env(safe-area-inset-top,0px))] left-3 z-30 flex items-center gap-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] select-none">
+                {/* Єдиний кутовий самурайський бейдж-стрічка з відкритим кутом і пріоритетом знижки (і на ПК, і на мобільному) */}
+                <CornerRibbon
+                  productId={selectedProduct.id}
+                  discountPercent={selectedProduct.discountPercent}
+                  badge={selectedProduct.badge}
+                  className="w-18 h-18 sm:w-22 sm:h-22"
+                />
+
+                {/* Мобільний плаваючий лічильник позицій унизу зображення по центру */}
+                <div
+                  className={cn(
+                    'sm:hidden absolute left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/70 backdrop-blur-md border border-white/15 select-none shadow-lg shadow-black/80',
+                    hasMultipleImages
+                      ? (isGiftProduct ? 'bottom-14' : 'bottom-8')
+                      : (isGiftProduct ? 'bottom-10' : 'bottom-3')
+                  )}
+                >
                   <button
                     onClick={handlePrevCard}
-                    className="text-zinc-300 hover:text-white active:scale-90 p-1 cursor-pointer transition-colors"
+                    className="text-zinc-300 hover:text-white active:scale-90 p-0.5 cursor-pointer transition-colors"
                     aria-label="Попередній"
                   >
                     <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
                   </button>
-                  <span className="text-xs font-mono font-black text-white tracking-wider">
+                  <span className="text-xs font-mono font-black text-white tracking-wider px-1">
                     {currentIndex + 1} / {activeProducts.length || 1}
                   </span>
                   <button
                     onClick={handleNextCard}
-                    className="text-zinc-300 hover:text-white active:scale-90 p-1 cursor-pointer transition-colors"
+                    className="text-zinc-300 hover:text-white active:scale-90 p-0.5 cursor-pointer transition-colors"
                     aria-label="Наступний"
                   >
                     <ChevronRight className="w-4 h-4 stroke-[2.5]" />
                   </button>
                 </div>
-
-                {/* Маркетинговий бейдж (ВЕГАН, ХІТ тощо) у лівому кутку фото (тільки якщо немає знижки) */}
-                {selectedProduct.badge && (!selectedProduct.discountPercent || selectedProduct.discountPercent <= 0) && (
-                  <div className="absolute top-3 left-3 z-20 pointer-events-none flex flex-col gap-1 items-start">
-                    <ProductBadge badge={selectedProduct.badge} locale={locale} />
-                  </div>
-                )}
 
                 {/* Плашка подарунка на всю ширину внизу зображення (червоно-чорний градієнт) */}
                 {isGiftProduct && (
