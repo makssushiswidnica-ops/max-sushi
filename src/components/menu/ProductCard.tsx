@@ -8,7 +8,7 @@ import { getProductZoom } from '@/lib/imageZoom';
 import { useCartStore } from '@/store/useCartStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useI18n } from '@/lib/i18nContext';
-import { getEffectivePrice } from '@/lib/utils';
+import { getEffectivePrice, cn } from '@/lib/utils';
 
 interface ProductCardProps {
   product: Product;
@@ -99,17 +99,70 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* Просте прямокутне зображення страви з гострими кутами та м'яким студійним світлом */}
         {!isDodatki ? (
           <div className="relative w-full aspect-[4/3] overflow-hidden bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.08)_0%,_#07070b_70%)] border border-white/10 group-hover:border-[#e50914]/50 flex items-center justify-center mb-3 transition-colors duration-300 shadow-md shadow-black/80 rounded-none">
-            {/* Маркетинговий бейдж (ВЕГАН, ХІТ тощо) або знижка */}
-            <div className="absolute top-2 left-2 z-20 pointer-events-none flex flex-col gap-1 items-start">
-              {product.discountPercent && product.discountPercent > 0 ? (
-                <span className="inline-flex items-center text-[10px] sm:text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#e50914] text-white border border-red-400 shadow-md shadow-red-950/80 select-none">
+            {/* Кутова стрічка знижки: самурайський червоно-чорний градієнт по діагоналі з відкритим кутом */}
+            {product.discountPercent && product.discountPercent > 0 ? (
+              <svg
+                viewBox="0 0 80 80"
+                className="absolute top-0 left-0 w-16 h-16 sm:w-20 sm:h-20 z-20 pointer-events-none select-none filter drop-shadow-[0_3px_6px_rgba(0,0,0,0.9)]"
+                aria-hidden="true"
+              >
+                <defs>
+                  <linearGradient id={`grad-discount-${product.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#e50914" />
+                    <stop offset="50%" stopColor="#85050b" />
+                    <stop offset="100%" stopColor="#0a0a10" />
+                  </linearGradient>
+                </defs>
+                <polygon
+                  points="34,0 78,0 0,78 0,34"
+                  fill={`url(#grad-discount-${product.id})`}
+                />
+                <line
+                  x1="34"
+                  y1="0"
+                  x2="0"
+                  y2="34"
+                  stroke="#e50914"
+                  strokeWidth="1"
+                  opacity="0.6"
+                />
+                <line
+                  x1="78"
+                  y1="0"
+                  x2="0"
+                  y2="78"
+                  stroke="#e50914"
+                  strokeWidth="1.2"
+                  opacity="0.8"
+                />
+                <text
+                  x="28"
+                  y="28"
+                  transform="rotate(-45 28 28)"
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fill="#ffffff"
+                  fontSize="11"
+                  fontWeight="900"
+                  letterSpacing="0.04em"
+                  style={{ fontFamily: 'inherit', fontWeight: 900 }}
+                >
                   -{product.discountPercent}%
-                </span>
-              ) : null}
-              {product.badge && (
+                </text>
+              </svg>
+            ) : null}
+
+            {/* Маркетинговий бейдж (NEW, VEGAN, HIT): якщо є знижка — показуємо праворуч, щоб не перекривати зріз */}
+            {product.badge && (
+              <div
+                className={cn(
+                  'absolute top-2 z-20 pointer-events-none flex flex-col gap-1',
+                  product.discountPercent && product.discountPercent > 0 ? 'right-2 items-end' : 'left-2 items-start'
+                )}
+              >
                 <ProductBadge badge={product.badge} locale={locale} />
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Акцентна плашка акції: рол у подарунок - на всю ширину внизу зображення (червоно-чорний градієнт) */}
             {isGiftProduct && (

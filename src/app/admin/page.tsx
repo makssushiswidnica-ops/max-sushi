@@ -5638,8 +5638,6 @@ export default function AdminPage() {
                       <option value="new">NEW — Новинка</option>
                       <option value="veg">VEGAN — Веган</option>
                       <option value="hit">HIT — Хіт продажів</option>
-                      <option value="spicy">SPICY — Гостре</option>
-                      <option value="sale">SALE — Акція</option>
                     </select>
                   </div>
                 </div>
