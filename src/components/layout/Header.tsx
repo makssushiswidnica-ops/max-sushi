@@ -379,20 +379,23 @@ export function Header() {
                   </span>
                 </button>
               )}
+            </div>
 
+            {/* Праворуч: Контакти (Адреса + Телефон) */}
+            <div className="flex items-center gap-3 sm:gap-4 shrink-0">
               <a
                 href={brandTheme.contacts.googleMapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hidden md:flex items-center gap-1 text-zinc-400 hover:text-white transition-colors group cursor-pointer shrink-0"
+                className="hidden md:flex items-center gap-1.5 text-zinc-400 hover:text-white transition-colors group cursor-pointer text-xs"
                 title={locale === 'pl' ? 'Pokaż na Google Maps' : 'Показати на Google Maps'}
               >
-                <MapPin className="w-3.5 h-3.5 text-[#e50914] group-hover:scale-110 transition-transform" />
+                <MapPin className="w-3.5 h-3.5 text-[#e50914] group-hover:scale-110 transition-transform shrink-0" />
                 <span className="group-hover:underline underline-offset-2">{brandTheme.contacts.shortAddress}</span>
               </a>
-            </div>
 
-            <div className="flex items-center gap-4 shrink-0">
+              <span className="text-zinc-600 hidden md:inline">•</span>
+
               <a
                 href={`tel:${brandTheme.contacts.phoneRaw}`}
                 className="flex items-center gap-1.5 text-zinc-300 hover:text-[#e50914] transition-colors font-medium text-xs sm:text-sm shrink-0"
