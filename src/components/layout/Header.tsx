@@ -362,11 +362,11 @@ export function Header() {
                   <span className="font-bold text-amber-300 group-hover:text-amber-200 transition-colors truncate">
                     {giftProduct 
                       ? (locale === 'pl' 
-                          ? `Prezent: ${giftProduct.name.pl} gratis od ${giftPromo.minAmount} zł! 🎁` 
-                          : `Подарунок: ${giftProduct.name.uk} безкоштовно від ${giftPromo.minAmount} zł! 🎁`)
+                          ? `${giftProduct.name.pl} gratis od ${giftPromo.minAmount} zł!` 
+                          : `${giftProduct.name.uk} безкоштовно від ${giftPromo.minAmount} zł!`)
                       : (locale === 'pl' 
-                          ? `Rolka w prezencie przy zamówieniu od ${giftPromo.minAmount} zł! 🎁` 
-                          : `Рол у подарунок при замовленні від ${giftPromo.minAmount} zł! 🎁`)}
+                          ? `Rolka gratis przy zamówieniu od ${giftPromo.minAmount} zł!` 
+                          : `Рол безкоштовно при замовленні від ${giftPromo.minAmount} zł!`)}
                   </span>
                 </button>
               )}
