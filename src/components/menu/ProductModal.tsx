@@ -269,14 +269,14 @@ export function ProductModal() {
             </div>
           )}
 
-          {/* Внутрішній вміст: на мобільному фото зверху, опис по центру, кнопки знизу. На десктопі 2 колонки */}
+          {/* Внутрішній вміст: на мобільному фото зверху, опис по центру, кнопки знизу. На десктопі 2 рівні колонки */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 flex flex-col sm:flex-row sm:p-5 gap-0 sm:gap-6 items-stretch scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            {/* Колонка з фотографією: на мобільному зверху з плаваючими лічильником у верхньому лівому куті без фону і хрестиком справа */}
+            {/* Колонка з фотографією: на мобільному зверху з плаваючими лічильником у верхньому лівому куті без фону і хрестиком справа. На десктопі строго 50% з overflow-hidden */}
             {selectedProduct.categoryId !== 'dodatki' && (
               <div
                 onTouchStart={handlePhotoTouchStart}
                 onTouchEnd={handlePhotoTouchEnd}
-                className="relative w-full sm:w-1/2 h-[38dvh] max-h-[330px] min-h-[230px] sm:max-h-none sm:min-h-0 sm:h-full pt-[calc(2.25rem+env(safe-area-inset-top,0px))] pb-3 px-3 sm:p-6 flex items-center justify-center bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.08)_0%,_#07070b_70%)] border-b sm:border-b-0 sm:border border-white/10 rounded-none shrink-0 shadow-md shadow-black/80"
+                className="relative w-full sm:w-1/2 sm:max-w-[calc(50%-0.75rem)] sm:flex-1 sm:min-w-0 h-[38dvh] max-h-[330px] min-h-[230px] sm:max-h-none sm:min-h-0 sm:h-full pt-[calc(2.25rem+env(safe-area-inset-top,0px))] pb-3 px-3 sm:p-6 sm:pt-6 flex items-center justify-center bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.08)_0%,_#07070b_70%)] border-b sm:border-b-0 sm:border border-white/10 rounded-none overflow-hidden shrink-0 shadow-md shadow-black/80"
               >
                 {/* Мобільна плаваюча кнопка закриття (хрестик) поверх фото під статус-баром */}
                 <button
@@ -315,12 +315,12 @@ export function ProductModal() {
                   </div>
                 )}
 
-                {/* Фото ролу з об'ємною тінню та каліброваним масштабом на мобільному, щоб нічого не зрізалося */}
+                {/* Фото ролу з об'ємною тінню та каліброваним масштабом на десктопі й мобільному */}
                 {productImages.length > 0 && productImages[currentImageIndex] ? (
                   <div
                     className="w-full h-full flex items-center justify-center animate-in fade-in duration-200 p-2 sm:p-4"
                     style={{
-                      transform: `scale(${typeof window !== 'undefined' && window.innerWidth < 640 ? Math.min(getProductZoom(selectedProduct) * 0.88, 1.3) : getProductZoom(selectedProduct)})`,
+                      transform: `scale(${typeof window !== 'undefined' && window.innerWidth < 640 ? Math.min(getProductZoom(selectedProduct) * 0.88, 1.25) : Math.min(getProductZoom(selectedProduct), 1.45)})`,
                     }}
                   >
                     <img
@@ -391,7 +391,7 @@ export function ProductModal() {
             )}
 
             {/* Колонка опису: комфортне повітря між блоками, на мобільному плавно заповнює екран */}
-            <div className={`w-full ${selectedProduct.categoryId === 'dodatki' ? 'max-w-md mx-auto p-4' : 'sm:w-1/2 p-4 sm:p-0'} flex flex-col justify-between overflow-hidden`}>
+            <div className={`w-full ${selectedProduct.categoryId === 'dodatki' ? 'max-w-md mx-auto p-4' : 'sm:w-1/2 sm:max-w-[calc(50%-0.75rem)] sm:flex-1 sm:min-w-0 p-4 sm:p-0'} flex flex-col justify-between overflow-hidden`}>
               <div className="space-y-3 sm:space-y-4 overflow-y-auto overflow-x-hidden pr-1 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                 {/* Назва ролу капсом та бейдж */}
                 <div className="flex items-center gap-2 flex-wrap">
