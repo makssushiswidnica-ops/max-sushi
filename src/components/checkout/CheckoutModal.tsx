@@ -28,11 +28,26 @@ import { createOrder } from '@/lib/supabase';
 import { brandTheme } from '@/config/theme';
 import { formatPrice, cn } from '@/lib/utils';
 import { DeliveryMethod, PaymentMethod, Order, OrderAddress } from '@/types';
+import { 
+  maskName, 
+  maskPhone, 
+  getRawPhoneDigits, 
+  maskStreet, 
+  maskHouse, 
+  maskApartment, 
+  maskFloor, 
+  maskEntryCode, 
+  maskChangeFrom 
+} from '@/lib/inputMasks';
 
-// Схема валідації Zod
+// Схема валідації Zod з масками та захистом від некоректних символів
 const checkoutSchema = z.object({
-  name: z.string().min(2, 'Імʼя занадто коротке'),
-  phone: z.string().min(7, 'Введіть коректний номер телефону'),
+  name: z.string()
+    .min(2, 'Вкажіть імʼя (мінімум 2 літери)')
+    .max(40, 'Імʼя занадто довге')
+    .refine((v) => /^[\p{L}\s'-]{2,40}$/u.test(v.trim()), 'Імʼя має містити лише літери'),
+  phone: z.string()
+    .refine((v) => getRawPhoneDigits(v).length === 9, 'Введіть 9 цифр номера телефону'),
   deliveryMethod: z.enum(['delivery', 'pickup']),
   street: z.string().optional(),
   house: z.string().optional(),
@@ -47,7 +62,7 @@ const checkoutSchema = z.object({
 }).refine(
   (data) => {
     if (data.deliveryMethod === 'delivery') {
-      return Boolean(data.street && data.street.trim().length > 0);
+      return Boolean(data.street && data.street.trim().length >= 2);
     }
     return true;
   },
@@ -206,13 +221,13 @@ export function CheckoutModal() {
   // Автоматичне автозаповнення контактів та адреси зі збереженого профілю клієнта
   React.useEffect(() => {
     if (isCheckoutOpen && customer) {
-      if (customer.name) setValue('name', customer.name);
-      if (customer.phone) setValue('phone', customer.phone);
-      if (customer.defaultAddress?.street) setValue('street', customer.defaultAddress.street);
-      if (customer.defaultAddress?.house) setValue('house', customer.defaultAddress.house);
-      if (customer.defaultAddress?.apartment) setValue('apartment', customer.defaultAddress.apartment);
-      if (customer.defaultAddress?.floor) setValue('floor', customer.defaultAddress.floor);
-      if (customer.defaultAddress?.entryCode) setValue('entryCode', customer.defaultAddress.entryCode);
+      if (customer.name) setValue('name', maskName(customer.name));
+      if (customer.phone) setValue('phone', maskPhone(customer.phone));
+      if (customer.defaultAddress?.street) setValue('street', maskStreet(customer.defaultAddress.street));
+      if (customer.defaultAddress?.house) setValue('house', maskHouse(customer.defaultAddress.house));
+      if (customer.defaultAddress?.apartment) setValue('apartment', maskApartment(customer.defaultAddress.apartment));
+      if (customer.defaultAddress?.floor) setValue('floor', maskFloor(customer.defaultAddress.floor));
+      if (customer.defaultAddress?.entryCode) setValue('entryCode', maskEntryCode(customer.defaultAddress.entryCode));
     }
   }, [isCheckoutOpen, customer, setValue]);
 
@@ -236,21 +251,21 @@ export function CheckoutModal() {
 
       const orderData: Order = {
         id: orderId,
-        name: values.name,
-        phone: values.phone,
+        name: maskName(values.name),
+        phone: getRawPhoneDigits(values.phone),
         deliveryMethod: values.deliveryMethod,
         address:
           values.deliveryMethod === 'delivery'
             ? {
-                street: values.street || '',
-                house: values.house || '',
-                apartment: values.apartment,
-                floor: values.floor,
-                entryCode: values.entryCode,
+                street: maskStreet(values.street || ''),
+                house: maskHouse(values.house || ''),
+                apartment: values.apartment ? maskApartment(values.apartment) : undefined,
+                floor: values.floor ? maskFloor(values.floor) : undefined,
+                entryCode: values.entryCode ? maskEntryCode(values.entryCode) : undefined,
               }
             : undefined,
         paymentMethod: values.paymentMethod,
-        changeFrom: values.changeFrom,
+        changeFrom: values.changeFrom ? maskChangeFrom(values.changeFrom) : undefined,
         comment: values.comment,
         personsCount,
         timingType: values.timingType,
@@ -476,7 +491,7 @@ export function CheckoutModal() {
             </div>
           </div>
 
-          {/* Контактні дані: компактні інпути */}
+          {/* Контактні дані: компактні інпути з масками */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
             <Input
               label={t.checkout.name}
@@ -484,15 +499,30 @@ export function CheckoutModal() {
               placeholder={t.checkout.namePlaceholder}
               error={errors.name?.message}
               className="h-9 sm:h-9.5 text-xs sm:text-sm"
-              {...register('name')}
+              maxLength={40}
+              {...register('name', {
+                onChange: (e) => {
+                  const cleaned = maskName(e.target.value);
+                  e.target.value = cleaned;
+                  setValue('name', cleaned, { shouldValidate: true });
+                },
+              })}
             />
             <Input
               label={t.checkout.phone}
               id="customer-phone"
-              placeholder={t.checkout.phonePlaceholder}
+              type="tel"
+              placeholder="000 000 000"
               error={errors.phone?.message}
-              className="h-9 sm:h-9.5 text-xs sm:text-sm"
-              {...register('phone')}
+              className="h-9 sm:h-9.5 text-xs sm:text-sm font-mono tracking-wider"
+              maxLength={11}
+              {...register('phone', {
+                onChange: (e) => {
+                  const formatted = maskPhone(e.target.value);
+                  e.target.value = formatted;
+                  setValue('phone', formatted, { shouldValidate: true });
+                },
+              })}
             />
           </div>
 
@@ -514,7 +544,14 @@ export function CheckoutModal() {
                     placeholder={t.checkout.streetPlaceholder}
                     error={errors.street?.message}
                     className="h-8.5 sm:h-9 text-xs"
-                    {...register('street')}
+                    maxLength={50}
+                    {...register('street', {
+                      onChange: (e) => {
+                        const cleaned = maskStreet(e.target.value);
+                        e.target.value = cleaned;
+                        setValue('street', cleaned, { shouldValidate: true });
+                      },
+                    })}
                   />
                 </div>
                 <div>
@@ -524,7 +561,14 @@ export function CheckoutModal() {
                     placeholder={t.checkout.housePlaceholder}
                     error={errors.house?.message}
                     className="h-8.5 sm:h-9 text-xs"
-                    {...register('house')}
+                    maxLength={10}
+                    {...register('house', {
+                      onChange: (e) => {
+                        const cleaned = maskHouse(e.target.value);
+                        e.target.value = cleaned;
+                        setValue('house', cleaned, { shouldValidate: true });
+                      },
+                    })}
                   />
                 </div>
               </div>
@@ -538,7 +582,14 @@ export function CheckoutModal() {
                     id="order-apartment"
                     placeholder={t.checkout.apartmentPlaceholder}
                     className="h-8.5 text-xs"
-                    {...register('apartment')}
+                    maxLength={8}
+                    {...register('apartment', {
+                      onChange: (e) => {
+                        const cleaned = maskApartment(e.target.value);
+                        e.target.value = cleaned;
+                        setValue('apartment', cleaned);
+                      },
+                    })}
                   />
                 </div>
                 <div className="flex flex-col">
@@ -549,7 +600,14 @@ export function CheckoutModal() {
                     id="order-floor"
                     placeholder={t.checkout.floorPlaceholder}
                     className="h-8.5 text-xs"
-                    {...register('floor')}
+                    maxLength={6}
+                    {...register('floor', {
+                      onChange: (e) => {
+                        const cleaned = maskFloor(e.target.value);
+                        e.target.value = cleaned;
+                        setValue('floor', cleaned);
+                      },
+                    })}
                   />
                 </div>
                 <div className="flex flex-col">
@@ -559,8 +617,15 @@ export function CheckoutModal() {
                   <Input
                     id="order-entry-code"
                     placeholder={t.checkout.entryCodePlaceholder}
-                    className="h-8.5 text-xs"
-                    {...register('entryCode')}
+                    className="h-8.5 text-xs font-mono"
+                    maxLength={8}
+                    {...register('entryCode', {
+                      onChange: (e) => {
+                        const cleaned = maskEntryCode(e.target.value);
+                        e.target.value = cleaned;
+                        setValue('entryCode', cleaned);
+                      },
+                    })}
                   />
                 </div>
               </div>
@@ -624,8 +689,15 @@ export function CheckoutModal() {
                   label={t.checkout.changeFrom}
                   id="order-change-from"
                   placeholder={t.checkout.changeFromPlaceholder}
-                  className="h-8.5 text-xs"
-                  {...register('changeFrom')}
+                  className="h-8.5 text-xs font-mono"
+                  maxLength={5}
+                  {...register('changeFrom', {
+                    onChange: (e) => {
+                      const cleaned = maskChangeFrom(e.target.value);
+                      e.target.value = cleaned;
+                      setValue('changeFrom', cleaned);
+                    },
+                  })}
                 />
               </div>
             )}

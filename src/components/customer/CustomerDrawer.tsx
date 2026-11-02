@@ -32,6 +32,16 @@ import { useCartStore } from '@/store/useCartStore';
 import { useI18n } from '@/lib/i18nContext';
 import { formatPrice, cn } from '@/lib/utils';
 import { Order, OrderAddress } from '@/types';
+import { 
+  maskName, 
+  maskPhone, 
+  getRawPhoneDigits, 
+  maskStreet, 
+  maskHouse, 
+  maskApartment, 
+  maskFloor, 
+  maskEntryCode 
+} from '@/lib/inputMasks';
 
 // Перевірка, чи з цього комп'ютера чи телефона вже колись виконувався логін / реєстрація або замовлення
 const checkHadPreviousLogin = (): boolean => {
@@ -231,12 +241,15 @@ export function CustomerDrawer() {
     setAuthError('');
     setAdminNotice('');
 
-    if (!regPhone.trim()) {
-      setAuthError(t.customer.phoneRequired);
+    const cleanPhone = getRawPhoneDigits(regPhone);
+    const cleanName = maskName(regName);
+
+    if (cleanPhone.length !== 9) {
+      setAuthError(locale === 'pl' ? 'Podaj poprawny numer telefonu (dokładnie 9 cyfr)' : 'Введіть коректний номер телефону (рівно 9 цифр)');
       return;
     }
-    if (!regName.trim()) {
-      setAuthError(t.customer.nameRequired);
+    if (cleanName.length < 2) {
+      setAuthError(locale === 'pl' ? 'Imię musi zawierać tylko litery (min. 2)' : 'Імʼя має містити тільки літери (мін. 2)');
       return;
     }
     if (!regPassword || regPassword.length < 4) {
@@ -247,14 +260,14 @@ export function CustomerDrawer() {
     setIsSubmitting(true);
     try {
       await registerCustomer({
-        phone: regPhone,
-        name: regName,
+        phone: cleanPhone,
+        name: cleanName,
         password: regPassword,
-        email: regEmail,
+        email: regEmail.trim(),
       });
       if (typeof window !== 'undefined') {
         localStorage.setItem('max-sushi-has-logged-in', 'true');
-        localStorage.setItem('max-sushi-last-identifier', regPhone.trim());
+        localStorage.setItem('max-sushi-last-identifier', cleanPhone);
       }
       // Очищення полів
       setRegPhone('');
@@ -317,17 +330,29 @@ export function CustomerDrawer() {
     e.preventDefault();
     if (!customer) return;
 
+    const cleanName = maskName(profileName) || customer.name;
+    const cleanPhone = getRawPhoneDigits(profilePhone) || customer.phone;
+
+    if (cleanPhone.length !== 9) {
+      setAuthError(locale === 'pl' ? 'Podaj poprawny numer telefonu (dokładnie 9 cyfr)' : 'Введіть коректний номер телефону (рівно 9 цифр)');
+      return;
+    }
+    if (cleanName.length < 2) {
+      setAuthError(locale === 'pl' ? 'Imię musi zawierać tylko litery (min. 2)' : 'Імʼя має містити тільки літери (мін. 2)');
+      return;
+    }
+
     const defaultAddress: OrderAddress = {
-      street: street.trim(),
-      house: house.trim(),
-      apartment: apartment.trim() || undefined,
-      floor: floor.trim() || undefined,
-      entryCode: entryCode.trim() || undefined,
+      street: maskStreet(street),
+      house: maskHouse(house),
+      apartment: apartment ? maskApartment(apartment) : undefined,
+      floor: floor ? maskFloor(floor) : undefined,
+      entryCode: entryCode ? maskEntryCode(entryCode) : undefined,
     };
 
     await updateProfile({
-      name: profileName.trim() || customer.name,
-      phone: profilePhone.trim() || customer.phone,
+      name: cleanName,
+      phone: cleanPhone,
       defaultAddress,
     });
 
@@ -508,10 +533,11 @@ export function CustomerDrawer() {
                 <input
                   type="tel"
                   value={regPhone}
-                  onChange={(e) => setRegPhone(e.target.value)}
-                  placeholder="+48 000 000 000"
+                  onChange={(e) => setRegPhone(maskPhone(e.target.value))}
+                  placeholder="000 000 000"
+                  maxLength={11}
                   required
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#14141c] border border-white/10 focus:border-[#e50914] focus:ring-1 focus:ring-[#e50914] text-white text-sm placeholder:text-zinc-600 outline-hidden transition-all"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#14141c] border border-white/10 focus:border-[#e50914] focus:ring-1 focus:ring-[#e50914] text-white text-sm font-mono tracking-wider placeholder:text-zinc-600 outline-hidden transition-all"
                 />
               </div>
 
@@ -523,8 +549,9 @@ export function CustomerDrawer() {
                 <input
                   type="text"
                   value={regName}
-                  onChange={(e) => setRegName(e.target.value)}
+                  onChange={(e) => setRegName(maskName(e.target.value))}
                   placeholder={t.customer.namePlaceholder}
+                  maxLength={40}
                   required
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[#14141c] border border-white/10 focus:border-[#e50914] focus:ring-1 focus:ring-[#e50914] text-white text-sm placeholder:text-zinc-600 outline-hidden transition-all"
                 />
@@ -676,7 +703,7 @@ export function CustomerDrawer() {
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#e50914] to-rose-400 p-0.5 shadow-md shadow-[#e50914]/30 shrink-0">
                 <div className="w-full h-full bg-[#121218] rounded-full flex items-center justify-center text-white font-black text-sm">
-                  {customer.name ? customer.name.slice(0, 1).toUpperCase() : 'M'}
+                  {(maskName(customer.name) || customer.name || 'M').slice(0, 1).toUpperCase()}
                 </div>
               </div>
               <div className="min-w-0">
@@ -685,12 +712,12 @@ export function CustomerDrawer() {
                     {t.customer.greeting},
                   </span>
                   <span className="text-sm font-black text-white truncate">
-                    {customer.name}
+                    {maskName(customer.name) || (locale === 'pl' ? 'Klient' : 'Клієнт')}
                   </span>
                 </div>
                 <div className="flex items-center gap-1 text-xs text-zinc-400 font-mono mt-0.5">
                   <Phone className="w-3 h-3 text-[#e50914] shrink-0" />
-                  <span>{customer.phone}</span>
+                  <span>{customer.phone ? maskPhone(customer.phone) : ''}</span>
                 </div>
               </div>
             </div>
@@ -984,8 +1011,9 @@ export function CustomerDrawer() {
                     <input
                       type="text"
                       value={profileName}
-                      onChange={(e) => setProfileName(e.target.value)}
+                      onChange={(e) => setProfileName(maskName(e.target.value))}
                       placeholder={t.customer.namePlaceholder}
+                      maxLength={40}
                       className="w-full mt-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs focus:border-[#e50914] outline-hidden"
                     />
                   </div>
@@ -995,8 +1023,10 @@ export function CustomerDrawer() {
                     <input
                       type="tel"
                       value={profilePhone}
-                      onChange={(e) => setProfilePhone(e.target.value)}
-                      className="w-full mt-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs focus:border-[#e50914] outline-hidden"
+                      onChange={(e) => setProfilePhone(maskPhone(e.target.value))}
+                      placeholder="000 000 000"
+                      maxLength={11}
+                      className="w-full mt-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs font-mono tracking-wider focus:border-[#e50914] outline-hidden"
                     />
                   </div>
                 </div>
@@ -1016,8 +1046,9 @@ export function CustomerDrawer() {
                       <input
                         type="text"
                         value={street}
-                        onChange={(e) => setStreet(e.target.value)}
+                        onChange={(e) => setStreet(maskStreet(e.target.value))}
                         placeholder="np. Parkowa"
+                        maxLength={50}
                         className="w-full mt-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs focus:border-[#e50914] outline-hidden"
                       />
                     </div>
@@ -1026,8 +1057,9 @@ export function CustomerDrawer() {
                       <input
                         type="text"
                         value={house}
-                        onChange={(e) => setHouse(e.target.value)}
+                        onChange={(e) => setHouse(maskHouse(e.target.value))}
                         placeholder="np. 8"
+                        maxLength={10}
                         className="w-full mt-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs focus:border-[#e50914] outline-hidden"
                       />
                     </div>
@@ -1039,8 +1071,9 @@ export function CustomerDrawer() {
                       <input
                         type="text"
                         value={apartment}
-                        onChange={(e) => setApartment(e.target.value)}
+                        onChange={(e) => setApartment(maskApartment(e.target.value))}
                         placeholder="np. 14"
+                        maxLength={8}
                         className="w-full mt-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs focus:border-[#e50914] outline-hidden"
                       />
                     </div>
@@ -1049,8 +1082,9 @@ export function CustomerDrawer() {
                       <input
                         type="text"
                         value={floor}
-                        onChange={(e) => setFloor(e.target.value)}
+                        onChange={(e) => setFloor(maskFloor(e.target.value))}
                         placeholder="np. 2"
+                        maxLength={6}
                         className="w-full mt-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs focus:border-[#e50914] outline-hidden"
                       />
                     </div>
@@ -1059,9 +1093,10 @@ export function CustomerDrawer() {
                       <input
                         type="text"
                         value={entryCode}
-                        onChange={(e) => setEntryCode(e.target.value)}
+                        onChange={(e) => setEntryCode(maskEntryCode(e.target.value))}
                         placeholder="np. 14#"
-                        className="w-full mt-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs focus:border-[#e50914] outline-hidden"
+                        maxLength={8}
+                        className="w-full mt-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs font-mono focus:border-[#e50914] outline-hidden"
                       />
                     </div>
                   </div>
