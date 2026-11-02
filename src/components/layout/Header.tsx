@@ -76,7 +76,7 @@ export function Header() {
           .order('created_at', { ascending: false })
           .limit(10);
 
-        if (!error && data && data.length > 0) {
+        if (!error && data) {
           const active = data.find((o: any) => o.status !== 'delivered' && o.status !== 'cancelled');
           if (active) {
             if (active.status === 'pending') activeStatus = 'pending';
@@ -84,9 +84,7 @@ export function Header() {
             else if (active.status === 'in_delivery') activeStatus = 'in_delivery';
           }
         }
-      }
-
-      if (!activeStatus && typeof window !== 'undefined') {
+      } else if (typeof window !== 'undefined') {
         const local = JSON.parse(localStorage.getItem('max-sushi-orders') || '[]');
         if (Array.isArray(local)) {
           const matching = local.filter((o: any) => normalizePhone(o.phone || '').includes(digits));
@@ -127,11 +125,10 @@ export function Header() {
             .select('id')
             .eq('status', 'pending')
             .limit(1);
-          if (!error && data && data.length > 0) {
-            hasPending = true;
+          if (!error) {
+            hasPending = Boolean(data && data.length > 0);
           }
-        }
-        if (!hasPending && typeof window !== 'undefined') {
+        } else if (typeof window !== 'undefined') {
           const local = JSON.parse(localStorage.getItem('max-sushi-orders') || '[]');
           if (Array.isArray(local) && local.some((o: any) => o.status === 'pending')) {
             hasPending = true;
@@ -185,8 +182,12 @@ export function Header() {
       if (isMounted) setHasNewAdminOrder(true);
       checkCustomerOrderStatus();
     };
-    const onOrdersUpdate = () => {
-      checkPendingOrders();
+    const onOrdersUpdate = (e?: any) => {
+      if (e?.detail && typeof e.detail.hasPending === 'boolean') {
+        if (isMounted) setHasNewAdminOrder(e.detail.hasPending);
+      } else {
+        checkPendingOrders();
+      }
       checkCustomerOrderStatus();
     };
 
@@ -286,36 +287,36 @@ export function Header() {
     }
     if (!isAdmin && customer) {
       if (customerOrderStatus === 'pending') {
-        return 'bg-[#1a0808] border-[#e50914] shadow-[0_0_12px_rgba(229,9,20,0.5)]';
+        return 'bg-[#181824] border-amber-500/50 text-amber-300';
       }
       if (customerOrderStatus === 'kitchen') {
-        return 'bg-[#1c1808] border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.5)]';
+        return 'bg-[#1c1808] border-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.3)]';
       }
       if (customerOrderStatus === 'in_delivery') {
-        return 'bg-[#0a1224] border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.5)]';
+        return 'bg-[#0a1224] border-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.3)]';
       }
       return 'bg-[#181824] hover:bg-[#202030] border-white/10 text-white shadow-sm';
     }
     return 'bg-[#131318] hover:bg-[#1a1a22] border-white/10 text-zinc-300 hover:text-white';
   };
 
-  // Стиль і колір пульсації іконки без жодних крапок
+  // Стиль і колір іконки
   const getUserIconClassName = () => {
     if (isAdmin && hasNewAdminOrder) {
       return 'text-[#e50914] animate-pulse drop-shadow-[0_0_8px_rgba(229,9,20,0.9)] scale-110';
     }
     if (!isAdmin && customer) {
       if (customerOrderStatus === 'pending') {
-        return 'text-[#e50914] animate-pulse drop-shadow-[0_0_8px_rgba(229,9,20,0.9)] scale-110';
+        return 'text-amber-400';
       }
       if (customerOrderStatus === 'kitchen') {
-        return 'text-amber-400 animate-pulse drop-shadow-[0_0_8px_rgba(251,191,36,0.9)] scale-110';
+        return 'text-amber-400';
       }
       if (customerOrderStatus === 'in_delivery') {
-        return 'text-blue-500 animate-pulse drop-shadow-[0_0_8px_rgba(59,130,246,0.9)] scale-110';
+        return 'text-blue-400';
       }
     }
-    return 'text-[#e50914]';
+    return 'text-zinc-300 group-hover:text-white';
   };
 
   return (

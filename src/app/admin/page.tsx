@@ -594,6 +594,11 @@ export default function AdminPage() {
       setOrders(loaded);
       setOrderRlsNotice(rlsIssue);
 
+      const hasAnyPending = loaded.some((o) => o.status === 'pending');
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('admin-orders-updated', { detail: { hasPending: hasAnyPending } }));
+      }
+
       // Перемикаємо на вкладку "Нові" ЛИШЕ один раз при отриманні дійсно нового замовлення
       if (isFirstOrdersLoadRef.current) {
         isFirstOrdersLoadRef.current = false;
@@ -700,6 +705,10 @@ export default function AdminPage() {
           localStorage.setItem('max-sushi-orders', JSON.stringify(updated));
         } catch {}
       }
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('admin-orders-updated'));
+      }
     } catch (err) {
       console.error('Error changing order status:', err);
     }
@@ -721,6 +730,10 @@ export default function AdminPage() {
           const updated = local.filter((o: any) => o.id !== orderId);
           localStorage.setItem('max-sushi-orders', JSON.stringify(updated));
         } catch {}
+      }
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('admin-orders-updated'));
       }
     } catch (err) {
       console.error('Error deleting order:', err);
