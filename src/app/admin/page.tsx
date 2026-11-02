@@ -268,6 +268,69 @@ export default function AdminPage() {
 
   const [mktSoundEnabled, setMktSoundEnabled] = useState<boolean>(storeSettings.soundNotificationsEnabled);
   const [pushStatus, setPushStatus] = useState<string>('default');
+  const [unreadOrderCount, setUnreadOrderCount] = useState<number>(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Ініціалізація та розблокування аудіо браузера при першій взаємодії
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const audio = new Audio('/notification.wav');
+      audio.preload = 'auto';
+      audioRef.current = audio;
+
+      const unlockAudio = () => {
+        if (audioRef.current) {
+          audioRef.current.load();
+        }
+        window.removeEventListener('click', unlockAudio);
+        window.removeEventListener('touchstart', unlockAudio);
+        window.removeEventListener('keydown', unlockAudio);
+      };
+
+      window.addEventListener('click', unlockAudio, { once: true });
+      window.addEventListener('touchstart', unlockAudio, { once: true });
+      window.addEventListener('keydown', unlockAudio, { once: true });
+
+      return () => {
+        window.removeEventListener('click', unlockAudio);
+        window.removeEventListener('touchstart', unlockAudio);
+        window.removeEventListener('keydown', unlockAudio);
+      };
+    }
+  }, []);
+
+  // Миготіння заголовку вкладки браузера при надходженні нового замовлення
+  useEffect(() => {
+    if (unreadOrderCount <= 0) {
+      if (typeof document !== 'undefined') {
+        document.title = 'Maks Sushi Admin';
+      }
+      return;
+    }
+
+    const timer = setInterval(() => {
+      if (typeof document === 'undefined') return;
+      document.title = document.title.startsWith('🔴')
+        ? '(' + unreadOrderCount + ') 🔔 НОВЕ ЗАМОВЛЕННЯ!'
+        : '🔴 ПЕРЕВІРТЕ ЗАМОВЛЕННЯ! — Maks Sushi';
+    }, 1000);
+
+    const clearAlert = () => {
+      setUnreadOrderCount(0);
+      if (typeof document !== 'undefined') {
+        document.title = 'Maks Sushi Admin';
+      }
+    };
+
+    window.addEventListener('focus', clearAlert);
+    window.addEventListener('click', clearAlert);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('focus', clearAlert);
+      window.removeEventListener('click', clearAlert);
+    };
+  }, [unreadOrderCount]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -360,13 +423,15 @@ export default function AdminPage() {
     }
   }, [isModalOpen, isAddCategoryModalOpen]);
 
-  // Ресторанне двотональне звукове сповіщення про нове замовлення через Web Audio API
-  const playOrderSound = () => {
-    if (typeof window === 'undefined') return;
+  // Ресторанне звукове сповіщення через Web Audio API (резервний варіант)
+  const playWebAudioBeep = () => {
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioCtx) return;
       const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
 
       // Перший тон (Ding)
       const osc1 = ctx.createOscillator();
@@ -374,8 +439,8 @@ export default function AdminPage() {
       osc1.connect(gain1);
       gain1.connect(ctx.destination);
       osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(659.25, ctx.currentTime); // E5
-      gain1.gain.setValueAtTime(0.35, ctx.currentTime);
+      osc1.frequency.setValueAtTime(659.25, ctx.currentTime);
+      gain1.gain.setValueAtTime(0.4, ctx.currentTime);
       gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
       osc1.start(ctx.currentTime);
       osc1.stop(ctx.currentTime + 0.35);
@@ -386,13 +451,55 @@ export default function AdminPage() {
       osc2.connect(gain2);
       gain2.connect(ctx.destination);
       osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(880, ctx.currentTime + 0.14); // A5
-      gain2.gain.setValueAtTime(0.35, ctx.currentTime + 0.14);
+      osc2.frequency.setValueAtTime(880, ctx.currentTime + 0.16);
+      gain2.gain.setValueAtTime(0.4, ctx.currentTime + 0.16);
       gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
-      osc2.start(ctx.currentTime + 0.14);
+      osc2.start(ctx.currentTime + 0.16);
       osc2.stop(ctx.currentTime + 0.6);
     } catch {
-      // ігноруємо обмеження аудіоконтексту браузера
+      // ignore
+    }
+  };
+
+  // Ресторанне звукове сповіщення про нове замовлення через Audio HTML5 + Web Audio API
+  const playOrderSound = () => {
+    if (typeof window === 'undefined') return;
+    try {
+      if (!audioRef.current) {
+        audioRef.current = new Audio('/notification.wav');
+      }
+      audioRef.current.currentTime = 0;
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          playWebAudioBeep();
+        });
+      }
+    } catch {
+      playWebAudioBeep();
+    }
+  };
+
+  // Виведення системного Push-сповіщення браузера
+  const showPushNotification = (orderId?: string, customerName?: string, total?: number) => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    if (Notification.permission === 'granted') {
+      try {
+        const bodyText = orderId
+          ? 'Нове замовлення #' + orderId + ' від ' + (customerName || 'Клієнта') + (total ? ' на ' + total + ' zł' : '')
+          : 'Отримано нове замовлення! Перейдіть в адмінку для обробки.';
+        const notif = new Notification('🔔 Нове замовлення Maks Sushi!', {
+          body: bodyText,
+          icon: '/icon.png',
+          tag: orderId || 'new-order',
+        });
+        notif.onclick = () => {
+          window.focus();
+          setOrderStatusFilter('pending');
+        };
+      } catch (e) {
+        console.warn('Push notification error:', e);
+      }
     }
   };
 
@@ -616,16 +723,9 @@ export default function AdminPage() {
           if (storeSettings.soundNotificationsEnabled) {
             playOrderSound();
           }
-          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-            try {
-              new Notification('🔔 Нове замовлення Maks Sushi!', {
-                body: 'Отримано нове замовлення! Перейдіть в адмінку для обробки.',
-                icon: brandTheme.logo,
-              });
-            } catch (e) {
-              console.warn('Push error:', e);
-            }
-          }
+          const firstNew = loaded.find((o) => o.status === 'pending' && !knownOrderIdsRef.current.has(o.id));
+          showPushNotification(firstNew?.id, firstNew?.customer_name, firstNew?.total);
+          setUnreadOrderCount((prev) => prev + 1);
         }
 
         knownOrderIdsRef.current = new Set(loaded.map((o) => o.id));
@@ -1519,6 +1619,9 @@ export default function AdminPage() {
             if (payload.eventType === 'INSERT') {
               playOrderSound();
               setOrderStatusFilter('pending');
+              const newOrder = payload.new as any;
+              showPushNotification(newOrder?.id, newOrder?.customer_name || newOrder?.name, newOrder?.total);
+              setUnreadOrderCount((prev) => prev + 1);
             }
           }
         )
@@ -2720,6 +2823,40 @@ export default function AdminPage() {
 
           {/* Десктопні кнопки дій у шапці */}
           <div className="hidden sm:flex items-center gap-2 sm:gap-3">
+            {/* Швидка перевірка звуку */}
+            <button
+              type="button"
+              onClick={() => {
+                playOrderSound();
+                showToast('🔊 Відтворено тестовий сигнал замовлення');
+              }}
+              title="Перевірити звук сповіщення"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-zinc-300 hover:text-white bg-[#151520] hover:bg-[#1e1e2d] border border-white/10 rounded-lg transition-colors cursor-pointer"
+            >
+              <Volume2 className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden md:inline">Тест звуку</span>
+            </button>
+
+            {/* Кнопка статусу системних Push сповіщень */}
+            {pushStatus === 'granted' ? (
+              <span
+                title="Push-сповіщення активні"
+                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg select-none"
+              >
+                <Bell className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="hidden md:inline">Push активний</span>
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={handleRequestPush}
+                title="Дозволити системні сповіщення про замовлення"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-white bg-[#e50914] hover:bg-[#f4222d] border border-[#e50914] rounded-lg transition-all animate-pulse cursor-pointer shadow-md shadow-[#e50914]/30"
+              >
+                <BellRing className="w-3.5 h-3.5" />
+                <span>Увімкнути Push</span>
+              </button>
+            )}
             {/* Кнопка налаштувань (іконка шестерні) */}
             <button
               type="button"
@@ -2753,8 +2890,30 @@ export default function AdminPage() {
             </button>
           </div>
 
-          {/* Мобільна кнопка бургер-меню в правому кутку */}
-          <div className="flex sm:hidden items-center">
+          {/* Мобільні кнопки дій у шапці */}
+          <div className="flex sm:hidden items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                playOrderSound();
+                showToast('🔊 Тест звуку');
+              }}
+              title="Тест звуку"
+              className="p-2 rounded-lg bg-[#151520] border border-white/10 text-amber-400 active:scale-95 cursor-pointer"
+            >
+              <Volume2 className="w-4 h-4" />
+            </button>
+            {pushStatus !== 'granted' && (
+              <button
+                type="button"
+                onClick={handleRequestPush}
+                title="Увімкнути Push-сповіщення"
+                className="p-2 rounded-lg bg-[#e50914] text-white animate-pulse active:scale-95 cursor-pointer"
+              >
+                <BellRing className="w-4 h-4" />
+              </button>
+            )}
+            <div className="flex items-center">
             <button
               ref={burgerButtonRef}
               type="button"
@@ -2768,6 +2927,7 @@ export default function AdminPage() {
                 <Menu className="w-5 h-5 text-white" />
               )}
             </button>
+            </div>
           </div>
         </div>
 
@@ -3886,6 +4046,47 @@ export default function AdminPage() {
         {/* 2. РОЗДІЛ: ЗАМОВЛЕННЯ */}
         {activeTab === 'orders' && (
           <div className="space-y-6">
+            {/* Попередження, якщо системні сповіщення не дозволені в браузері */}
+            {pushStatus !== 'granted' && (
+              <div
+                style={{
+                  clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
+                }}
+                className="p-3 sm:p-4 bg-gradient-to-r from-red-500/15 via-[#161622] to-[#12121c] border border-[#e50914]/40 flex items-center justify-between gap-3 flex-wrap"
+              >
+                <div className="flex items-center gap-3 text-xs sm:text-sm text-zinc-200">
+                  <div className="w-8 h-8 rounded-lg bg-[#e50914]/20 border border-[#e50914]/40 flex items-center justify-center shrink-0">
+                    <BellRing className="w-4 h-4 text-[#e50914] animate-bounce" />
+                  </div>
+                  <div>
+                    <strong className="text-white block sm:inline">Системні сповіщення вимкнено у вашому браузері.</strong>{' '}
+                    <span className="text-zinc-400">Натисніть кнопку, щоб комп&apos;ютер вчасно подавав звуковий сигнал та виводив спливаюче вікно при нових замовленнях.</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playOrderSound();
+                      showToast('🔊 Відтворено тестовий звук');
+                    }}
+                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs font-bold rounded-lg border border-white/10 transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Volume2 className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Тест звуку</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRequestPush}
+                    className="px-3.5 py-1.5 bg-[#e50914] hover:bg-[#f4222d] text-white text-xs font-bold rounded-lg transition-all cursor-pointer shadow-md shadow-[#e50914]/40 flex items-center gap-1.5 active:scale-95"
+                  >
+                    <Bell className="w-3.5 h-3.5" />
+                    <span>Увімкнути Push</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Попередження про RLS, якщо виявлено проблему з політиками Supabase */}
             {orderRlsNotice && (
               <div
