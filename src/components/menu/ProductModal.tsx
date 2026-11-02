@@ -319,11 +319,11 @@ export function ProductModal() {
                   </div>
                 )}
 
-                {/* Плашка подарунка на всю ширину внизу зображення без заокруглень */}
+                {/* Плашка подарунка на всю ширину внизу зображення (червоно-чорний градієнт) */}
                 {isGiftProduct && (
-                  <div className="absolute inset-x-0 bottom-0 z-20 pointer-events-none py-2 px-3 bg-gradient-to-r from-amber-500 via-rose-500 to-[#e50914] text-white flex items-center justify-center gap-2 shadow-lg shadow-black/90 select-none border-t border-amber-300/40">
-                    <Gift className="w-4 h-4 text-amber-100 shrink-0" />
-                    <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-center drop-shadow-sm">
+                  <div className="absolute inset-x-0 bottom-0 z-20 pointer-events-none py-2 px-3 bg-gradient-to-r from-[#e50914] via-[#85050b] to-[#0a0a10] text-white flex items-center justify-center gap-2 shadow-lg shadow-black/90 select-none border-t border-[#e50914]/50">
+                    <Gift className="w-4 h-4 text-white shrink-0 animate-bounce" />
+                    <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-center text-white drop-shadow-md">
                       {locale === 'pl' 
                         ? `Za darmo od ${giftPromo.minAmount} zł` 
                         : `Безкоштовно від ${giftPromo.minAmount} zł`}
