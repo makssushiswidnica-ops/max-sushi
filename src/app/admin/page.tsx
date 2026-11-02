@@ -2868,7 +2868,7 @@ export default function AdminPage() {
                 type="button"
                 onClick={() => setActiveTab('marketing')}
                 className={cn(
-                  'relative py-3 px-3 sm:px-4 text-xs sm:text-sm font-bold tracking-wider uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none flex items-center justify-center gap-1.5 sm:gap-2 shrink-0',
+                  'hidden sm:flex relative py-3 px-3 sm:px-4 text-xs sm:text-sm font-bold tracking-wider uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none items-center justify-center gap-1.5 sm:gap-2 shrink-0',
                   activeTab === 'marketing' ? 'text-white font-black' : 'text-zinc-400 hover:text-zinc-200'
                 )}
               >
@@ -2884,7 +2884,7 @@ export default function AdminPage() {
                 type="button"
                 onClick={() => setActiveTab('stats')}
                 className={cn(
-                  'relative py-3 px-3 sm:px-4 text-xs sm:text-sm font-bold tracking-wider uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none flex items-center justify-center gap-1.5 sm:gap-2 shrink-0',
+                  'hidden sm:flex relative py-3 px-3 sm:px-4 text-xs sm:text-sm font-bold tracking-wider uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none items-center justify-center gap-1.5 sm:gap-2 shrink-0',
                   activeTab === 'stats' ? 'text-white font-black' : 'text-zinc-400 hover:text-zinc-200'
                 )}
               >
@@ -2947,7 +2947,7 @@ export default function AdminPage() {
 
       {/* Головна робоча зона */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 min-w-0 max-w-full">
-        {/* 0. ПОЧАТКОВИЙ ЕКРАН: 3 КАРТКИ (МЕНЮ, ЗАМОВЛЕННЯ, СТАТИСТИКА) - на мобілці компактно вміщуються в 1 екран */}
+        {/* 0. ПОЧАТКОВИЙ ЕКРАН: 4 КАРТКИ (МЕНЮ, ЗАМОВЛЕННЯ, МАРКЕТИНГ, СТАТИСТИКА) */}
         {activeTab === 'dashboard' && (
           <div className="space-y-4 sm:space-y-8 animate-in fade-in zoom-in-95 duration-200">
             <div className="text-center max-w-2xl mx-auto pt-1 sm:pt-4">
@@ -2959,7 +2959,7 @@ export default function AdminPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-5 pt-1 sm:pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 pt-1 sm:pt-2">
               {/* 1. КАРТКА: МЕНЮ */}
               <div
                 onClick={() => {
@@ -2975,7 +2975,7 @@ export default function AdminPage() {
                   style={{
                     clipPath: 'polygon(11px 0, 100% 0, 100% calc(100% - 11px), calc(100% - 11px) 100%, 0 100%, 0 11px)',
                   }}
-                  className="bg-[#0f0f18] p-3.5 sm:p-8 h-full flex flex-col justify-between"
+                  className="bg-[#0f0f18] p-3.5 sm:p-6 lg:p-7 h-full flex flex-col justify-between"
                 >
                   <div className="flex items-center justify-between sm:block">
                     <div className="flex items-center gap-3 sm:block">
@@ -2983,7 +2983,7 @@ export default function AdminPage() {
                         <UtensilsCrossed className="w-5 h-5 sm:w-7 sm:h-7" />
                       </div>
                       <div>
-                        <h2 className="text-base sm:text-2xl font-black uppercase tracking-wider text-white group-hover:text-[#ff4d58] transition-colors">
+                        <h2 className="text-base sm:text-xl lg:text-2xl font-black uppercase tracking-wider text-white group-hover:text-[#ff4d58] transition-colors">
                           МЕНЮ
                         </h2>
                         <p className="hidden sm:block text-xs sm:text-sm text-zinc-400 mt-2 leading-relaxed">
@@ -3020,7 +3020,7 @@ export default function AdminPage() {
                     clipPath: 'polygon(11px 0, 100% 0, 100% calc(100% - 11px), calc(100% - 11px) 100%, 0 100%, 0 11px)',
                   }}
                   className={cn(
-                    'p-3.5 sm:p-8 h-full flex flex-col justify-between transition-colors duration-300',
+                    'p-3.5 sm:p-6 lg:p-7 h-full flex flex-col justify-between transition-colors duration-300',
                     newOrdersCount > 0
                       ? 'bg-gradient-to-br from-[#2b080b] via-[#1a0608] to-[#110406]'
                       : 'bg-[#0f0f18]'
@@ -3042,7 +3042,7 @@ export default function AdminPage() {
                         <div className="flex items-center gap-2">
                           <h2
                             className={cn(
-                              'text-base sm:text-2xl font-black uppercase tracking-wider transition-colors',
+                              'text-base sm:text-xl lg:text-2xl font-black uppercase tracking-wider transition-colors',
                               newOrdersCount > 0 ? 'text-[#ff4d58]' : 'text-white group-hover:text-[#ff4d58]'
                             )}
                           >
@@ -3055,7 +3055,7 @@ export default function AdminPage() {
                               }}
                               className="px-2 py-0.5 text-[10px] sm:text-xs bg-[#e50914] text-white font-black tracking-wider shadow-md shadow-[#e50914]/40"
                             >
-                              +{newOrdersCount} НОВИХ
+                              +{newOrdersCount}
                             </span>
                           )}
                         </div>
@@ -3064,8 +3064,8 @@ export default function AdminPage() {
                           newOrdersCount > 0 ? 'text-zinc-300' : 'text-zinc-400'
                         )}>
                           {newOrdersCount > 0
-                            ? `У вас ${newOrdersCount} ${newOrdersCount === 1 ? 'нове замовлення' : 'нових замовлень'}! Натисніть, щоб переглянути та прийняти.`
-                            : "Потік онлайн-замовлень у реальному часі, кухня, кур'єрська доставка та статуси."}
+                            ? `У вас ${newOrdersCount} нових замовлень! Натисніть, щоб відкрити.`
+                            : "Потік онлайн-замовлень, кухня, кур'єрська доставка та чеки."}
                         </p>
                       </div>
                     </div>
@@ -3075,14 +3075,53 @@ export default function AdminPage() {
                   </div>
                   <div className="hidden sm:flex pt-6 mt-6 border-t border-white/10 items-center justify-between text-xs font-black uppercase tracking-wider text-zinc-400 group-hover:text-white transition-colors">
                     <span className={cn(newOrdersCount > 0 ? 'text-[#ff4d58] font-black' : '')}>
-                      {newOrdersCount > 0 ? `Переглянути нові (${newOrdersCount})` : 'Перейти до замовлень'}
+                      {newOrdersCount > 0 ? `Нові замовлення (${newOrdersCount})` : 'Перейти до замовлень'}
                     </span>
                     <span className="text-base text-[#e50914] group-hover:translate-x-1.5 transition-transform">→</span>
                   </div>
                 </div>
               </div>
 
-              {/* 3. КАРТКА: СТАТИСТИКА */}
+              {/* 3. КАРТКА: МАРКЕТИНГ & ДОСТАВКА */}
+              <div
+                onClick={() => setActiveTab('marketing')}
+                style={{
+                  clipPath: 'polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)',
+                }}
+                className="group relative p-[1px] bg-gradient-to-b from-white/20 via-white/5 to-[#e50914]/30 hover:to-[#e50914] cursor-pointer transition-all duration-300 hover:shadow-2xl hover:shadow-[#e50914]/25 hover:-translate-y-1 active:scale-98"
+              >
+                <div
+                  style={{
+                    clipPath: 'polygon(11px 0, 100% 0, 100% calc(100% - 11px), calc(100% - 11px) 100%, 0 100%, 0 11px)',
+                  }}
+                  className="bg-[#0f0f18] p-3.5 sm:p-6 lg:p-7 h-full flex flex-col justify-between"
+                >
+                  <div className="flex items-center justify-between sm:block">
+                    <div className="flex items-center gap-3 sm:block">
+                      <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-[#e50914]/10 border border-[#e50914]/30 flex items-center justify-center text-[#e50914] group-hover:scale-110 group-hover:bg-[#e50914] group-hover:text-white transition-all duration-300 shadow-md shadow-[#e50914]/20 shrink-0 sm:mb-6">
+                        <Gift className="w-5 h-5 sm:w-7 sm:h-7" />
+                      </div>
+                      <div>
+                        <h2 className="text-base sm:text-xl lg:text-2xl font-black uppercase tracking-wider text-white group-hover:text-[#ff4d58] transition-colors">
+                          МАРКЕТИНГ
+                        </h2>
+                        <p className="hidden sm:block text-xs sm:text-sm text-zinc-400 mt-2 leading-relaxed">
+                          Тарифи доставки, безкоштовний поріг, рол у подарунок та сповіщення.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="sm:hidden flex items-center gap-1 text-xs font-bold text-zinc-400 group-hover:text-white transition-colors shrink-0">
+                      <span className="text-[#e50914] text-base group-hover:translate-x-1 transition-transform">→</span>
+                    </div>
+                  </div>
+                  <div className="hidden sm:flex pt-6 mt-6 border-t border-white/10 items-center justify-between text-xs font-black uppercase tracking-wider text-zinc-400 group-hover:text-white transition-colors">
+                    <span>Керувати тарифами</span>
+                    <span className="text-base text-[#e50914] group-hover:translate-x-1.5 transition-transform">→</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. КАРТКА: СТАТИСТИКА */}
               <div
                 onClick={() => setActiveTab('stats')}
                 style={{
@@ -3094,7 +3133,7 @@ export default function AdminPage() {
                   style={{
                     clipPath: 'polygon(11px 0, 100% 0, 100% calc(100% - 11px), calc(100% - 11px) 100%, 0 100%, 0 11px)',
                   }}
-                  className="bg-[#0f0f18] p-3.5 sm:p-8 h-full flex flex-col justify-between"
+                  className="bg-[#0f0f18] p-3.5 sm:p-6 lg:p-7 h-full flex flex-col justify-between"
                 >
                   <div className="flex items-center justify-between sm:block">
                     <div className="flex items-center gap-3 sm:block">
@@ -3102,11 +3141,11 @@ export default function AdminPage() {
                         <BarChart3 className="w-5 h-5 sm:w-7 sm:h-7" />
                       </div>
                       <div>
-                        <h2 className="text-base sm:text-2xl font-black uppercase tracking-wider text-white group-hover:text-[#ff4d58] transition-colors">
+                        <h2 className="text-base sm:text-xl lg:text-2xl font-black uppercase tracking-wider text-white group-hover:text-[#ff4d58] transition-colors">
                           СТАТИСТИКА
                         </h2>
                         <p className="hidden sm:block text-xs sm:text-sm text-zinc-400 mt-2 leading-relaxed">
-                          Аналітика продажів, виручка закладу, середній чек та найпопулярніші позиції меню.
+                          Аналітика продажів, виручка закладу, середній чек та найпопулярніші страви.
                         </p>
                       </div>
                     </div>
@@ -4592,131 +4631,134 @@ export default function AdminPage() {
 
         {/* 4. РОЗДІЛ: МАРКЕТИНГ & ДОСТАВКА */}
         {activeTab === 'marketing' && (
-          <div className="space-y-6 w-full min-w-0 max-w-full">
-            {/* Верхня плашка розділу */}
-            <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#e50914]/20 border border-[#e50914]/40 flex items-center justify-center text-[#e50914] shrink-0 shadow-lg shadow-[#e50914]/20">
-                  <Gift className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-base sm:text-lg font-black text-white uppercase tracking-wide">
-                    Маркетинг & Доставка
-                  </h2>
-                  <p className="text-xs text-zinc-400 mt-0.5">
-                    Керування тарифами доставки по Свідниці та за місто, акційними подарунками та звуковими/push сповіщеннями
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-4 sm:space-y-6 w-full min-w-0 max-w-full">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* 1. Блок тарифів та зон доставки */}
-              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-5 sm:p-6 space-y-5 flex flex-col justify-between">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2.5 pb-3 border-b border-white/10">
+              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 space-y-4 flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2.5 pb-2.5 border-b border-white/10">
                     <Truck className="w-5 h-5 text-[#e50914]" />
                     <h3 className="text-sm sm:text-base font-black text-white uppercase tracking-wider">
                       Зони та вартість доставки
                     </h3>
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-2.5">
                     {/* Поріг безкоштовної доставки по місту */}
-                    <div className="p-3.5 bg-[#141420] border border-white/5 rounded-xl space-y-1.5">
-                      <div className="flex justify-between items-center">
-                        <label className="text-xs font-bold text-white">
-                          Безкоштовна доставка по Свідниці (від PLN)
-                        </label>
-                        <span className="text-xs font-black text-emerald-400">
-                          від {mktCityThreshold} zł
-                        </span>
+                    <div className="p-3 bg-[#141420] border border-white/5 rounded-xl flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs sm:text-sm font-bold text-white">
+                            Безкоштовна доставка
+                          </span>
+                          <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
+                            Свідниця
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 mt-0.5 leading-tight">
+                          Сума замовлення по місту, від якої доставка безкоштовна (0 zł)
+                        </p>
                       </div>
-                      <input
-                        type="number"
-                        min="0"
-                        step="5"
-                        value={mktCityThreshold}
-                        onChange={(e) => setMktCityThreshold(Number(e.target.value))}
-                        className="w-full bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-3 py-2 text-sm text-white font-bold focus:outline-none"
-                      />
-                      <p className="text-[11px] text-zinc-400">
-                        При замовленні від цієї суми доставка по Свідниці стає безкоштовною (0 zł).
-                      </p>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <input
+                          type="number"
+                          min="0"
+                          step="5"
+                          value={mktCityThreshold}
+                          onChange={(e) => setMktCityThreshold(Number(e.target.value))}
+                          className="w-20 sm:w-24 bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-2.5 py-1.5 text-right text-sm text-white font-black focus:outline-none"
+                        />
+                        <span className="text-xs font-bold text-zinc-400">zł</span>
+                      </div>
                     </div>
 
                     {/* Стандартна ціна по місту */}
-                    <div className="p-3.5 bg-[#141420] border border-white/5 rounded-xl space-y-1.5">
-                      <div className="flex justify-between items-center">
-                        <label className="text-xs font-bold text-white">
-                          Стандартна доставка по Свідниці (PLN)
-                        </label>
-                        <span className="text-xs font-black text-white">
-                          {mktCityFee} zł
-                        </span>
+                    <div className="p-3 bg-[#141420] border border-white/5 rounded-xl flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs sm:text-sm font-bold text-white">
+                            Стандартна доставка
+                          </span>
+                          <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-white/10 text-zinc-300 border border-white/15 shrink-0">
+                            Свідниця
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 mt-0.5 leading-tight">
+                          Тариф по місту, якщо чек менший за поріг безкоштовної доставки
+                        </p>
                       </div>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={mktCityFee}
-                        onChange={(e) => setMktCityFee(Number(e.target.value))}
-                        className="w-full bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-3 py-2 text-sm text-white font-bold focus:outline-none"
-                      />
-                      <p className="text-[11px] text-zinc-400">
-                        Стягується, якщо сума замовлення по місту менша за поріг безкоштовної доставки.
-                      </p>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={mktCityFee}
+                          onChange={(e) => setMktCityFee(Number(e.target.value))}
+                          className="w-20 sm:w-24 bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-2.5 py-1.5 text-right text-sm text-white font-black focus:outline-none"
+                        />
+                        <span className="text-xs font-bold text-zinc-400">zł</span>
+                      </div>
                     </div>
 
                     {/* Передмістя до 5 км */}
-                    <div className="p-3.5 bg-[#141420] border border-white/5 rounded-xl space-y-1.5">
-                      <div className="flex justify-between items-center">
-                        <label className="text-xs font-bold text-white">
-                          За місто до 5 км (PLN, завжди платна)
-                        </label>
-                        <span className="text-xs font-black text-amber-400">
-                          {mktSuburb5kmFee} zł
-                        </span>
+                    <div className="p-3 bg-[#141420] border border-white/5 rounded-xl flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs sm:text-sm font-bold text-white">
+                            Передмістя до 5 км
+                          </span>
+                          <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30 shrink-0">
+                            завжди платна
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 mt-0.5 leading-tight">
+                          Фіксований тариф для передмістя на відстані до 5 км від закладу
+                        </p>
                       </div>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={mktSuburb5kmFee}
-                        onChange={(e) => setMktSuburb5kmFee(Number(e.target.value))}
-                        className="w-full bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-3 py-2 text-sm text-white font-bold focus:outline-none"
-                      />
-                      <p className="text-[11px] text-zinc-400">
-                        Фіксований тариф для передмістя на відстані до 5 км від закладу.
-                      </p>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={mktSuburb5kmFee}
+                          onChange={(e) => setMktSuburb5kmFee(Number(e.target.value))}
+                          className="w-20 sm:w-24 bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-2.5 py-1.5 text-right text-sm text-white font-black focus:outline-none"
+                        />
+                        <span className="text-xs font-bold text-zinc-400">zł</span>
+                      </div>
                     </div>
 
                     {/* Передмістя 5 - 10 км */}
-                    <div className="p-3.5 bg-[#141420] border border-white/5 rounded-xl space-y-1.5">
-                      <div className="flex justify-between items-center">
-                        <label className="text-xs font-bold text-white">
-                          За місто 5–10 км (PLN, завжди платна)
-                        </label>
-                        <span className="text-xs font-black text-[#ff4d58]">
-                          {mktSuburb10kmFee} zł
-                        </span>
+                    <div className="p-3 bg-[#141420] border border-white/5 rounded-xl flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs sm:text-sm font-bold text-white">
+                            Передмістя 5–10 км
+                          </span>
+                          <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-400 border border-rose-500/30 shrink-0">
+                            макс. 10 км
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 mt-0.5 leading-tight">
+                          Тариф для зони 5–10 км. Доставка далі ніж 10 км не здійснюється
+                        </p>
                       </div>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={mktSuburb10kmFee}
-                        onChange={(e) => setMktSuburb10kmFee(Number(e.target.value))}
-                        className="w-full bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-3 py-2 text-sm text-white font-bold focus:outline-none"
-                      />
-                      <p className="text-[11px] text-zinc-400">
-                        Фіксований тариф для передмістя від 5 до 10 км. Доставка далі ніж 10 км закладом не здійснюється.
-                      </p>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={mktSuburb10kmFee}
+                          onChange={(e) => setMktSuburb10kmFee(Number(e.target.value))}
+                          className="w-20 sm:w-24 bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-2.5 py-1.5 text-right text-sm text-white font-black focus:outline-none"
+                        />
+                        <span className="text-xs font-bold text-zinc-400">zł</span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-white/5">
+                <div className="pt-3 border-t border-white/5 flex justify-end">
                   <button
                     type="button"
                     onClick={() => {
@@ -4731,7 +4773,7 @@ export default function AdminPage() {
                     style={{
                       clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
                     }}
-                    className="w-full py-2.5 px-4 bg-[#e50914] hover:bg-[#f4222d] text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-[#e50914]/30 active:scale-98 flex items-center justify-center gap-2"
+                    className="w-full sm:w-auto px-5 py-2 bg-[#e50914] hover:bg-[#f4222d] text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-[#e50914]/30 active:scale-98 flex items-center justify-center gap-2"
                   >
                     <Check className="w-4 h-4" />
                     <span>Зберегти тарифи доставки</span>
@@ -4740,10 +4782,10 @@ export default function AdminPage() {
               </div>
 
               {/* 2. Блок Акції "Рол у подарунок" & Сповіщення */}
-              <div className="space-y-6 flex flex-col justify-between">
+              <div className="space-y-4 sm:space-y-6 flex flex-col justify-between">
                 {/* Акція: Рол у подарунок */}
-                <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-5 sm:p-6 space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 space-y-3.5">
+                  <div className="flex items-center justify-between pb-2.5 border-b border-white/10">
                     <div className="flex items-center gap-2.5">
                       <Gift className="w-5 h-5 text-amber-400" />
                       <h3 className="text-sm sm:text-base font-black text-white uppercase tracking-wider">
@@ -4778,34 +4820,44 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-3.5">
+                  <div className="space-y-2.5">
                     {/* Мінімальна сума для подарунка */}
-                    <div className="p-3.5 bg-[#141420] border border-white/5 rounded-xl space-y-1.5">
-                      <label className="text-xs font-bold text-white block">
-                        Мінімальна сума замовлення для подарунка (PLN)
-                      </label>
-                      <input
-                        type="number"
-                        min="50"
-                        step="10"
-                        value={mktGiftMinAmount}
-                        onChange={(e) => setMktGiftMinAmount(Number(e.target.value))}
-                        className="w-full bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-3 py-2 text-sm text-white font-bold focus:outline-none"
-                      />
-                      <p className="text-[11px] text-zinc-400">
-                        Коли клієнт додає страв на суму {mktGiftMinAmount} zł або більше, подарунковий рол автоматично додається до кошика за 0 zł.
-                      </p>
+                    <div className="p-3 bg-[#141420] border border-white/5 rounded-xl flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs sm:text-sm font-bold text-white block">
+                          Мінімальна сума для подарунка
+                        </span>
+                        <p className="text-[11px] text-zinc-400 mt-0.5 leading-tight">
+                          Подарунковий рол автоматично додається до кошика за 0 zł при досягненні суми
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <input
+                          type="number"
+                          min="50"
+                          step="10"
+                          value={mktGiftMinAmount}
+                          onChange={(e) => setMktGiftMinAmount(Number(e.target.value))}
+                          className="w-20 sm:w-24 bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-2.5 py-1.5 text-right text-sm text-white font-black focus:outline-none"
+                        />
+                        <span className="text-xs font-bold text-zinc-400">zł</span>
+                      </div>
                     </div>
 
                     {/* Вибір страви у подарунок */}
-                    <div className="p-3.5 bg-[#141420] border border-white/5 rounded-xl space-y-1.5">
-                      <label className="text-xs font-bold text-white block">
-                        Страва, що видається у подарунок
-                      </label>
+                    <div className="p-3 bg-[#141420] border border-white/5 rounded-xl space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="text-xs sm:text-sm font-bold text-white block">
+                          Страва, що видається у подарунок
+                        </label>
+                        <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30 shrink-0">
+                          GRATIS (0 zł)
+                        </span>
+                      </div>
                       <select
                         value={mktGiftProductId}
                         onChange={(e) => setMktGiftProductId(e.target.value)}
-                        className="w-full bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-3 py-2.5 text-xs sm:text-sm text-white focus:outline-none cursor-pointer"
+                        className="w-full bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-3 py-2 text-xs sm:text-sm text-white focus:outline-none cursor-pointer"
                       >
                         {products.map((p) => (
                           <option key={p.id} value={p.id}>
@@ -4813,11 +4865,13 @@ export default function AdminPage() {
                           </option>
                         ))}
                       </select>
-                      <p className="text-[11px] text-zinc-400">
+                      <p className="text-[11px] text-zinc-400 leading-tight">
                         Обрана позиція додаватиметься в чеки для кухні з позначкою GRATIS.
                       </p>
                     </div>
+                  </div>
 
+                  <div className="pt-2 flex justify-end">
                     <button
                       type="button"
                       onClick={() => {
@@ -4833,7 +4887,7 @@ export default function AdminPage() {
                       style={{
                         clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
                       }}
-                      className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-600 text-black font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-amber-500/25 active:scale-98 flex items-center justify-center gap-2"
+                      className="w-full sm:w-auto px-5 py-2 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-amber-500/25 active:scale-98 flex items-center justify-center gap-2"
                     >
                       <Check className="w-4 h-4" />
                       <span>Зберегти умови подарунка</span>
