@@ -39,8 +39,11 @@ export async function fetchMenuData(): Promise<MenuData> {
       image: cat.image || '',
     }));
 
-    const products: Product[] = productsRes.data.map((prod: any) => ({
+    const defaultSkuMap = new Map(defaultProducts.map((p, idx) => [p.id, p.sku || String(idx + 1)]));
+
+    const products: Product[] = productsRes.data.map((prod: any, idx: number) => ({
       id: prod.id,
+      sku: prod.sku || prod.nutrition?.sku || defaultSkuMap.get(prod.id) || String(idx + 1),
       categoryId: prod.category_id,
       name: prod.name,
       description: prod.description,
@@ -279,7 +282,12 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
     if (updates.image !== undefined) payload.image = updates.image;
     if (updates.badge !== undefined) payload.badge = updates.badge || null;
     if (updates.ingredients !== undefined) payload.ingredients = updates.ingredients;
-    if (updates.nutrition !== undefined) payload.nutrition = updates.nutrition;
+    if (updates.nutrition !== undefined || updates.sku !== undefined) {
+      payload.nutrition = {
+        ...(updates.nutrition || {}),
+        ...(updates.sku !== undefined ? { sku: updates.sku } : {}),
+      };
+    }
     if (updates.isAvailable !== undefined) payload.is_available = updates.isAvailable;
 
     const { error } = await supabase
@@ -317,7 +325,10 @@ export async function createProduct(product: Product): Promise<{ success: boolea
           images: product.images || [],
           badge: product.badge || null,
           ingredients: product.ingredients,
-          nutrition: product.nutrition,
+          nutrition: {
+            ...(product.nutrition || { calories: 0, proteins: 0, fats: 0, carbs: 0 }),
+            ...(product.sku ? { sku: product.sku } : {}),
+          },
           is_available: product.isAvailable,
         },
       ]);

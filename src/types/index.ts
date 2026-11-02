@@ -21,6 +21,7 @@ export interface LocalizedArray {
 
 export interface Product {
   id: string;
+  sku?: string; // Артикул / номер страви на касі (PLU)
   name: LocalizedString;
   description: LocalizedString;
   price: number; // в PLN / грн

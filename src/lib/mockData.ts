@@ -117,6 +117,7 @@ export const products: Product[] = [
   // ==========================================
   {
     id: 'maki-ogorek',
+    sku: '1',
     name: {
       pl: 'Maki Ogórek',
       uk: 'Макі Огірок',
@@ -144,6 +145,7 @@ export const products: Product[] = [
   },
   {
     id: 'maki-awokado',
+    sku: '2',
     name: {
       pl: 'Maki Awokado',
       uk: 'Макі Авокадо',
@@ -171,6 +173,7 @@ export const products: Product[] = [
   },
   {
     id: 'maki-krab',
+    sku: '3',
     name: {
       pl: 'Maki Krab',
       uk: 'Макі Краб',
@@ -198,6 +201,7 @@ export const products: Product[] = [
   },
   {
     id: 'maki-tykwa',
+    sku: '4',
     name: {
       pl: 'Maki z Tykwą',
       uk: 'Макі з Тиквою',
@@ -225,6 +229,7 @@ export const products: Product[] = [
   },
   {
     id: 'maki-rzodkiew',
+    sku: '5',
     name: {
       pl: 'Maki z Rzodkwią',
       uk: 'Макі з Редькою',
@@ -252,6 +257,7 @@ export const products: Product[] = [
   },
   {
     id: 'maki-losos',
+    sku: '6',
     name: {
       pl: 'Maki Łosoś',
       uk: 'Макі Лосось',
@@ -279,6 +285,7 @@ export const products: Product[] = [
   },
   {
     id: 'maki-tunczyk',
+    sku: '7',
     name: {
       pl: 'Maki Tuńczyk',
       uk: 'Макі Тунець',
@@ -306,6 +313,7 @@ export const products: Product[] = [
   },
   {
     id: 'maki-krewetka',
+    sku: '8',
     name: {
       pl: 'Maki Krewetka',
       uk: 'Макі Креветка',
@@ -333,6 +341,7 @@ export const products: Product[] = [
   },
   {
     id: 'maki-wegorz',
+    sku: '9',
     name: {
       pl: 'Maki Węgorz',
       uk: 'Макі Вугор',
@@ -360,6 +369,7 @@ export const products: Product[] = [
   },
   {
     id: 'maki-tempura',
+    sku: '10',
     name: {
       pl: 'Maki z Krewetką w Tempurze',
       uk: 'Макі з Креветкою в Темпурі',
@@ -391,6 +401,7 @@ export const products: Product[] = [
   // ==========================================
   {
     id: 'futomaki-wegan',
+    sku: '11',
     name: {
       pl: 'Futomaki Wegan',
       uk: 'Футомакі Веган',
@@ -418,6 +429,7 @@ export const products: Product[] = [
   },
   {
     id: 'futomaki-banzai',
+    sku: '12',
     name: {
       pl: 'Futomaki Banzai',
       uk: 'Футомакі Банзай',
@@ -445,6 +457,7 @@ export const products: Product[] = [
   },
   {
     id: 'futomaki-losos',
+    sku: '13',
     name: {
       pl: 'Futomaki z Łososiem',
       uk: 'Футомакі з Лососем',
@@ -472,6 +485,7 @@ export const products: Product[] = [
   },
   {
     id: 'futomaki-tunczyk',
+    sku: '14',
     name: {
       pl: 'Futomaki z Tuńczykiem',
       uk: 'Футомакі з Тунцем',
@@ -499,6 +513,7 @@ export const products: Product[] = [
   },
   {
     id: 'futomaki-bangkok',
+    sku: '15',
     name: {
       pl: 'Futomaki Bangkok',
       uk: 'Футомакі Бангкок',
@@ -526,6 +541,7 @@ export const products: Product[] = [
   },
   {
     id: 'futomaki-kurama',
+    sku: '16',
     name: {
       pl: 'Futomaki Kurama',
       uk: 'Футомакі Курама',
@@ -553,6 +569,7 @@ export const products: Product[] = [
   },
   {
     id: 'futomaki-tokio',
+    sku: '17',
     name: {
       pl: 'Futomaki Tokio',
       uk: 'Футомакі Токіо',
@@ -580,6 +597,7 @@ export const products: Product[] = [
   },
   {
     id: 'futomaki-osmiornica',
+    sku: '18',
     name: {
       pl: 'Futomaki z Ośmiornicą w Tempurze',
       uk: 'Футомакі з Восьминогом в Темпурі',
@@ -610,6 +628,7 @@ export const products: Product[] = [
   // ==========================================
   {
     id: 'lux-filadelfia-losos',
+    sku: '19',
     name: {
       pl: 'Filadelfia z Łososiem',
       uk: 'Філадельфія з Лососем',
@@ -637,6 +656,7 @@ export const products: Product[] = [
   },
   {
     id: 'lux-filadelfia-tunczyk',
+    sku: '20',
     name: {
       pl: 'Filadelfia z Tuńczykiem',
       uk: 'Філадельфія з Тунцем',
@@ -664,6 +684,7 @@ export const products: Product[] = [
   },
   {
     id: 'lux-zloty-smok',
+    sku: '21',
     name: {
       pl: 'Złoty Smok',
       uk: 'Золотий Дракон',
@@ -691,6 +712,7 @@ export const products: Product[] = [
   },
   {
     id: 'lux-zielony-smok',
+    sku: '22',
     name: {
       pl: 'Zielony Smok',
       uk: 'Зелений Дракон',
@@ -718,6 +740,7 @@ export const products: Product[] = [
   },
   {
     id: 'lux-krolewski-smok',
+    sku: '23',
     name: {
       pl: 'Królewski Smok',
       uk: 'Королівський Дракон',
@@ -745,6 +768,7 @@ export const products: Product[] = [
   },
   {
     id: 'lux-favorite',
+    sku: '24',
     name: {
       pl: 'Favorite',
       uk: 'Фаворит',
@@ -772,6 +796,7 @@ export const products: Product[] = [
   },
   {
     id: 'lux-fila-lux',
+    sku: '25',
     name: {
       pl: 'Fila Lux',
       uk: 'Філа Люкс',
@@ -799,6 +824,7 @@ export const products: Product[] = [
   },
   {
     id: 'lux-mikado',
+    sku: '26',
     name: {
       pl: 'Mikado',
       uk: 'Мікадо',
@@ -826,6 +852,7 @@ export const products: Product[] = [
   },
   {
     id: 'lux-mango-fila',
+    sku: '27',
     name: {
       pl: 'Mango Fila',
       uk: 'Манго Філа',
@@ -853,6 +880,7 @@ export const products: Product[] = [
   },
   {
     id: 'lux-kanada',
+    sku: '28',
     name: {
       pl: 'Kanada',
       uk: 'Канада',
@@ -880,6 +908,7 @@ export const products: Product[] = [
   },
   {
     id: 'lux-azuma',
+    sku: '29',
     name: {
       pl: 'Azuma',
       uk: 'Азума',
@@ -907,6 +936,7 @@ export const products: Product[] = [
   },
   {
     id: 'lux-okinawa',
+    sku: '30',
     name: {
       pl: 'Okinawa',
       uk: 'Окінава',
@@ -934,6 +964,7 @@ export const products: Product[] = [
   },
   {
     id: 'lux-komaki',
+    sku: '31',
     name: {
       pl: 'Komaki',
       uk: 'Комакі',
@@ -961,6 +992,7 @@ export const products: Product[] = [
   },
   {
     id: 'lux-matsue',
+    sku: '32',
     name: {
       pl: 'Matsue',
       uk: 'Мацуе',
@@ -988,6 +1020,7 @@ export const products: Product[] = [
   },
   {
     id: 'lux-sunrise',
+    sku: '33',
     name: {
       pl: 'Sunrise',
       uk: 'Санрайз',
@@ -1018,6 +1051,7 @@ export const products: Product[] = [
   // ==========================================
   {
     id: 'rolki-bonito',
+    sku: '34',
     name: {
       pl: 'Bonito',
       uk: 'Боніто',
@@ -1045,6 +1079,7 @@ export const products: Product[] = [
   },
   {
     id: 'rolki-laguna-red',
+    sku: '35',
     name: {
       pl: 'Laguna Red',
       uk: 'Лагуна Ред',
@@ -1072,6 +1107,7 @@ export const products: Product[] = [
   },
   {
     id: 'rolki-rock-n-roll',
+    sku: '36',
     name: {
       pl: "Rock'n'Roll 50/50",
       uk: "Рок-н-Рол 50/50",
@@ -1099,6 +1135,7 @@ export const products: Product[] = [
   },
   {
     id: 'rolki-sakura',
+    sku: '37',
     name: {
       pl: 'Sakura 50/50',
       uk: 'Сакура 50/50',
@@ -1126,6 +1163,7 @@ export const products: Product[] = [
   },
   {
     id: 'rolki-lawa-tunczyk',
+    sku: '38',
     name: {
       pl: 'Lawa Tuńczyk',
       uk: 'Лава Тунець',
@@ -1153,6 +1191,7 @@ export const products: Product[] = [
   },
   {
     id: 'rolki-lawa-losos',
+    sku: '39',
     name: {
       pl: 'Lawa Łosoś',
       uk: 'Лава Лосось',
@@ -1180,6 +1219,7 @@ export const products: Product[] = [
   },
   {
     id: 'rolki-kalifornia-losos-masago',
+    sku: '40',
     name: {
       pl: 'Kalifornia z Łososiem w Masago',
       uk: 'Каліфорнія з Лососем у Масаго',
@@ -1207,6 +1247,7 @@ export const products: Product[] = [
   },
   {
     id: 'rolki-kalifornia-tunczyk-tempura',
+    sku: '41',
     name: {
       pl: 'Kalifornia z Tuńczykiem w Tempurze',
       uk: 'Каліфорнія з Тунцем у Темпурі',
@@ -1234,6 +1275,7 @@ export const products: Product[] = [
   },
   {
     id: 'rolki-kalifornia-krewetki',
+    sku: '42',
     name: {
       pl: 'Kalifornia z Krewetkami',
       uk: 'Каліфорнія з Креветками',
@@ -1261,6 +1303,7 @@ export const products: Product[] = [
   },
   {
     id: 'rolki-czarna-kalifornia',
+    sku: '43',
     name: {
       pl: 'Czarna Kalifornia',
       uk: 'Чорна Каліфорнія',
@@ -1288,6 +1331,7 @@ export const products: Product[] = [
   },
   {
     id: 'rolki-hanami',
+    sku: '44',
     name: {
       pl: 'Hanami',
       uk: 'Ханамі',
@@ -1315,6 +1359,7 @@ export const products: Product[] = [
   },
   {
     id: 'rolki-sniezny-krab',
+    sku: '45',
     name: {
       pl: 'Śnieżny Krab',
       uk: 'Сніговий Краб',
@@ -1342,6 +1387,7 @@ export const products: Product[] = [
   },
   {
     id: 'rolki-kalifornia-tunczyk-sezam',
+    sku: '46',
     name: {
       pl: 'Kalifornia z Tuńczykiem w Sezamie',
       uk: 'Каліфорнія з Тунцем у Кунжуті',
@@ -1369,6 +1415,7 @@ export const products: Product[] = [
   },
   {
     id: 'rolki-kalifornia-tunczyk-masago',
+    sku: '47',
     name: {
       pl: 'Kalifornia z Tuńczykiem w Masago',
       uk: 'Каліфорнія з Тунцем у Масаго',
@@ -1396,6 +1443,7 @@ export const products: Product[] = [
   },
   {
     id: 'rolki-kalifornia-light',
+    sku: '48',
     name: {
       pl: 'Kalifornia Light',
       uk: 'Каліфорнія Лайт',
@@ -1423,6 +1471,7 @@ export const products: Product[] = [
   },
   {
     id: 'rolki-kalifornia-masago',
+    sku: '49',
     name: {
       pl: 'Kalifornia Masago',
       uk: 'Каліфорнія Масаго',
@@ -1450,6 +1499,7 @@ export const products: Product[] = [
   },
   {
     id: 'rolki-miyako',
+    sku: '50',
     name: {
       pl: 'Miyako',
       uk: 'Міяко',
@@ -1477,6 +1527,7 @@ export const products: Product[] = [
   },
   {
     id: 'rolki-cheese-light',
+    sku: '51',
     name: {
       pl: 'Cheese Light',
       uk: 'Чіз Лайт',
@@ -1504,6 +1555,7 @@ export const products: Product[] = [
   },
   {
     id: 'rolki-cheese-ami',
+    sku: '52',
     name: {
       pl: 'Cheese Ami',
       uk: 'Чіз Амі',
@@ -1531,6 +1583,7 @@ export const products: Product[] = [
   },
   {
     id: 'rolki-miami',
+    sku: '53',
     name: {
       pl: 'Miami',
       uk: 'Маямі',
@@ -1561,6 +1614,7 @@ export const products: Product[] = [
   // ==========================================
   {
     id: 'pieczone-kamikaze',
+    sku: '54',
     name: {
       pl: 'Kamikaze',
       uk: 'Камікадзе',
@@ -1588,6 +1642,7 @@ export const products: Product[] = [
   },
   {
     id: 'pieczone-pieczony-krab',
+    sku: '55',
     name: {
       pl: 'Pieczony Krab',
       uk: 'Запечений Краб',
@@ -1615,6 +1670,7 @@ export const products: Product[] = [
   },
   {
     id: 'pieczone-pieczona-fila',
+    sku: '56',
     name: {
       pl: 'Pieczona Fila',
       uk: 'Запечена Філа',
@@ -1642,6 +1698,7 @@ export const products: Product[] = [
   },
   {
     id: 'pieczone-japonia',
+    sku: '57',
     name: {
       pl: 'Japonia',
       uk: 'Японія',
@@ -1669,6 +1726,7 @@ export const products: Product[] = [
   },
   {
     id: 'pieczone-lawa-katana',
+    sku: '58',
     name: {
       pl: 'Lawa Katana',
       uk: 'Лава Катана',
@@ -1696,6 +1754,7 @@ export const products: Product[] = [
   },
   {
     id: 'pieczone-lawa-oni',
+    sku: '59',
     name: {
       pl: 'Lawa Oni',
       uk: 'Лава Оні',
@@ -1726,6 +1785,7 @@ export const products: Product[] = [
   // ==========================================
   {
     id: 'tempura-krab',
+    sku: '60',
     name: {
       pl: 'Tempura Krab',
       uk: 'Темпура Краб',
@@ -1753,6 +1813,7 @@ export const products: Product[] = [
   },
   {
     id: 'tempura-losos',
+    sku: '61',
     name: {
       pl: 'Tempura Łosoś',
       uk: 'Темпура Лосось',
@@ -1780,6 +1841,7 @@ export const products: Product[] = [
   },
   {
     id: 'tempura-fudzi',
+    sku: '62',
     name: {
       pl: 'Fudżi',
       uk: 'Фудзі',
@@ -1807,6 +1869,7 @@ export const products: Product[] = [
   },
   {
     id: 'tempura-tunczyk',
+    sku: '63',
     name: {
       pl: 'Tempura Tuńczyk',
       uk: 'Темпура Тунець',
@@ -1834,6 +1897,7 @@ export const products: Product[] = [
   },
   {
     id: 'tempura-aloha-nami',
+    sku: '64',
     name: {
       pl: 'Aloha Nami Roll',
       uk: 'Алоха Намі Рол',
@@ -1864,6 +1928,7 @@ export const products: Product[] = [
   // ==========================================
   {
     id: 'miso-zupa',
+    sku: '65',
     name: {
       pl: 'Miso Zupa',
       uk: 'Місо Суп',
@@ -1891,6 +1956,7 @@ export const products: Product[] = [
   },
   {
     id: 'miso-zupa-losos',
+    sku: '66',
     name: {
       pl: 'Miso Zupa z Łososiem',
       uk: 'Місо Суп з Лососем',
@@ -1918,6 +1984,7 @@ export const products: Product[] = [
   },
   {
     id: 'miso-zupa-krewetki',
+    sku: '67',
     name: {
       pl: 'Miso Zupa z Krewetkami',
       uk: 'Місо Суп з Креветками',
@@ -1948,6 +2015,7 @@ export const products: Product[] = [
   // ==========================================
   {
     id: 'burger-salmon',
+    sku: '68',
     name: {
       pl: 'Salmon Burger',
       uk: 'Салмон Бургер',
@@ -1975,6 +2043,7 @@ export const products: Product[] = [
   },
   {
     id: 'burger-tuna',
+    sku: '69',
     name: {
       pl: 'Tuna Burger',
       uk: 'Туна Бургер',
@@ -2002,6 +2071,7 @@ export const products: Product[] = [
   },
   {
     id: 'burger-morski',
+    sku: '70',
     name: {
       pl: 'Morski Burger',
       uk: 'Морський Бургер',
@@ -2029,6 +2099,7 @@ export const products: Product[] = [
   },
   {
     id: 'burger-shrimp',
+    sku: '71',
     name: {
       pl: 'Shrimp Burger',
       uk: 'Шрімп Бургер',
@@ -2056,6 +2127,7 @@ export const products: Product[] = [
   },
   {
     id: 'burger-tecza',
+    sku: '72',
     name: {
       pl: 'Tęcza Burger',
       uk: 'Тенча Бургер',
@@ -2083,6 +2155,7 @@ export const products: Product[] = [
   },
   {
     id: 'burger-wege',
+    sku: '73',
     name: {
       pl: 'Wege Burger',
       uk: 'Веге Бургер',
@@ -2113,6 +2186,7 @@ export const products: Product[] = [
   // ==========================================
   {
     id: 'poke-losos',
+    sku: '74',
     name: {
       pl: 'Poke Bowl z Łososiem',
       uk: 'Поке Боул з Лососем',
@@ -2140,6 +2214,7 @@ export const products: Product[] = [
   },
   {
     id: 'poke-tunczyk',
+    sku: '75',
     name: {
       pl: 'Poke Bowl z Tuńczykiem',
       uk: 'Поке Боул з Тунцем',
@@ -2167,6 +2242,7 @@ export const products: Product[] = [
   },
   {
     id: 'poke-krewetki',
+    sku: '76',
     name: {
       pl: 'Poke Bowl z Krewetkami',
       uk: 'Поке Боул з Креветками',
@@ -2197,6 +2273,7 @@ export const products: Product[] = [
   // ==========================================
   {
     id: 'krewetki-tempurze',
+    sku: '77',
     name: {
       pl: 'Krewetki w Tempurze',
       uk: 'Креветки в Темпурі',
@@ -2224,6 +2301,7 @@ export const products: Product[] = [
   },
   {
     id: 'kalmar-tempurze',
+    sku: '78',
     name: {
       pl: 'Kalmar w Tempurze',
       uk: 'Кальмар у Темпурі',
@@ -2251,6 +2329,7 @@ export const products: Product[] = [
   },
   {
     id: 'duze-spring-rolls',
+    sku: '79',
     name: {
       pl: 'Duże Spring Rolls z Warzywami',
       uk: 'Великі Спрінг Роли з Овочами',
@@ -2278,6 +2357,7 @@ export const products: Product[] = [
   },
   {
     id: 'salatka-wakame',
+    sku: '80',
     name: {
       pl: 'Wakame',
       uk: 'Вакаме',
@@ -2305,6 +2385,7 @@ export const products: Product[] = [
   },
   {
     id: 'gyoza-z-miesem',
+    sku: '81',
     name: {
       pl: 'Smażone Pierożki Gyoza z Mięsem',
       uk: 'Смажені Пельмені Гьодза з Мʼясом',
@@ -2332,6 +2413,7 @@ export const products: Product[] = [
   },
   {
     id: 'gyoza-z-kurczakiem',
+    sku: '82',
     name: {
       pl: 'Smażone Pierożki Gyoza z Kurczakiem i Grzybami',
       uk: 'Смажені Пельмені Гьодза з Куркою та Грибами',
@@ -2362,6 +2444,7 @@ export const products: Product[] = [
   // ==========================================
   {
     id: 'zestaw-fiesta',
+    sku: '83',
     name: {
       pl: 'Zestaw Fiesta',
       uk: 'Сет Фієста',
@@ -2389,6 +2472,7 @@ export const products: Product[] = [
   },
   {
     id: 'zestaw-florida',
+    sku: '84',
     name: {
       pl: 'Zestaw Florida',
       uk: 'Сет Флорида',
@@ -2416,6 +2500,7 @@ export const products: Product[] = [
   },
   {
     id: 'zestaw-grand',
+    sku: '85',
     name: {
       pl: 'Zestaw Grand',
       uk: 'Сет Гранд',
@@ -2443,6 +2528,7 @@ export const products: Product[] = [
   },
   {
     id: 'zestaw-filaman',
+    sku: '86',
     name: {
       pl: 'Zestaw Filaman',
       uk: 'Сет Філаман',
@@ -2470,6 +2556,7 @@ export const products: Product[] = [
   },
   {
     id: 'mega-zestaw',
+    sku: '87',
     name: {
       pl: 'Mega Zestaw',
       uk: 'Мега Сет',
@@ -2497,6 +2584,7 @@ export const products: Product[] = [
   },
   {
     id: 'zestaw-tsunami',
+    sku: '88',
     name: {
       pl: 'Zestaw Tsunami',
       uk: 'Сет Цунамі',
@@ -2524,6 +2612,7 @@ export const products: Product[] = [
   },
   {
     id: 'zestaw-lux',
+    sku: '89',
     name: {
       pl: 'Zestaw Lux',
       uk: 'Сет Люкс',
@@ -2551,6 +2640,7 @@ export const products: Product[] = [
   },
   {
     id: 'zestaw-weganski',
+    sku: '90',
     name: {
       pl: 'Zestaw Wegański',
       uk: 'Веганський Сет',
@@ -2578,6 +2668,7 @@ export const products: Product[] = [
   },
   {
     id: 'zestaw-malibu',
+    sku: '91',
     name: {
       pl: 'Zestaw Malibu',
       uk: 'Сет Малібу',
@@ -2605,6 +2696,7 @@ export const products: Product[] = [
   },
   {
     id: 'mini-zestaw-1',
+    sku: '92',
     name: {
       pl: 'Mini Zestaw #1',
       uk: 'Міні Сет #1',
@@ -2632,6 +2724,7 @@ export const products: Product[] = [
   },
   {
     id: 'mini-zestaw-2',
+    sku: '93',
     name: {
       pl: 'Mini Zestaw #2',
       uk: 'Міні Сет #2',
@@ -2659,6 +2752,7 @@ export const products: Product[] = [
   },
   {
     id: 'zestaw-3',
+    sku: '94',
     name: {
       pl: 'Zestaw #3',
       uk: 'Сет #3',
@@ -2686,6 +2780,7 @@ export const products: Product[] = [
   },
   {
     id: 'zestaw-4',
+    sku: '95',
     name: {
       pl: 'Zestaw #4',
       uk: 'Сет #4',
@@ -2713,6 +2808,7 @@ export const products: Product[] = [
   },
   {
     id: 'zestaw-chrupiacy',
+    sku: '96',
     name: {
       pl: 'Zestaw Chrupiący',
       uk: 'Хрусткий Сет',
@@ -2740,6 +2836,7 @@ export const products: Product[] = [
   },
   {
     id: 'zestaw-medium',
+    sku: '97',
     name: {
       pl: 'Zestaw Medium',
       uk: 'Сет Медіум',
@@ -2767,6 +2864,7 @@ export const products: Product[] = [
   },
   {
     id: 'zestaw-smokow',
+    sku: '98',
     name: {
       pl: 'Zestaw Smoków',
       uk: 'Сет Драконів',
@@ -2798,6 +2896,7 @@ export const products: Product[] = [
   // ==========================================
   {
     id: 'sos-sojowy-dodatkowy',
+    sku: '99',
     name: {
       pl: 'Sos Sojowy Dodatkowy',
       uk: 'Соєвий Соус Додатковий',
@@ -2824,6 +2923,7 @@ export const products: Product[] = [
   },
   {
     id: 'pomocniki-do-paleczek',
+    sku: '100',
     name: {
       pl: 'Pomocniki do Pałeczek',
       uk: 'Навчальні Тримачі до Паличок',
@@ -2850,6 +2950,7 @@ export const products: Product[] = [
   },
   {
     id: 'sos-mango-jalapeno',
+    sku: '101',
     name: {
       pl: 'Sos Mango Jalapeño',
       uk: 'Соус Манго Халапеньйо',
@@ -2876,6 +2977,7 @@ export const products: Product[] = [
   },
   {
     id: 'wasabi-dodatkowy',
+    sku: '102',
     name: {
       pl: 'Wasabi Dodatkowe',
       uk: 'Васабі Додатковий',
@@ -2902,6 +3004,7 @@ export const products: Product[] = [
   },
   {
     id: 'imbir-dodatkowy',
+    sku: '103',
     name: {
       pl: 'Imbir Dodatkowy',
       uk: 'Імбир Додатковий',
@@ -2928,6 +3031,7 @@ export const products: Product[] = [
   },
   {
     id: 'sos-sriracha-mayo',
+    sku: '104',
     name: {
       pl: 'Sos Sriracha Mayo',
       uk: 'Соус Шрірача Майо',
@@ -2954,6 +3058,7 @@ export const products: Product[] = [
   },
   {
     id: 'sos-teriyaki',
+    sku: '105',
     name: {
       pl: 'Sos Teriyaki',
       uk: 'Соус Теріякі',
@@ -2980,6 +3085,7 @@ export const products: Product[] = [
   },
   {
     id: 'sos-unagi',
+    sku: '106',
     name: {
       pl: 'Sos Unagi',
       uk: 'Соус Унагі',
@@ -3006,6 +3112,7 @@ export const products: Product[] = [
   },
   {
     id: 'sos-ponzu',
+    sku: '107',
     name: {
       pl: 'Sos Ponzu',
       uk: 'Соус Понзу',

@@ -108,9 +108,11 @@ export interface AdminOrder {
   items: Array<{
     product: {
       id?: string;
+      sku?: string;
       name?: { pl: string; uk: string } | string;
       price?: number;
       image?: string;
+      nutrition?: any;
     };
     quantity: number;
   }>;
@@ -184,6 +186,7 @@ export default function AdminPage() {
 
   // Форма редагування
   const [formId, setFormId] = useState('');
+  const [formSku, setFormSku] = useState('');
   const [formCategoryId, setFormCategoryId] = useState('');
   const [isFormCategoryDropdownOpen, setIsFormCategoryDropdownOpen] = useState(false);
   const [formNamePl, setFormNamePl] = useState('');
@@ -670,14 +673,16 @@ export default function AdminPage() {
         const titleUk = typeof prod.name === 'object' ? (prod.name.uk || prod.name.pl || 'Страва') : (prod.name || 'Страва');
         const titlePl = typeof prod.name === 'object' ? (prod.name.pl || '') : '';
         const price = Number(prod.price || 0);
+        const sku = prod.sku || (prod as any).nutrition?.sku || '';
+        const skuText = sku ? ` ${sku}` : '';
         return `
           <tr style="border-bottom: 1px dashed #666;">
             <td style="padding: 6px 0; font-size: 16px; font-weight: 900; width: 36px; vertical-align: top;">
               ${item.quantity}×
             </td>
             <td style="padding: 6px 4px; font-size: 14px; font-weight: bold; vertical-align: top;">
-              <div>${titleUk}</div>
-              ${titlePl && titlePl !== titleUk ? `<div style="font-size: 11px; font-weight: normal; color: #444; margin-top: 1px;">${titlePl}</div>` : ''}
+              <div>${titleUk}${skuText}</div>
+              ${titlePl && titlePl !== titleUk ? `<div style="font-size: 11px; font-weight: normal; color: #444; margin-top: 1px;">${titlePl}${skuText}</div>` : ''}
             </td>
             <td style="padding: 6px 0; font-size: 13px; text-align: right; vertical-align: top; white-space: nowrap;">
               ${price * item.quantity} zł
@@ -1406,6 +1411,9 @@ export default function AdminPage() {
   const handleOpenAddModal = () => {
     setEditingProduct(null);
     setFormId(`dish-${Date.now()}`);
+    // Автоматично пропонуємо наступний порядковий номер на касі
+    const nextSku = Math.max(0, ...products.map((p) => Number(p.sku || (p as any).nutrition?.sku || 0)).filter((n) => !isNaN(n))) + 1;
+    setFormSku(String(nextSku));
     // Враховуємо обраний зараз розділ меню або перший з наявних
     const defaultCat = selectedCategoryFilter !== 'all' 
       ? selectedCategoryFilter 
@@ -1435,6 +1443,7 @@ export default function AdminPage() {
   const handleOpenEditModal = (product: Product) => {
     setEditingProduct(product);
     setFormId(product.id);
+    setFormSku(product.sku || (product as any).nutrition?.sku || '');
     setFormCategoryId(product.categoryId);
     setIsFormCategoryDropdownOpen(false);
     setActiveLangTab('pl');
@@ -1687,9 +1696,15 @@ export default function AdminPage() {
       } else {
         delete baseNutrition.zoom;
       }
+      if (formSku.trim()) {
+        baseNutrition.sku = formSku.trim();
+      } else {
+        delete baseNutrition.sku;
+      }
 
       const productPayload: Product = {
         id: formId,
+        sku: formSku.trim() || undefined,
         categoryId: formCategoryId,
         name: { pl: formNamePl.trim(), uk: finalNameUk },
         description: { pl: formDescPl.trim(), uk: finalDescUk },
@@ -2305,7 +2320,14 @@ export default function AdminPage() {
                         </div>
                       )}
                       <div className="min-w-0">
-                        <p className="text-xs sm:text-sm font-bold text-white truncate">{title}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="text-xs sm:text-sm font-bold text-white truncate">{title}</p>
+                          {(prod.sku || (prod as any).nutrition?.sku) && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                              #{prod.sku || (prod as any).nutrition?.sku}
+                            </span>
+                          )}
+                        </div>
                         {titlePl && titlePl !== title && (
                           <p className="text-[10px] text-zinc-400 truncate italic">{titlePl}</p>
                         )}
@@ -3256,9 +3278,16 @@ export default function AdminPage() {
                         {/* Інформація про страву */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-1 mb-1">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 truncate bg-white/5 px-2 py-0.5 rounded">
-                              {categoryObj?.name.pl || product.categoryId}
-                            </span>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              {(product.sku || (product as any).nutrition?.sku) && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-400/20 text-amber-300 border border-amber-400/30 shrink-0">
+                                  #{product.sku || (product as any).nutrition?.sku}
+                                </span>
+                              )}
+                              <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 truncate bg-white/5 px-2 py-0.5 rounded">
+                                {categoryObj?.name.pl || product.categoryId}
+                              </span>
+                            </div>
                             {product.badge && (
                               <ProductBadge badge={product.badge} locale="uk" />
                             )}
@@ -4735,9 +4764,22 @@ export default function AdminPage() {
                 )}
               </div>
 
-              {/* Блок параметрів страви (Ціна, вага, шматочки, бейдж) */}
+              {/* Блок параметрів страви (Код на касі, ціна, вага, шматочки, бейдж) */}
               <div className="bg-[#141420] border border-white/10 rounded-xl p-3 sm:p-4">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-amber-300 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                      <span>Код каси (PLU)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formSku}
+                      onChange={(e) => setFormSku(e.target.value.replace(/[^\w\d-]/g, '').slice(0, 10))}
+                      placeholder="напр. 97"
+                      className="w-full bg-[#1b1b2a] border border-amber-400/40 focus:border-amber-400 rounded-lg px-3 py-2 text-sm text-amber-300 font-mono font-bold focus:outline-none"
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5">
                       Ціна (PLN) *
