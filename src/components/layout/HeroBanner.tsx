@@ -1,10 +1,19 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useI18n } from '@/lib/i18nContext';
+import { useSettingsStore } from '@/store/useSettingsStore';
 
 export function HeroBanner() {
   const { locale } = useI18n();
+  const [mounted, setMounted] = useState(false);
+  const cityFreeThreshold = useSettingsStore((s) => s.cityFreeThreshold) || 150;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const displayThreshold = mounted ? cityFreeThreshold : 150;
 
   const scrollToMenu = () => {
     // Скидаємо каталог до початкової першої категорії (Міні Макі)
@@ -171,7 +180,7 @@ export function HeroBanner() {
                 {locale === 'pl' ? 'Darmowa dostawa' : 'Безкоштовна доставка'}
               </div>
               <div className="text-[7.5px] sm:text-[11px] text-zinc-400 sm:text-zinc-300/90 leading-tight mt-0.5">
-                {locale === 'pl' ? 'Przy zamówieniu powyżej 100 zł' : 'При замовленні від 100 zł'}
+                {locale === 'pl' ? `Przy zamówieniu powyżej ${displayThreshold} zł` : `При замовленні від ${displayThreshold} zł`}
               </div>
             </div>
           </div>

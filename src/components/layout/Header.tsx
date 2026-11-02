@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ShoppingBag, Phone, Clock, MapPin, User } from 'lucide-react';
+import { ShoppingBag, Phone, Clock, MapPin, User, Gift } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
+import { useSettingsStore } from '@/store/useSettingsStore';
 import { useCustomerStore, normalizePhone } from '@/store/useCustomerStore';
 import { useI18n } from '@/lib/i18nContext';
 import { brandTheme, getStoreStatus } from '@/config/theme';
@@ -16,6 +17,8 @@ export function Header() {
   const { locale, t } = useI18n();
   const toggleCart = useCartStore((s) => s.toggleOpen);
   const items = useCartStore((s) => s.items);
+  const menuProducts = useCartStore((s) => s.menuProducts);
+  const giftPromo = useSettingsStore((s) => s.giftPromo);
 
   const toggleCustomerDrawer = useCustomerStore((s) => s.toggleOpen);
   const customer = useCustomerStore((s) => s.customer);
@@ -24,6 +27,28 @@ export function Header() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [hasNewAdminOrder, setHasNewAdminOrder] = useState(false);
   const [customerOrderStatus, setCustomerOrderStatus] = useState<'pending' | 'kitchen' | 'in_delivery' | null>(null);
+
+  // Слайдер верхньої плашки: статус роботи (5 сек) / активна акція (10 сек)
+  const [activeTopSlide, setActiveTopSlide] = useState<'status' | 'promo'>('status');
+
+  const giftProduct = React.useMemo(() => {
+    if (!giftPromo?.enabled || !giftPromo.productId) return null;
+    return menuProducts?.find((p) => p.id === giftPromo.productId) || null;
+  }, [giftPromo, menuProducts]);
+
+  useEffect(() => {
+    if (!mounted || !giftPromo?.enabled) {
+      setActiveTopSlide('status');
+      return;
+    }
+
+    const duration = activeTopSlide === 'status' ? 5000 : 10000;
+    const timer = setTimeout(() => {
+      setActiveTopSlide((prev) => (prev === 'status' ? 'promo' : 'status'));
+    }, duration);
+
+    return () => clearTimeout(timer);
+  }, [activeTopSlide, giftPromo?.enabled, mounted]);
 
   useEffect(() => {
     setMounted(true);
@@ -298,33 +323,59 @@ export function Header() {
       <header className="sticky top-0 z-40 w-full glass-nav border-b border-white/10 transition-all">
         {/* Верхня інформаційна стрічка */}
         <div className="top-info-bar border-b border-white/5 bg-[#070709]/90 py-1.5 sm:py-2 text-[11px] sm:text-xs text-zinc-400">
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center justify-between">
-            <div className="flex items-center gap-3 sm:gap-5">
-              <div className="flex items-center gap-1.5">
-                <span className="relative flex h-2 w-2">
-                  {storeStatus.isOpen ? (
-                    <>
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                    </>
-                  ) : (
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                  )}
-                </span>
-                <span className={storeStatus.isOpen ? 'text-emerald-400 font-semibold' : 'text-amber-400 font-semibold'}>
-                  {storeStatus.text}
-                </span>
-                <span className="text-zinc-500 hidden xs:inline">•</span>
-                <span className="hidden xs:flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-zinc-500" />
-                  {storeStatus.todayHours}
-                </span>
-              </div>
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3 sm:gap-5 min-w-0 flex-1 overflow-hidden">
+              {activeTopSlide === 'status' || !giftPromo?.enabled ? (
+                <div key="status" className="flex items-center gap-1.5 min-w-0 truncate animate-in fade-in duration-300">
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    {storeStatus.isOpen ? (
+                      <>
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </>
+                    ) : (
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                    )}
+                  </span>
+                  <span className={cn('truncate', storeStatus.isOpen ? 'text-emerald-400 font-semibold' : 'text-amber-400 font-semibold')}>
+                    {storeStatus.text}
+                  </span>
+                  <span className="text-zinc-500 hidden xs:inline">•</span>
+                  <span className="hidden xs:flex items-center gap-1 shrink-0">
+                    <Clock className="w-3.5 h-3.5 text-zinc-500" />
+                    {storeStatus.todayHours}
+                  </span>
+                </div>
+              ) : (
+                <button
+                  key="promo"
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById('catalog') || document.getElementById('menu') || document.querySelector('[data-menu-section]');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="flex items-center gap-1.5 text-left min-w-0 truncate animate-in fade-in duration-300 cursor-pointer group"
+                >
+                  <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#e50914]/20 border border-[#e50914]/40 text-[#ff4d58] shrink-0">
+                    <Gift className="w-2.5 h-2.5 animate-bounce" />
+                  </span>
+                  <span className="font-bold text-amber-300 group-hover:text-amber-200 transition-colors truncate">
+                    {giftProduct 
+                      ? (locale === 'pl' 
+                          ? `Prezent: ${giftProduct.name.pl} gratis od ${giftPromo.minAmount} zł! 🎁` 
+                          : `Подарунок: ${giftProduct.name.uk} безкоштовно від ${giftPromo.minAmount} zł! 🎁`)
+                      : (locale === 'pl' 
+                          ? `Rolka w prezencie przy zamówieniu od ${giftPromo.minAmount} zł! 🎁` 
+                          : `Рол у подарунок при замовленні від ${giftPromo.minAmount} zł! 🎁`)}
+                  </span>
+                </button>
+              )}
+
               <a
                 href={brandTheme.contacts.googleMapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hidden md:flex items-center gap-1 text-zinc-400 hover:text-white transition-colors group cursor-pointer"
+                className="hidden md:flex items-center gap-1 text-zinc-400 hover:text-white transition-colors group cursor-pointer shrink-0"
                 title={locale === 'pl' ? 'Pokaż na Google Maps' : 'Показати на Google Maps'}
               >
                 <MapPin className="w-3.5 h-3.5 text-[#e50914] group-hover:scale-110 transition-transform" />
@@ -332,10 +383,10 @@ export function Header() {
               </a>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 shrink-0">
               <a
                 href={`tel:${brandTheme.contacts.phoneRaw}`}
-                className="flex items-center gap-1.5 text-zinc-300 hover:text-[#e50914] transition-colors font-medium text-xs sm:text-sm"
+                className="flex items-center gap-1.5 text-zinc-300 hover:text-[#e50914] transition-colors font-medium text-xs sm:text-sm shrink-0"
               >
                 <Phone className="w-3 h-3 text-[#e50914]" />
                 <span>{brandTheme.contacts.phone}</span>
