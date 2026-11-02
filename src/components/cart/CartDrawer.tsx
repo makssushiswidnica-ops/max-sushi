@@ -260,7 +260,7 @@ export function CartDrawer() {
               </div>
 
               {items.map((item) => (
-                <CartItem key={item.product.id} item={item} />
+                <CartItem key={item.isGift ? `${item.product.id}-gift` : item.product.id} item={item} />
               ))}
             </div>
 
@@ -311,7 +311,7 @@ export function CartDrawer() {
                     style={{ WebkitOverflowScrolling: 'touch' }}
                   >
                   {loopedAddons.map((addon) => {
-                    const cartItem = items.find((i) => i.product.id === addon.id);
+                    const cartItem = items.find((i) => i.product.id === addon.id && !i.isGift);
                     const qty = cartItem ? cartItem.quantity : 0;
                     const name = typeof addon.name === 'object'
                       ? (addon.name[locale as 'uk' | 'pl'] || addon.name.uk || addon.name.pl)

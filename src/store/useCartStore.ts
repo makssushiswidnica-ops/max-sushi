@@ -139,9 +139,8 @@ export const useCartStore = create<CartState>()(
 
       removeItem: (productId: string) => {
         set((state) => {
-          const updated = state.items.filter(
-            (item) => item.product.id !== productId && !item.isGift
-          );
+          const rawItems = state.items.filter((i) => !i.isGift);
+          const updated = rawItems.filter((item) => item.product.id !== productId);
           return { items: syncGiftItem(updated, state.menuProducts) };
         });
       },
@@ -153,9 +152,20 @@ export const useCartStore = create<CartState>()(
           if (quantity <= 0) {
             updated = rawItems.filter((item) => item.product.id !== productId);
           } else {
-            updated = rawItems.map((item) =>
-              item.product.id === productId ? { ...item, quantity } : item
-            );
+            const exists = rawItems.some((item) => item.product.id === productId);
+            if (exists) {
+              updated = rawItems.map((item) =>
+                item.product.id === productId ? { ...item, quantity } : item
+              );
+            } else {
+              const allDishes = state.menuProducts?.length ? state.menuProducts : defaultProducts;
+              const prod = allDishes.find((p) => p.id === productId) || defaultProducts.find((p) => p.id === productId);
+              if (prod) {
+                updated = [...rawItems, { product: prod, quantity }];
+              } else {
+                updated = rawItems;
+              }
+            }
           }
           return { items: syncGiftItem(updated, state.menuProducts) };
         });

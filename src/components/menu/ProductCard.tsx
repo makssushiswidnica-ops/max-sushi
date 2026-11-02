@@ -32,7 +32,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const giftPromo = useSettingsStore((s) => s.giftPromo);
   const isGiftProduct = mounted && giftPromo?.enabled && giftPromo.productId === product.id;
 
-  const cartItem = mounted ? items.find((item) => item.product.id === product.id) : undefined;
+  const cartItem = mounted ? items.find((item) => item.product.id === product.id && !item.isGift) : undefined;
   const quantity = cartItem?.quantity || 0;
   const isEditing = activeCardId === product.id && quantity > 0;
 
