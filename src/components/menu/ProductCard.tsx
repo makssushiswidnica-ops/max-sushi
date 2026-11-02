@@ -99,18 +99,8 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* Просте прямокутне зображення страви з гострими кутами та м'яким студійним світлом */}
         {!isDodatki ? (
           <div className="relative w-full aspect-[4/3] overflow-hidden bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.08)_0%,_#07070b_70%)] border border-white/10 group-hover:border-[#e50914]/50 flex items-center justify-center mb-3 transition-colors duration-300 shadow-md shadow-black/80 rounded-none">
-            {/* Маркетинговий бейдж (ВЕГАН, ХІТ тощо) або знижка / подарунок */}
+            {/* Маркетинговий бейдж (ВЕГАН, ХІТ тощо) або знижка */}
             <div className="absolute top-2 left-2 z-20 pointer-events-none flex flex-col gap-1 items-start">
-              {isGiftProduct && (
-                <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-gradient-to-r from-amber-500 via-rose-500 to-[#e50914] text-white border border-amber-300/40 shadow-lg shadow-amber-950/80 select-none animate-pulse">
-                  <Gift className="w-3 h-3 text-amber-200 shrink-0" />
-                  <span>
-                    {locale === 'pl' 
-                      ? `Za darmo od ${giftPromo.minAmount} zł` 
-                      : `Безкоштовно від ${giftPromo.minAmount} zł`}
-                  </span>
-                </span>
-              )}
               {product.discountPercent && product.discountPercent > 0 ? (
                 <span className="inline-flex items-center text-[10px] sm:text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#e50914] text-white border border-red-400 shadow-md shadow-red-950/80 select-none">
                   -{product.discountPercent}%
@@ -120,6 +110,20 @@ export function ProductCard({ product }: ProductCardProps) {
                 <ProductBadge badge={product.badge} locale={locale} />
               )}
             </div>
+
+            {/* Акцентна плашка акції: рол у подарунок - внизу зображення по центру */}
+            {isGiftProduct && (
+              <div className="absolute bottom-2 inset-x-1.5 z-20 pointer-events-none flex justify-center">
+                <span className="inline-flex items-center gap-1 text-[9.5px] sm:text-[10.5px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 via-rose-500 to-[#e50914] text-white border border-amber-300/40 shadow-lg shadow-black/80 select-none animate-pulse">
+                  <Gift className="w-3 h-3 text-amber-200 shrink-0" />
+                  <span>
+                    {locale === 'pl' 
+                      ? `Za darmo od ${giftPromo.minAmount} zł` 
+                      : `Безкоштовно від ${giftPromo.minAmount} zł`}
+                  </span>
+                </span>
+              </div>
+            )}
             {product.image ? (
               <div className="w-full h-full flex items-center justify-center transition-transform duration-500 ease-out group-hover:scale-105">
                 <div
