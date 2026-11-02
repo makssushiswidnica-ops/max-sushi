@@ -66,7 +66,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
 
     const db = getStoredCustomersDb();
 
-    // Перевірка на вже існуючий номер або e-mail
+    // Перевірка на вже існуючий номер або e-mail у локальній базі
     const existing = db.find(
       (c) =>
         normalizePhone(c.phone) === normalizePhone(cleanPhone) ||
@@ -75,6 +75,24 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
 
     if (existing) {
       throw new Error('userAlreadyExists');
+    }
+
+    // Перевірка на вже існуючого користувача у Supabase
+    if (isSupabaseConfigured) {
+      try {
+        const last9 = normalizePhone(cleanPhone).slice(-9);
+        const { data: remoteExisting } = await supabase
+          .from('customers')
+          .select('id, phone, email')
+          .or(`phone.ilike.%${last9}%,email.eq.${cleanEmail || '___'}`)
+          .limit(1);
+
+        if (remoteExisting && remoteExisting.length > 0) {
+          throw new Error('userAlreadyExists');
+        }
+      } catch (err: any) {
+        if (err?.message === 'userAlreadyExists') throw err;
+      }
     }
 
     // Спробуємо підтягнути збережену адресу з попередніх замовлень
@@ -102,7 +120,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
       savedAt: new Date().toISOString(),
     };
 
-    // Зберігаємо в базі користувачів
+    // Зберігаємо в базі користувачів браузера
     db.push(newProfile);
     if (typeof window !== 'undefined') {
       localStorage.setItem('max-sushi-customers-db', JSON.stringify(db));
@@ -111,20 +129,26 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
       localStorage.setItem('max-sushi-last-identifier', cleanPhone);
     }
 
-    // Також спробуємо оновити або зберегти в Supabase таблицю customers (якщо створена)
+    // Зберігаємо безпосередньо в базі даних Supabase (таблиця customers)
     if (isSupabaseConfigured) {
       try {
         await supabase.from('customers').upsert(
           {
+            id: newProfile.id,
             phone: cleanPhone,
             name: cleanName,
             email: cleanEmail,
+            password: password,
             address: defaultAddress,
+            language: 'pl',
+            created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           },
           { onConflict: 'phone' }
         );
-      } catch (err) {}
+      } catch (err) {
+        console.warn('Notice when saving customer to Supabase:', err);
+      }
     }
 
     set({ customer: newProfile });
@@ -204,6 +228,53 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
       return { type: 'customer', profile: customerMatch };
     }
 
+    // Перевірка 3: Пошук у базі даних Supabase (якщо користувач заходить з нового пристрою або іншого браузера)
+    if (isSupabaseConfigured) {
+      try {
+        const last9 = cleanPhone.length >= 7 ? cleanPhone.slice(-9) : '';
+        const filterParts = [];
+        if (last9) filterParts.push(`phone.ilike.%${last9}%`);
+        if (cleanEmail && cleanEmail.includes('@')) filterParts.push(`email.eq.${cleanEmail}`);
+
+        if (filterParts.length > 0) {
+          const { data: remoteUsers } = await supabase
+            .from('customers')
+            .select('*')
+            .or(filterParts.join(','))
+            .limit(1);
+
+          if (remoteUsers && remoteUsers.length > 0) {
+            const remoteUser = remoteUsers[0];
+            if (remoteUser.password && remoteUser.password !== password) {
+              throw new Error('invalidPassword');
+            }
+
+            const restoredProfile: CustomerProfile = {
+              id: remoteUser.id || `cust_${Date.now()}`,
+              phone: remoteUser.phone,
+              name: remoteUser.name,
+              email: remoteUser.email || undefined,
+              password: remoteUser.password || password,
+              defaultAddress: remoteUser.address || undefined,
+              preferredLanguage: remoteUser.language || 'pl',
+              savedAt: remoteUser.updated_at || new Date().toISOString(),
+            };
+
+            // Синхронізуємо локально для миттєвого доступу
+            db.push(restoredProfile);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('max-sushi-customers-db', JSON.stringify(db));
+              localStorage.setItem('max-sushi-customer', JSON.stringify(restoredProfile));
+            }
+            set({ customer: restoredProfile });
+            return { type: 'customer', profile: restoredProfile };
+          }
+        }
+      } catch (e: any) {
+        if (e?.message === 'invalidPassword') throw e;
+      }
+    }
+
     // Якщо користувач ще не створив пароль, але робив замовлення раніше
     if (cleanPhone.length >= 7) {
       let foundOrderName = '';
@@ -270,6 +341,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
             phone: updated.phone,
             name: updated.name,
             email: updated.email,
+            password: updated.password,
             address: updated.defaultAddress,
             language: updated.preferredLanguage,
             updated_at: new Date().toISOString(),
