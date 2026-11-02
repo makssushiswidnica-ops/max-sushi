@@ -312,28 +312,21 @@ export function ProductModal() {
                   </button>
                 </div>
 
-                {/* Маркетинговий бейдж (ВЕГАН, ХІТ тощо) або знижка у лівому кутку фото */}
-                <div className="absolute top-3 left-3 z-20 pointer-events-none flex flex-col gap-1 items-start">
-                  {selectedProduct.discountPercent && selectedProduct.discountPercent > 0 ? (
-                    <span className="inline-flex items-center text-[10px] sm:text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#e50914] text-white border border-red-400 shadow-md shadow-red-950/80 select-none">
-                      -{selectedProduct.discountPercent}%
-                    </span>
-                  ) : null}
-                  {selectedProduct.badge && (
+                {/* Маркетинговий бейдж (ВЕГАН, ХІТ тощо) у лівому кутку фото (без плашки знижки %) */}
+                {selectedProduct.badge && (
+                  <div className="absolute top-3 left-3 z-20 pointer-events-none flex flex-col gap-1 items-start">
                     <ProductBadge badge={selectedProduct.badge} locale={locale} />
-                  )}
-                </div>
+                  </div>
+                )}
 
-                {/* Плашка подарунка внизу зображення по центру */}
+                {/* Плашка подарунка на всю ширину внизу зображення без заокруглень */}
                 {isGiftProduct && (
-                  <div className="absolute bottom-3 inset-x-2 z-20 pointer-events-none flex justify-center">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full bg-gradient-to-r from-amber-500 via-rose-500 to-[#e50914] text-white border border-amber-300/40 shadow-xl shadow-black/90 select-none animate-pulse">
-                      <Gift className="w-3.5 h-3.5 text-amber-200 shrink-0" />
-                      <span>
-                        {locale === 'pl' 
-                          ? `Za darmo od ${giftPromo.minAmount} zł` 
-                          : `Безкоштовно від ${giftPromo.minAmount} zł`}
-                      </span>
+                  <div className="absolute inset-x-0 bottom-0 z-20 pointer-events-none py-2 px-3 bg-gradient-to-r from-amber-500 via-rose-500 to-[#e50914] text-white flex items-center justify-center gap-2 shadow-lg shadow-black/90 select-none border-t border-amber-300/40">
+                    <Gift className="w-4 h-4 text-amber-100 shrink-0" />
+                    <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-center drop-shadow-sm">
+                      {locale === 'pl' 
+                        ? `Za darmo od ${giftPromo.minAmount} zł` 
+                        : `Безкоштовно від ${giftPromo.minAmount} zł`}
                     </span>
                   </div>
                 )}

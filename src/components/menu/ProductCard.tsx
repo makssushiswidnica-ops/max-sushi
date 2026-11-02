@@ -111,16 +111,14 @@ export function ProductCard({ product }: ProductCardProps) {
               )}
             </div>
 
-            {/* Акцентна плашка акції: рол у подарунок - внизу зображення по центру */}
+            {/* Акцентна плашка акції: рол у подарунок - на всю ширину внизу зображення без заокруглень */}
             {isGiftProduct && (
-              <div className="absolute bottom-2 inset-x-1.5 z-20 pointer-events-none flex justify-center">
-                <span className="inline-flex items-center gap-1 text-[9.5px] sm:text-[10.5px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 via-rose-500 to-[#e50914] text-white border border-amber-300/40 shadow-lg shadow-black/80 select-none animate-pulse">
-                  <Gift className="w-3 h-3 text-amber-200 shrink-0" />
-                  <span>
-                    {locale === 'pl' 
-                      ? `Za darmo od ${giftPromo.minAmount} zł` 
-                      : `Безкоштовно від ${giftPromo.minAmount} zł`}
-                  </span>
+              <div className="absolute inset-x-0 bottom-0 z-20 pointer-events-none py-1 sm:py-1.5 px-2 bg-gradient-to-r from-amber-500 via-rose-500 to-[#e50914] text-white flex items-center justify-center gap-1.5 shadow-md shadow-black/80 select-none border-t border-amber-300/40">
+                <Gift className="w-3 h-3 text-amber-100 shrink-0" />
+                <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-center drop-shadow-sm">
+                  {locale === 'pl' 
+                    ? `Za darmo od ${giftPromo.minAmount} zł` 
+                    : `Безкоштовно від ${giftPromo.minAmount} zł`}
                 </span>
               </div>
             )}
