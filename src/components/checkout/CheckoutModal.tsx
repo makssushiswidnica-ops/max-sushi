@@ -33,6 +33,7 @@ import {
   maskName, 
   maskPhone, 
   getRawPhoneDigits, 
+  maskCity,
   maskStreet, 
   maskHouse, 
   maskApartment, 
@@ -42,7 +43,7 @@ import {
 } from '@/lib/inputMasks';
 
 // Схема валідації Zod з масками, підтримкою мов та захистом від некоректних символів
-const createCheckoutSchema = (t: ReturnType<typeof useI18n>['t']) =>
+const createCheckoutSchema = (t: ReturnType<typeof useI18n>['t'], locale: string) =>
   z.object({
     name: z
       .string()
@@ -53,6 +54,8 @@ const createCheckoutSchema = (t: ReturnType<typeof useI18n>['t']) =>
       .string()
       .refine((v) => getRawPhoneDigits(v).length === 9, t.checkout.errors.phoneRequired),
     deliveryMethod: z.enum(['delivery', 'pickup']),
+    zone: z.string().default('city'),
+    city: z.string().optional(),
     street: z.string().optional(),
     house: z.string().optional(),
     apartment: z.string().optional(),
@@ -64,6 +67,17 @@ const createCheckoutSchema = (t: ReturnType<typeof useI18n>['t']) =>
     scheduledTime: z.string().optional(),
     comment: z.string().optional(),
   }).refine(
+    (data) => {
+      if (data.deliveryMethod === 'delivery' && data.zone === 'suburb') {
+        return Boolean(data.city && data.city.trim().length >= 2);
+      }
+      return true;
+    },
+    {
+      message: (t.checkout.errors as any).cityRequired || (locale === 'pl' ? 'Proszę podać miejscowość' : 'Вкажіть населений пункт'),
+      path: ['city'],
+    }
+  ).refine(
     (data) => {
       if (data.deliveryMethod === 'delivery') {
         return Boolean(data.street && data.street.trim().length >= 2);
@@ -175,7 +189,7 @@ export function CheckoutModal() {
     return bounds.isTodayCutoffPassed ? 'tomorrow' : 'today';
   });
 
-  const checkoutSchema = React.useMemo(() => createCheckoutSchema(t), [t]);
+  const checkoutSchema = React.useMemo(() => createCheckoutSchema(t, locale), [t, locale]);
   const schemaResolver = React.useMemo(() => createZodResolver(checkoutSchema), [checkoutSchema]);
 
   const {
@@ -191,6 +205,8 @@ export function CheckoutModal() {
       name: '',
       phone: '',
       deliveryMethod: 'delivery',
+      zone: 'city',
+      city: '',
       street: '',
       house: '',
       apartment: '',
@@ -232,6 +248,12 @@ export function CheckoutModal() {
     if (isCheckoutOpen && customer) {
       if (customer.name) setValue('name', maskName(customer.name));
       if (customer.phone) setValue('phone', maskPhone(customer.phone));
+      if (customer.defaultAddress?.zone) {
+        const z = (customer.defaultAddress.zone === 'suburb_10km' || customer.defaultAddress.zone === 'suburb_5km') ? 'suburb' : customer.defaultAddress.zone;
+        setSelectedZone(z as DeliveryZoneId);
+        setValue('zone', z);
+      }
+      if (customer.defaultAddress?.city) setValue('city', maskCity(customer.defaultAddress.city));
       if (customer.defaultAddress?.street) setValue('street', maskStreet(customer.defaultAddress.street));
       if (customer.defaultAddress?.house) setValue('house', maskHouse(customer.defaultAddress.house));
       if (customer.defaultAddress?.apartment) setValue('apartment', maskApartment(customer.defaultAddress.apartment));
@@ -267,6 +289,7 @@ export function CheckoutModal() {
           values.deliveryMethod === 'delivery'
             ? {
                 zone: selectedZone,
+                city: selectedZone === 'suburb' ? maskCity(values.city || '') : 'Świdnica',
                 street: maskStreet(values.street || ''),
                 house: maskHouse(values.house || ''),
                 apartment: values.apartment ? maskApartment(values.apartment) : undefined,
@@ -294,6 +317,8 @@ export function CheckoutModal() {
       // Запам'ятовуємо або оновлюємо дані клієнта та адресу для майбутніх замовлень
       try {
         const addressObj: OrderAddress | undefined = values.deliveryMethod === 'delivery' && values.street ? {
+          zone: selectedZone,
+          city: selectedZone === 'suburb' ? maskCity(values.city || '') : 'Świdnica',
           street: values.street,
           house: values.house || '',
           apartment: values.apartment || undefined,
@@ -547,71 +572,81 @@ export function CheckoutModal() {
               </div>
 
               {/* Вибір зони доставки */}
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
                   {locale === 'pl' ? 'Strefa dostawy' : 'Зона доставки'}
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+                <div className="grid grid-cols-2 gap-2">
+                  {/* 1. Свідниця */}
                   <button
                     type="button"
-                    onClick={() => setSelectedZone('city')}
+                    onClick={() => {
+                      setSelectedZone('city');
+                      setValue('zone', 'city');
+                    }}
                     className={cn(
-                      'p-2 rounded-lg border text-left transition-all cursor-pointer',
+                      'p-2 sm:p-2.5 rounded-xl border text-left transition-all cursor-pointer',
                       selectedZone === 'city'
                         ? 'bg-[#e50914]/15 border-[#e50914] text-white shadow-sm shadow-[#e50914]/20'
                         : 'bg-[#121218] border-white/10 text-zinc-400 hover:text-white hover:border-white/20'
                     )}
                   >
-                    <div className="text-xs font-bold text-white flex items-center justify-between">
+                    <div className="text-xs sm:text-sm font-bold text-white flex items-center justify-between">
                       <span>Świdnica</span>
-                      {selectedZone === 'city' && <span className="w-1.5 h-1.5 rounded-full bg-[#e50914]" />}
+                      {selectedZone === 'city' && <span className="w-2 h-2 rounded-full bg-[#e50914] shadow-sm shadow-[#e50914]" />}
                     </div>
-                    <div className="text-[10px] text-zinc-400 mt-0.5">
+                    <div className="text-[10px] sm:text-[11px] text-zinc-400 mt-0.5 leading-tight">
                       {subtotal >= storeSettings.cityFreeThreshold
                         ? (locale === 'pl' ? 'Darmowa dostawa' : 'Безкоштовно')
                         : `${storeSettings.cityStandardFee} zł (od ${storeSettings.cityFreeThreshold} zł gratis)`}
                     </div>
                   </button>
 
+                  {/* 2. За місто (до 10 км) */}
                   <button
                     type="button"
-                    onClick={() => setSelectedZone('suburb_5km')}
+                    onClick={() => {
+                      setSelectedZone('suburb');
+                      setValue('zone', 'suburb');
+                    }}
                     className={cn(
-                      'p-2 rounded-lg border text-left transition-all cursor-pointer',
-                      selectedZone === 'suburb_5km'
+                      'p-2 sm:p-2.5 rounded-xl border text-left transition-all cursor-pointer',
+                      selectedZone === 'suburb'
                         ? 'bg-[#e50914]/15 border-[#e50914] text-white shadow-sm shadow-[#e50914]/20'
                         : 'bg-[#121218] border-white/10 text-zinc-400 hover:text-white hover:border-white/20'
                     )}
                   >
-                    <div className="text-xs font-bold text-white flex items-center justify-between">
-                      <span>{locale === 'pl' ? 'Do 5 km poza miastem' : 'До 5 км за місто'}</span>
-                      {selectedZone === 'suburb_5km' && <span className="w-1.5 h-1.5 rounded-full bg-[#e50914]" />}
+                    <div className="text-xs sm:text-sm font-bold text-white flex items-center justify-between">
+                      <span>{locale === 'pl' ? 'Za miastem' : 'За місто'}</span>
+                      {selectedZone === 'suburb' && <span className="w-2 h-2 rounded-full bg-[#e50914] shadow-sm shadow-[#e50914]" />}
                     </div>
-                    <div className="text-[10px] text-zinc-400 mt-0.5">
-                      {storeSettings.suburb5kmFee} zł ({locale === 'pl' ? 'płatna' : 'платна'})
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setSelectedZone('suburb_10km')}
-                    className={cn(
-                      'p-2 rounded-lg border text-left transition-all cursor-pointer',
-                      selectedZone === 'suburb_10km'
-                        ? 'bg-[#e50914]/15 border-[#e50914] text-white shadow-sm shadow-[#e50914]/20'
-                        : 'bg-[#121218] border-white/10 text-zinc-400 hover:text-white hover:border-white/20'
-                    )}
-                  >
-                    <div className="text-xs font-bold text-white flex items-center justify-between">
-                      <span>{locale === 'pl' ? '5 - 10 km poza miastem' : '5 - 10 км за місто'}</span>
-                      {selectedZone === 'suburb_10km' && <span className="w-1.5 h-1.5 rounded-full bg-[#e50914]" />}
-                    </div>
-                    <div className="text-[10px] text-zinc-400 mt-0.5">
-                      {storeSettings.suburb10kmFee} zł (max 10 km)
+                    <div className="text-[10px] sm:text-[11px] text-zinc-400 mt-0.5 leading-tight">
+                      {storeSettings.suburb10kmFee} zł ({locale === 'pl' ? 'do 10 km' : 'до 10 км'})
                     </div>
                   </button>
                 </div>
               </div>
+
+              {/* Поле для вводу населеного пункту, якщо це не Свідниця */}
+              {selectedZone === 'suburb' && (
+                <div className="animate-in fade-in duration-200">
+                  <Input
+                    label={locale === 'pl' ? 'Miejscowość (do 10 km poza Świdnicą) *' : 'Населений пункт (до 10 км за містом) *'}
+                    id="order-city"
+                    placeholder={locale === 'pl' ? 'np. Pszenno, Witoszów Dolny, Bystrzyca...' : 'наприклад, Pszenno, Witoszów Dolny...'}
+                    error={errors.city?.message}
+                    className="h-8.5 sm:h-9 text-xs"
+                    maxLength={40}
+                    {...register('city', {
+                      onChange: (e) => {
+                        const cleaned = maskCity(e.target.value);
+                        e.target.value = cleaned;
+                        setValue('city', cleaned, { shouldValidate: true });
+                      },
+                    })}
+                  />
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div className="sm:col-span-2">

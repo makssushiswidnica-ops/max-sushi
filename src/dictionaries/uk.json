@@ -73,6 +73,9 @@
     "phone": "Номер телефону",
     "phonePlaceholder": "+48 000 000 000",
     "addressTitle": "Адреса доставки",
+    "city": "Населений пункт",
+    "cityPlaceholder": "наприклад, Pszenno, Witoszów...",
+    "suburbZone": "За місто",
     "street": "Вулиця",
     "streetPlaceholder": "наприклад, Marszałkowska",
     "house": "Номер будинку",
@@ -105,6 +108,7 @@
     "errors": {
       "nameRequired": "Будь ласка, вкажіть ваше ім'я",
       "phoneRequired": "Введіть дійсний номер телефону",
+      "cityRequired": "Будь ласка, вкажіть назву населеного пункту за містом",
       "streetRequired": "Будь ласка, вкажіть назву вулиці",
       "houseRequired": "Вкажіть номер будинку"
     }

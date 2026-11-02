@@ -73,6 +73,9 @@
     "phone": "Numer telefonu",
     "phonePlaceholder": "+48 000 000 000",
     "addressTitle": "Adres dostawy",
+    "city": "Miejscowość",
+    "cityPlaceholder": "np. Pszenno, Witoszów Dolny...",
+    "suburbZone": "Za miastem",
     "street": "Ulica",
     "streetPlaceholder": "np. Marszałkowska",
     "house": "Numer domu / budynku",
@@ -105,6 +108,7 @@
     "errors": {
       "nameRequired": "Proszę podać imię i nazwisko",
       "phoneRequired": "Wymagany poprawny numer telefonu",
+      "cityRequired": "Proszę podać miejscowość poza Świdnicą",
       "streetRequired": "Proszę podać ulicę",
       "houseRequired": "Proszę podać numer domu"
     }

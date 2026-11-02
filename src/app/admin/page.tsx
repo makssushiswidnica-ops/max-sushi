@@ -96,6 +96,7 @@ export interface AdminOrder {
   deliveryMethod?: 'delivery' | 'pickup';
   address?: {
     zone?: string;
+    city?: string;
     street?: string;
     house?: string;
     apartment?: string;
@@ -224,7 +225,6 @@ export default function AdminPage() {
 
   const [mktCityThreshold, setMktCityThreshold] = useState<number>(storeSettings.cityFreeThreshold);
   const [mktCityFee, setMktCityFee] = useState<number>(storeSettings.cityStandardFee);
-  const [mktSuburb5kmFee, setMktSuburb5kmFee] = useState<number>(storeSettings.suburb5kmFee);
   const [mktSuburb10kmFee, setMktSuburb10kmFee] = useState<number>(storeSettings.suburb10kmFee);
 
   const [mktGiftEnabled, setMktGiftEnabled] = useState<boolean>(storeSettings.giftPromo.enabled);
@@ -243,7 +243,6 @@ export default function AdminPage() {
   useEffect(() => {
     setMktCityThreshold(storeSettings.cityFreeThreshold);
     setMktCityFee(storeSettings.cityStandardFee);
-    setMktSuburb5kmFee(storeSettings.suburb5kmFee);
     setMktSuburb10kmFee(storeSettings.suburb10kmFee);
     setMktGiftEnabled(storeSettings.giftPromo.enabled);
     setMktGiftMinAmount(storeSettings.giftPromo.minAmount);
@@ -778,15 +777,13 @@ export default function AdminPage() {
     const isScheduled = (order.timing_type === 'scheduled' || order.timingType === 'scheduled') && Boolean(scheduled);
     const timingBadge = isScheduled ? `НА ЧАС: ${formatScheduledBadgeTime(order)}` : 'ЯКНАЙШВИДШЕ';
     const addressStr = order.address
-      ? `вул. ${order.address.street || ''} ${order.address.house || ''}${order.address.apartment ? `, кв. ${order.address.apartment}` : ''}${order.address.floor ? `, пов. ${order.address.floor}` : ''}${order.address.entryCode ? `, код ${order.address.entryCode}` : ''}`
+      ? `${order.address.city && order.address.zone !== 'city' ? `${order.address.city}, ` : ''}вул. ${order.address.street || ''} ${order.address.house || ''}${order.address.apartment ? `, кв. ${order.address.apartment}` : ''}${order.address.floor ? `, пов. ${order.address.floor}` : ''}${order.address.entryCode ? `, код ${order.address.entryCode}` : ''}`
       : 'Адреса не вказана';
 
-    const zoneStr = order.address?.zone === 'suburb_5km'
-      ? 'Передмістя (до 5 км)'
-      : order.address?.zone === 'suburb_10km'
-      ? 'Передмістя (5-10 км)'
-      : order.address?.zone === 'city'
+    const zoneStr = order.address?.zone === 'city'
       ? 'Свідниця'
+      : (order.address?.zone === 'suburb' || order.address?.zone === 'suburb_10km' || order.address?.zone === 'suburb_5km')
+      ? `За місто (до 10 км)${order.address?.city ? ` (${order.address.city})` : ''}`
       : '';
 
     const itemsHtml = order.items
@@ -2327,7 +2324,7 @@ export default function AdminPage() {
                   <MapPin className="w-3 h-3 text-[#e50914] shrink-0 mt-0.5" />
                   <span>
                     {order.address?.street
-                      ? `вул. ${order.address.street} ${order.address.house || ''}`
+                      ? `${order.address.city && order.address.zone !== 'city' ? `${order.address.city}, ` : ''}вул. ${order.address.street} ${order.address.house || ''}`
                       : 'Адреса не вказана'}
                     {order.address?.apartment && `, кв. ${order.address.apartment}`}
                     {order.address?.floor && `, пов. ${order.address.floor}`}
@@ -2337,11 +2334,9 @@ export default function AdminPage() {
                 {order.address?.zone && (
                   <div className="pt-1">
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                      {order.address.zone === 'suburb_5km'
-                        ? 'Передмістя до 5 км'
-                        : order.address.zone === 'suburb_10km'
-                        ? 'Передмістя 5-10 км'
-                        : 'Свідниця'}
+                      {order.address.zone === 'city'
+                        ? 'Свідниця'
+                        : `За місто (до 10 км)${order.address.city ? ` • ${order.address.city}` : ''}`}
                     </span>
                   </div>
                 )}
@@ -4700,47 +4695,19 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    {/* Передмістя до 5 км */}
+                    {/* За місто до 10 км */}
                     <div className="p-3 bg-[#141420] border border-white/5 rounded-xl flex items-center justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-xs sm:text-sm font-bold text-white">
-                            Передмістя до 5 км
+                            За місто (до 10 км)
                           </span>
                           <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30 shrink-0">
                             завжди платна
                           </span>
                         </div>
                         <p className="text-[11px] text-zinc-400 mt-0.5 leading-tight">
-                          Фіксований тариф для передмістя на відстані до 5 км від закладу
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={mktSuburb5kmFee}
-                          onChange={(e) => setMktSuburb5kmFee(Number(e.target.value))}
-                          className="w-20 sm:w-24 bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-2.5 py-1.5 text-right text-sm text-white font-black focus:outline-none"
-                        />
-                        <span className="text-xs font-bold text-zinc-400">zł</span>
-                      </div>
-                    </div>
-
-                    {/* Передмістя 5 - 10 км */}
-                    <div className="p-3 bg-[#141420] border border-white/5 rounded-xl flex items-center justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs sm:text-sm font-bold text-white">
-                            Передмістя 5–10 км
-                          </span>
-                          <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-400 border border-rose-500/30 shrink-0">
-                            макс. 10 км
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-zinc-400 mt-0.5 leading-tight">
-                          Тариф для зони 5–10 км. Доставка далі ніж 10 км не здійснюється
+                          Фіксований тариф доставки за місто (до 10 км). Далі ніж 10 км не доставляємо
                         </p>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
@@ -4765,7 +4732,6 @@ export default function AdminPage() {
                       updateSettings({
                         cityFreeThreshold: Number(mktCityThreshold),
                         cityStandardFee: Number(mktCityFee),
-                        suburb5kmFee: Number(mktSuburb5kmFee),
                         suburb10kmFee: Number(mktSuburb10kmFee),
                       });
                       showToast('Тарифи доставки успішно збережено!');

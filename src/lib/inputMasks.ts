@@ -61,6 +61,20 @@ export function getRawPhoneDigits(val: string): string {
 }
 
 /**
+ * Маска для назви населеного пункту (miejscowość):
+ * - Дозволено: літери (польські, латиниця, кирилиця), пробіли, дефіси.
+ * - Заборонено: цифри, спецсимволи, емодзі.
+ * - Максимальна довжина: 40 символів.
+ */
+export function maskCity(val: string): string {
+  if (!val) return '';
+  const cleaned = val.replace(/[^\p{L}\s\-]/gu, '');
+  const trimmedStart = cleaned.replace(/^[\s\-]+/, '');
+  const singleSpaced = trimmedStart.replace(/\s{2,}/g, ' ');
+  return singleSpaced.slice(0, 40);
+}
+
+/**
  * Маска для назви вулиці:
  * - Дозволено: літери, цифри (напр. 3 Maja), пробіли, крапки (напр. gen., św.), дефіси.
  * - Заборонено: спецсимволи @, &, (), *, emojis тощо.

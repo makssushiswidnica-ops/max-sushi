@@ -54,13 +54,13 @@ export interface CartItem {
   isGift?: boolean;
 }
 
-export type DeliveryZoneId = 'city' | 'suburb_5km' | 'suburb_10km';
+export type DeliveryZoneId = 'city' | 'suburb' | 'suburb_5km' | 'suburb_10km';
 
 export interface StoreSettings {
   cityFreeThreshold: number;
   cityStandardFee: number;
-  suburb5kmFee: number;
   suburb10kmFee: number;
+  suburb5kmFee?: number;
   giftPromo: {
     enabled: boolean;
     minAmount: number;
@@ -75,6 +75,7 @@ export type OrderTimingType = 'asap' | 'scheduled';
 
 export interface OrderAddress {
   zone?: DeliveryZoneId;
+  city?: string;
   street: string;
   house: string;
   apartment?: string;
