@@ -59,22 +59,15 @@ export function CartItem({ item }: CartItemProps) {
 
       {/* Опис та ціна */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <h4 className="text-sm font-bold text-white truncate">
-            {item.product.name[locale]}
-          </h4>
-          {isGift && (
-            <span className="px-1.5 py-0.2 bg-red-500/20 text-[#ff4d58] border border-red-500/40 rounded text-[10px] font-black uppercase tracking-wider">
-              {locale === 'pl' ? 'Prezent' : 'Подарунок'}
-            </span>
-          )}
-        </div>
+        <h4 className="text-sm font-bold text-white truncate">
+          {item.product.name[locale]}
+        </h4>
         <div className="flex items-center gap-2 mt-0.5 text-xs text-zinc-400">
-          <span>{item.product.weight} г</span>
+          <span>{item.product.weight} {locale === 'pl' ? 'g' : 'г'}</span>
           {item.product.pieces && (
             <>
               <span>•</span>
-              <span>{item.product.pieces} шт.</span>
+              <span>{item.product.pieces} {locale === 'pl' ? 'szt.' : 'шт.'}</span>
             </>
           )}
         </div>
@@ -114,8 +107,8 @@ export function CartItem({ item }: CartItemProps) {
         )}
 
         {isGift ? (
-          <span className="text-[11px] font-black px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-            1 шт. (Gratis)
+          <span className="text-xs font-bold px-2.5 py-1 rounded bg-[#1b1b24] text-zinc-300 border border-white/10 select-none">
+            1 {locale === 'pl' ? 'szt.' : 'шт.'}
           </span>
         ) : (
           <div

@@ -246,7 +246,7 @@ export function CartDrawer() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                  Ваші страви
+                  {locale === 'pl' ? 'Twoje dania' : 'Ваші страви'}
                 </span>
                 <button
                   onClick={() => {
