@@ -283,7 +283,7 @@ export function StickyNav({
       style={{ top: `${headerHeight}px` }}
       className="sticky z-30 w-full bg-[#07070a]/95 backdrop-blur-xl border-b border-white/10 transition-all shadow-md shadow-black/40"
     >
-      <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 relative flex items-center justify-between min-h-14 md:min-h-[66px] py-1 md:py-2">
+      <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 relative flex items-center justify-between min-h-12 sm:min-h-14 lg:min-h-[66px] py-1 lg:py-2">
         {/* Кнопка випадаючого списку категорій: збільшена, зручна для пальців */}
         <div className="relative shrink-0 z-50 flex items-center my-auto" ref={dropdownRef}>
           <button
@@ -401,10 +401,10 @@ export function StickyNav({
         </div>
 
         {/* Розділювач біля кнопки меню (десктоп) */}
-        <div className="h-6 w-[1px] bg-white/10 mx-2 shrink-0 hidden md:block" />
+        <div className="h-6 w-[1px] bg-white/10 mx-2 shrink-0 hidden lg:block" />
 
-        {/* ДЕСКТОПНИЙ ВИГЛЯД: Усі категорії у 2 компактні рядки (hidden md:flex) */}
-        <div className="hidden md:flex flex-1 flex-wrap items-center justify-center gap-x-2 lg:gap-x-3.5 gap-y-1 sm:gap-y-1.5 py-1 px-1 min-w-0">
+        {/* ДЕСКТОПНИЙ ВИГЛЯД: Усі категорії у 2 компактні рядки (hidden lg:flex) */}
+        <div className="hidden lg:flex flex-1 flex-wrap items-center justify-center gap-x-2 lg:gap-x-3.5 gap-y-1 sm:gap-y-1.5 py-1 px-1 min-w-0">
           {categoriesData.map((category) => {
             const isActive = category.id === activeCategory;
             return (
@@ -428,9 +428,9 @@ export function StickyNav({
           })}
         </div>
 
-        {/* МОБІЛЬНИЙ ВИГЛЯД: Циклічна горизонтальна стрічка (flex md:hidden) */}
+        {/* МОБІЛЬНИЙ ТА ПЛАНШЕТНИЙ ВИГЛЯД: Циклічна горизонтальна стрічка (flex lg:hidden) */}
         <div className={cn(
-          "relative flex-1 min-w-0 items-center transition-all flex md:hidden",
+          "relative flex-1 min-w-0 items-center transition-all flex lg:hidden",
           isSearchOpen ? "hidden" : "flex"
         )}>
           {/* М'які градієнтні маски виключно над стрічкою категорій */}
@@ -476,7 +476,7 @@ export function StickyNav({
 
         {/* Розділювач біля пошуку (десктоп) */}
         {!isSearchOpen && (
-          <div className="h-6 w-[1px] bg-white/10 mx-2 shrink-0 hidden md:block" />
+          <div className="h-6 w-[1px] bg-white/10 mx-2 shrink-0 hidden lg:block" />
         )}
 
         {/* Прозорий безпечний бекдроп для мобільного пошуку: при тапі за межами інпуту просто згортає пошук */}

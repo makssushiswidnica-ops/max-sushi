@@ -29,7 +29,7 @@ export function Footer() {
   return (
     <footer className="bg-[#070709] border-t border-white/5 py-12 text-zinc-400 text-xs sm:text-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-10 border-b border-white/5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 pb-10 border-b border-white/5">
           {/* Бренд */}
           <div className="space-y-3">
             <Link
@@ -112,14 +112,14 @@ export function Footer() {
           </div>
 
           {/* Графік роботи */}
-          <div className="space-y-3">
+          <div className="space-y-3 sm:col-span-2 lg:col-span-1">
             <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
               <Clock className="w-4 h-4 text-[#e50914]" />
               <span>{locale === 'pl' ? 'Godziny otwarcia' : 'Графік роботи'}</span>
             </h4>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-x-8 gap-y-1 text-xs">
               {brandTheme.contacts.schedule.map((item, idx) => (
-                <div key={idx} className="flex justify-between py-0.5 border-b border-white/5">
+                <div key={idx} className="flex justify-between items-center py-1 border-b border-white/5">
                   <span className="text-zinc-400">
                     {locale === 'pl' ? item.dayPl : item.dayUk}:
                   </span>

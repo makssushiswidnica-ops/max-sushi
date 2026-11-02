@@ -208,7 +208,7 @@ export function ProductModal() {
       />
 
       {/* Головний контейнер модалки з десктопними стрілками перемикання */}
-      <div className="relative z-10 w-full h-[100dvh] sm:h-[590px] sm:max-w-3xl my-auto flex items-center justify-center">
+      <div className="relative z-10 w-full h-[100dvh] sm:h-[min(590px,calc(100dvh-1.5rem))] max-h-[100dvh] sm:max-w-3xl my-auto flex items-center justify-center">
         {/* Кнопка "Попередній рол" для десктопу (зліва від модалки) */}
         <button
           onClick={handlePrevCard}
@@ -219,11 +219,11 @@ export function ProductModal() {
           <ChevronLeft className="w-6 h-6 stroke-[2.5]" />
         </button>
 
-        {/* Тіло модальної картки: на телефоні на весь екран (100dvh) без стрибків, на десктопі фіксовані 590px */}
+        {/* Тіло модальної картки: на телефоні на весь екран (100dvh) без стрибків, на десктопі до 590px або висота екрану в landscape */}
         <div
           onTouchStart={handleCardTouchStart}
           onTouchEnd={handleCardTouchEnd}
-          className="relative w-full h-full sm:h-[590px] flex flex-col bg-[#111116] border-0 sm:border sm:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.9)] overflow-hidden text-white animate-in zoom-in-95 duration-200 rounded-none"
+          className="relative w-full h-full sm:h-[min(590px,calc(100dvh-1.5rem))] max-h-[100dvh] flex flex-col bg-[#111116] border-0 sm:border sm:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.9)] overflow-hidden text-white animate-in zoom-in-95 duration-200 rounded-none"
         >
           {/* Десктопна верхня панель (навігація + хлібні крихти + закриття). На мобільному прихована для економії місця */}
           <div className="hidden sm:flex items-center justify-between px-5 py-3 border-b border-white/5 bg-[#16161e] shrink-0">

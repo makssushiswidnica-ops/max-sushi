@@ -297,7 +297,7 @@ export function Header() {
     <>
       <header className="sticky top-0 z-40 w-full glass-nav border-b border-white/10 transition-all">
         {/* Верхня інформаційна стрічка */}
-        <div className="border-b border-white/5 bg-[#070709]/90 py-1.5 sm:py-2 text-[11px] sm:text-xs text-zinc-400">
+        <div className="top-info-bar border-b border-white/5 bg-[#070709]/90 py-1.5 sm:py-2 text-[11px] sm:text-xs text-zinc-400">
           <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center justify-between">
             <div className="flex items-center gap-3 sm:gap-5">
               <div className="flex items-center gap-1.5">
@@ -345,7 +345,7 @@ export function Header() {
         </div>
 
         {/* Головна панель навігації */}
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-15 sm:h-18 flex items-center justify-between">
+        <div className="main-nav-bar max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-15 sm:h-18 flex items-center justify-between">
           {/* Логотип */}
           <div className="flex items-center gap-2">
             <Link

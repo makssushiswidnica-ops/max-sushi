@@ -185,3 +185,34 @@
   animation: shadowLevitate 3.5s ease-in-out infinite;
 }
 
+/* Оптимізація для горизонтальної орієнтації смартфонів (landscape при малій висоті екрану <= 520px) */
+@media (orientation: landscape) and (max-height: 520px) {
+  /* Приховуємо верхню тонку стрічку інфо для збереження корисної висоти */
+  .top-info-bar {
+    display: none !important;
+  }
+  
+  /* Зменшуємо висоту головного хедера в ландшафті */
+  .main-nav-bar {
+    height: 52px !important;
+  }
+
+  /* Компактний банер Hero для розміщення на горизонтальному екрані телефону без зайвого скролу */
+  .hero-banner-container {
+    min-height: 290px !important;
+    padding-top: 1.25rem !important;
+    padding-bottom: 1.25rem !important;
+  }
+
+  .hero-banner-title {
+    font-size: 2.25rem !important;
+    line-height: 1.15 !important;
+  }
+
+  .hero-banner-button-wrapper {
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+  }
+}
+
+

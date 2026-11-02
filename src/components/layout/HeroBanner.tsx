@@ -31,7 +31,7 @@ export function HeroBanner() {
   };
 
   return (
-    <div className="relative overflow-hidden min-h-[500px] sm:min-h-[560px] flex flex-col justify-between border-b border-white/10 pt-12 sm:pt-16 pb-8 sm:pb-10">
+    <div className="hero-banner-container relative overflow-hidden min-h-[500px] sm:min-h-[560px] flex flex-col justify-between border-b border-white/10 pt-10 sm:pt-16 pb-8 sm:pb-10">
       {/* Фонове атмосферне зображення зі свіжими суші-ролами */}
       <div className="absolute inset-0 z-0">
         <img
@@ -59,7 +59,7 @@ export function HeroBanner() {
               WebkitTextStroke: '0.4px #09090b',
               paintOrder: 'stroke fill',
             }}
-            className="text-3xl xs:text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-normal text-[#fdf8f4] tracking-wide leading-[1.15] drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)] max-w-full break-words"
+            className="hero-banner-title text-3xl xs:text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-normal text-[#fdf8f4] tracking-wide leading-[1.15] drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)] max-w-full break-words"
           >
             {locale === 'pl' ? (
               <>
@@ -91,7 +91,7 @@ export function HeroBanner() {
       </div>
 
       {/* Середня частина: Велика акцентна червона кнопка зі скошеними кутами (самурайський стиль) */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full my-auto py-8 sm:py-12">
+      <div className="hero-banner-button-wrapper max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full my-auto py-6 sm:py-12">
         <div className="flex items-center justify-center">
           <button
             onClick={scrollToMenu}
