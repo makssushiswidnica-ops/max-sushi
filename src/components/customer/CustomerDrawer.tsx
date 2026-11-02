@@ -1059,8 +1059,8 @@ export function CustomerDrawer() {
                         value={house}
                         onChange={(e) => setHouse(maskHouse(e.target.value))}
                         placeholder="np. 8"
-                        maxLength={10}
-                        className="w-full mt-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs focus:border-[#e50914] outline-hidden"
+                        maxLength={8}
+                        className="w-full mt-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs font-mono focus:border-[#e50914] outline-hidden"
                       />
                     </div>
                   </div>
@@ -1070,22 +1070,24 @@ export function CustomerDrawer() {
                       <label className="text-[11px] font-bold text-zinc-400">{t.customer.apartment}</label>
                       <input
                         type="text"
+                        inputMode="numeric"
                         value={apartment}
                         onChange={(e) => setApartment(maskApartment(e.target.value))}
                         placeholder="np. 14"
-                        maxLength={8}
-                        className="w-full mt-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs focus:border-[#e50914] outline-hidden"
+                        maxLength={6}
+                        className="w-full mt-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs font-mono focus:border-[#e50914] outline-hidden"
                       />
                     </div>
                     <div>
                       <label className="text-[11px] font-bold text-zinc-400">{t.customer.floor}</label>
                       <input
                         type="text"
+                        inputMode="numeric"
                         value={floor}
                         onChange={(e) => setFloor(maskFloor(e.target.value))}
                         placeholder="np. 2"
-                        maxLength={6}
-                        className="w-full mt-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs focus:border-[#e50914] outline-hidden"
+                        maxLength={3}
+                        className="w-full mt-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs font-mono focus:border-[#e50914] outline-hidden"
                       />
                     </div>
                     <div>

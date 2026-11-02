@@ -40,50 +40,53 @@ import {
   maskChangeFrom 
 } from '@/lib/inputMasks';
 
-// Схема валідації Zod з масками та захистом від некоректних символів
-const checkoutSchema = z.object({
-  name: z.string()
-    .min(2, 'Вкажіть імʼя (мінімум 2 літери)')
-    .max(40, 'Імʼя занадто довге')
-    .refine((v) => /^[\p{L}\s'-]{2,40}$/u.test(v.trim()), 'Імʼя має містити лише літери'),
-  phone: z.string()
-    .refine((v) => getRawPhoneDigits(v).length === 9, 'Введіть 9 цифр номера телефону'),
-  deliveryMethod: z.enum(['delivery', 'pickup']),
-  street: z.string().optional(),
-  house: z.string().optional(),
-  apartment: z.string().optional(),
-  floor: z.string().optional(),
-  entryCode: z.string().optional(),
-  paymentMethod: z.enum(['blik_online', 'card_courier', 'cash']),
-  changeFrom: z.string().optional(),
-  timingType: z.enum(['asap', 'scheduled']).default('asap'),
-  scheduledTime: z.string().optional(),
-  comment: z.string().optional(),
-}).refine(
-  (data) => {
-    if (data.deliveryMethod === 'delivery') {
-      return Boolean(data.street && data.street.trim().length >= 2);
+// Схема валідації Zod з масками, підтримкою мов та захистом від некоректних символів
+const createCheckoutSchema = (t: ReturnType<typeof useI18n>['t']) =>
+  z.object({
+    name: z
+      .string()
+      .min(2, t.checkout.errors.nameRequired)
+      .max(40, t.checkout.errors.nameRequired)
+      .refine((v) => /^[\p{L}\s'-]{2,40}$/u.test(v.trim()), t.checkout.errors.nameRequired),
+    phone: z
+      .string()
+      .refine((v) => getRawPhoneDigits(v).length === 9, t.checkout.errors.phoneRequired),
+    deliveryMethod: z.enum(['delivery', 'pickup']),
+    street: z.string().optional(),
+    house: z.string().optional(),
+    apartment: z.string().optional(),
+    floor: z.string().optional(),
+    entryCode: z.string().optional(),
+    paymentMethod: z.enum(['blik_online', 'card_courier', 'cash']),
+    changeFrom: z.string().optional(),
+    timingType: z.enum(['asap', 'scheduled']).default('asap'),
+    scheduledTime: z.string().optional(),
+    comment: z.string().optional(),
+  }).refine(
+    (data) => {
+      if (data.deliveryMethod === 'delivery') {
+        return Boolean(data.street && data.street.trim().length >= 2);
+      }
+      return true;
+    },
+    {
+      message: t.checkout.errors.streetRequired,
+      path: ['street'],
     }
-    return true;
-  },
-  {
-    message: 'Вкажіть вулицю доставки',
-    path: ['street'],
-  }
-).refine(
-  (data) => {
-    if (data.deliveryMethod === 'delivery') {
-      return Boolean(data.house && data.house.trim().length > 0);
+  ).refine(
+    (data) => {
+      if (data.deliveryMethod === 'delivery') {
+        return Boolean(data.house && data.house.trim().length > 0 && /\d/.test(data.house));
+      }
+      return true;
+    },
+    {
+      message: t.checkout.errors.houseRequired,
+      path: ['house'],
     }
-    return true;
-  },
-  {
-    message: 'Вкажіть номер будинку',
-    path: ['house'],
-  }
-);
+  );
 
-type CheckoutFormValues = z.infer<typeof checkoutSchema>;
+type CheckoutFormValues = z.infer<ReturnType<typeof createCheckoutSchema>>;
 
 export function CheckoutModal() {
   const { locale, t } = useI18n();
@@ -169,6 +172,9 @@ export function CheckoutModal() {
     return bounds.isTodayCutoffPassed ? 'tomorrow' : 'today';
   });
 
+  const checkoutSchema = React.useMemo(() => createCheckoutSchema(t), [t]);
+  const schemaResolver = React.useMemo(() => createZodResolver(checkoutSchema), [checkoutSchema]);
+
   const {
     register,
     handleSubmit,
@@ -177,7 +183,7 @@ export function CheckoutModal() {
     reset,
     formState: { errors },
   } = useForm<CheckoutFormValues>({
-    resolver: createZodResolver(checkoutSchema),
+    resolver: schemaResolver,
     defaultValues: {
       name: '',
       phone: '',
@@ -560,8 +566,8 @@ export function CheckoutModal() {
                     id="order-house"
                     placeholder={t.checkout.housePlaceholder}
                     error={errors.house?.message}
-                    className="h-8.5 sm:h-9 text-xs"
-                    maxLength={10}
+                    className="h-8.5 sm:h-9 text-xs font-mono"
+                    maxLength={8}
                     {...register('house', {
                       onChange: (e) => {
                         const cleaned = maskHouse(e.target.value);
@@ -580,9 +586,10 @@ export function CheckoutModal() {
                   </span>
                   <Input
                     id="order-apartment"
+                    inputMode="numeric"
                     placeholder={t.checkout.apartmentPlaceholder}
-                    className="h-8.5 text-xs"
-                    maxLength={8}
+                    className="h-8.5 text-xs font-mono"
+                    maxLength={6}
                     {...register('apartment', {
                       onChange: (e) => {
                         const cleaned = maskApartment(e.target.value);
@@ -598,9 +605,11 @@ export function CheckoutModal() {
                   </span>
                   <Input
                     id="order-floor"
+                    type="text"
+                    inputMode="numeric"
                     placeholder={t.checkout.floorPlaceholder}
-                    className="h-8.5 text-xs"
-                    maxLength={6}
+                    className="h-8.5 text-xs font-mono"
+                    maxLength={3}
                     {...register('floor', {
                       onChange: (e) => {
                         const cleaned = maskFloor(e.target.value);
