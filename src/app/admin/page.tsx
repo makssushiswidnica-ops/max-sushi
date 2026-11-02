@@ -4626,10 +4626,11 @@ export default function AdminPage() {
 
         {/* 4. РОЗДІЛ: МАРКЕТИНГ & ДОСТАВКА */}
         {activeTab === 'marketing' && (
-          <div className="space-y-4 sm:space-y-6 w-full min-w-0 max-w-full">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          <div className="space-y-5 sm:space-y-6 w-full min-w-0 max-w-full">
+            {/* Верхній ряд: Зони доставки та Акція (однакової висоти) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-stretch">
               {/* 1. Блок тарифів та зон доставки */}
-              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 space-y-4 flex flex-col justify-between">
+              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4">
                 <div className="space-y-3">
                   <div className="flex items-center gap-2.5 pb-2.5 border-b border-white/10">
                     <Truck className="w-5 h-5 text-[#e50914]" />
@@ -4639,7 +4640,7 @@ export default function AdminPage() {
                   </div>
 
                   <div className="space-y-2.5">
-                    {/* Поріг безкоштовної доставки по місту */}
+                    {/* Безкоштовна доставка */}
                     <div className="p-3 bg-[#141420] border border-white/5 rounded-xl flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2 flex-wrap min-w-0">
                         <span className="text-xs sm:text-sm font-bold text-white">
@@ -4733,10 +4734,9 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* 2. Блок Акції "Рол у подарунок" & Сповіщення */}
-              <div className="space-y-4 sm:space-y-6 flex flex-col justify-between">
-                {/* Акція: Рол у подарунок */}
-                <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 space-y-3.5">
+              {/* 2. Блок Акції "Рол у подарунок" */}
+              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between pb-2.5 border-b border-white/10">
                     <div className="flex items-center gap-2.5">
                       <Gift className="w-5 h-5 text-amber-400" />
@@ -4780,7 +4780,7 @@ export default function AdminPage() {
                           Мінімальна сума для подарунка
                         </span>
                         <p className="text-[11px] text-zinc-400 mt-0.5 leading-tight">
-                          Подарунковий рол автоматично додається до кошика за 0 zł при досягненні суми
+                          Подарунковий рол автоматично додається за 0 zł
                         </p>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
@@ -4822,119 +4822,121 @@ export default function AdminPage() {
                       </p>
                     </div>
                   </div>
-
-                  <div className="pt-2 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        updateSettings({
-                          giftPromo: {
-                            enabled: mktGiftEnabled,
-                            minAmount: Number(mktGiftMinAmount),
-                            productId: mktGiftProductId,
-                          },
-                        });
-                        showToast('Налаштування подарункової акції збережено!');
-                      }}
-                      style={{
-                        clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
-                      }}
-                      className="w-full sm:w-auto px-5 py-2 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-amber-500/25 active:scale-98 flex items-center justify-center gap-2"
-                    >
-                      <Check className="w-4 h-4" />
-                      <span>Зберегти умови подарунка</span>
-                    </button>
-                  </div>
                 </div>
 
-                {/* Сповіщення про нові замовлення */}
-                <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-5 sm:p-6 space-y-4">
-                  <div className="flex items-center gap-2.5 pb-3 border-b border-white/10">
-                    <BellRing className="w-5 h-5 text-emerald-400" />
-                    <h3 className="text-sm sm:text-base font-black text-white uppercase tracking-wider">
-                      Сповіщення про нові замовлення
-                    </h3>
-                  </div>
+                <div className="pt-3 border-t border-white/5 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateSettings({
+                        giftPromo: {
+                          enabled: mktGiftEnabled,
+                          minAmount: Number(mktGiftMinAmount),
+                          productId: mktGiftProductId,
+                        },
+                      });
+                      showToast('Налаштування подарункової акції збережено!');
+                    }}
+                    style={{
+                      clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
+                    }}
+                    className="w-full sm:w-auto px-5 py-2 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-amber-500/25 active:scale-98 flex items-center justify-center gap-2"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Зберегти умови подарунка</span>
+                  </button>
+                </div>
+              </div>
+            </div>
 
-                  <div className="space-y-3">
-                    {/* Звуковий сигнал */}
-                    <div className="p-3.5 bg-[#141420] border border-white/5 rounded-xl flex items-center justify-between gap-3">
-                      <div className="space-y-0.5">
-                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                          <Volume2 className="w-4 h-4 text-[#e50914]" />
-                          Звуковий сигнал (дзвіночок)
-                        </span>
-                        <p className="text-[11px] text-zinc-400">
-                          Ресторанний подвійний сигнал при надходженні нового замовлення
-                        </p>
-                      </div>
+            {/* 3. Блок сповіщень (по центру, компактний, не розтягнутий) */}
+            <div className="max-w-2xl mx-auto w-full pt-1 sm:pt-2">
+              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 space-y-3.5">
+                <div className="flex items-center gap-2.5 pb-2.5 border-b border-white/10">
+                  <BellRing className="w-5 h-5 text-emerald-400" />
+                  <h3 className="text-sm sm:text-base font-black text-white uppercase tracking-wider">
+                    Сповіщення про нові замовлення
+                  </h3>
+                </div>
 
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            playOrderSound();
-                            showToast('Звуковий сигнал перевірено! 🔔');
-                          }}
-                          title="Протестувати звук"
-                          className="px-2 py-1 bg-white/10 hover:bg-white/20 text-white rounded text-[11px] font-bold cursor-pointer transition-colors"
-                        >
-                          🔔 Тест
-                        </button>
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={mktSoundEnabled}
-                          onClick={() => {
-                            const next = !mktSoundEnabled;
-                            setMktSoundEnabled(next);
-                            updateSettings({ soundNotificationsEnabled: next });
-                            showToast(next ? 'Звук замовлень увімкнено!' : 'Звук вимкнено');
-                          }}
-                          className={cn(
-                            'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-none border border-white/15',
-                            mktSoundEnabled
-                              ? 'bg-emerald-500 shadow-sm shadow-emerald-500/40'
-                              : 'bg-zinc-700'
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              'pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform duration-200 ease-in-out',
-                              mktSoundEnabled ? 'translate-x-4' : 'translate-x-0'
-                            )}
-                          />
-                        </button>
-                      </div>
+                <div className="space-y-2.5">
+                  {/* Звуковий сигнал */}
+                  <div className="p-3 bg-[#141420] border border-white/5 rounded-xl flex items-center justify-between gap-3">
+                    <div className="space-y-0.5 min-w-0">
+                      <span className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+                        <Volume2 className="w-4 h-4 text-[#e50914] shrink-0" />
+                        Звуковий сигнал (дзвіночок)
+                      </span>
+                      <p className="text-[11px] text-zinc-400 leading-tight">
+                        Ресторанний подвійний сигнал при надходженні нового замовлення
+                      </p>
                     </div>
 
-                    {/* Браузерні Push сповіщення */}
-                    <div className="p-3.5 bg-[#141420] border border-white/5 rounded-xl flex items-center justify-between gap-3">
-                      <div className="space-y-0.5">
-                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                          <Bell className="w-4 h-4 text-amber-400" />
-                          Системні Push-сповіщення браузера
-                        </span>
-                        <p className="text-[11px] text-zinc-400">
-                          {pushStatus === 'granted'
-                            ? 'Статус: Активно! Сповіщення працюють навіть якщо вкладку згорнуто.'
-                            : 'Дозвольте браузеру надсилати push-повідомлення при нових замовленнях.'}
-                        </p>
-                      </div>
-
+                    <div className="flex items-center gap-2 shrink-0">
                       <button
                         type="button"
-                        onClick={handleRequestPush}
+                        onClick={() => {
+                          playOrderSound();
+                          showToast('Звуковий сигнал перевірено! 🔔');
+                        }}
+                        title="Протестувати звук"
+                        className="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-white rounded text-xs font-bold cursor-pointer transition-colors"
+                      >
+                        🔔 Тест
+                      </button>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={mktSoundEnabled}
+                        onClick={() => {
+                          const next = !mktSoundEnabled;
+                          setMktSoundEnabled(next);
+                          updateSettings({ soundNotificationsEnabled: next });
+                          showToast(next ? 'Звук замовлень увімкнено!' : 'Звук вимкнено');
+                        }}
                         className={cn(
-                          'px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all shrink-0',
-                          pushStatus === 'granted'
-                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                            : 'bg-[#e50914] text-white shadow-sm hover:bg-[#f4222d]'
+                          'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-none border border-white/15',
+                          mktSoundEnabled
+                            ? 'bg-emerald-500 shadow-sm shadow-emerald-500/40'
+                            : 'bg-zinc-700'
                         )}
                       >
-                        {pushStatus === 'granted' ? '✓ Активно' : 'Увімкнути Push'}
+                        <span
+                          className={cn(
+                            'pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform duration-200 ease-in-out',
+                            mktSoundEnabled ? 'translate-x-4' : 'translate-x-0'
+                          )}
+                        />
                       </button>
                     </div>
+                  </div>
+
+                  {/* Браузерні Push сповіщення */}
+                  <div className="p-3 bg-[#141420] border border-white/5 rounded-xl flex items-center justify-between gap-3">
+                    <div className="space-y-0.5 min-w-0">
+                      <span className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+                        <Bell className="w-4 h-4 text-amber-400 shrink-0" />
+                        Системні Push-сповіщення браузера
+                      </span>
+                      <p className="text-[11px] text-zinc-400 leading-tight">
+                        {pushStatus === 'granted'
+                          ? 'Статус: Активно! Працює навіть якщо вкладку згорнуто.'
+                          : 'Дозвольте браузеру надсилати push-повідомлення.'}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleRequestPush}
+                      className={cn(
+                        'px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all shrink-0',
+                        pushStatus === 'granted'
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                          : 'bg-[#e50914] text-white shadow-sm hover:bg-[#f4222d]'
+                      )}
+                    >
+                      {pushStatus === 'granted' ? '✓ Активно' : 'Увімкнути Push'}
+                    </button>
                   </div>
                 </div>
               </div>
