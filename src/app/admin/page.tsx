@@ -32,6 +32,8 @@ import {
   ToggleLeft,
   ToggleRight,
   ChevronDown,
+  ChevronRight,
+  LayoutDashboard,
   FolderPlus,
   Wand2,
   Globe,
@@ -185,6 +187,39 @@ export default function AdminPage() {
 
   // Стан мобільного бургер-меню в хедері
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const burgerButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Закриття мобільного меню при кліку за межами або натисканні Escape
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node;
+      if (
+        mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(target) &&
+        burgerButtonRef.current &&
+        !burgerButtonRef.current.contains(target)
+      ) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsMobileMenuOpen(false);
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isMobileMenuOpen]);
 
   // Модальне вікно редагування / створення страви
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -2708,6 +2743,7 @@ export default function AdminPage() {
           {/* Мобільна кнопка бургер-меню в правому кутку */}
           <div className="flex sm:hidden items-center">
             <button
+              ref={burgerButtonRef}
               type="button"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               title={isMobileMenuOpen ? 'Закрити меню' : 'Меню керування'}
@@ -2722,90 +2758,231 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Мобільне висувне бургер-меню (налаштування, статистика, перехід на сайт та вихід) */}
+        {/* Мобільне висувне бургер-меню (розділи та пункти, клік за межами закриває) */}
         {isMobileMenuOpen && (
           <>
+            {/* Оверлей-підкладка на весь екран */}
             <div 
               onClick={() => setIsMobileMenuOpen(false)}
-              className="sm:hidden fixed inset-0 top-16 z-35 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150"
+              className="sm:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-xs transition-opacity animate-in fade-in duration-150"
+              aria-hidden="true"
             />
-            <div className="sm:hidden absolute inset-x-0 top-16 z-40 bg-[#0e0e16] border-b border-white/15 p-3.5 shadow-2xl animate-in slide-in-from-top-2 duration-150 space-y-1.5">
-              {/* Вкладка Маркетинг & Доставка */}
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('marketing');
-                  setIsMobileMenuOpen(false);
-                }}
-                className={cn(
-                  'w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all',
-                  activeTab === 'marketing'
-                    ? 'bg-[#e50914] text-white shadow-md shadow-[#e50914]/40'
-                    : 'text-zinc-300 hover:text-white bg-white/5 border border-white/5'
-                )}
-              >
-                <Gift className={cn('w-4 h-4', activeTab === 'marketing' ? 'text-white' : 'text-rose-400')} />
-                <span>Маркетинг & Доставка</span>
-              </button>
 
-              {/* Вкладка Статистика */}
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('stats');
-                  setIsMobileMenuOpen(false);
-                }}
-                className={cn(
-                  'w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all',
-                  activeTab === 'stats'
-                    ? 'bg-[#e50914] text-white shadow-md shadow-[#e50914]/40'
-                    : 'text-zinc-300 hover:text-white bg-white/5 border border-white/5'
-                )}
-              >
-                <BarChart3 className={cn('w-4 h-4', activeTab === 'stats' ? 'text-white' : 'text-amber-400')} />
-                <span>Аналітика та статистика</span>
-              </button>
+            {/* Меню у вигляді розділів та пунктів */}
+            <div 
+              ref={mobileMenuRef}
+              className="sm:hidden fixed inset-x-0 top-16 z-50 bg-[#0e0e16] border-b border-white/15 shadow-2xl max-h-[calc(100vh-4rem)] overflow-y-auto animate-in slide-in-from-top-2 duration-150"
+            >
+              {/* РОЗДІЛ: НАВІГАЦІЯ */}
+              <div className="px-4 py-2 text-[10px] font-black uppercase tracking-wider text-zinc-500 bg-white/[0.02] border-b border-white/5">
+                Розділи адмін-панелі
+              </div>
 
-              {/* Вкладка Налаштування */}
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('settings');
-                  setIsMobileMenuOpen(false);
-                }}
-                className={cn(
-                  'w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all',
-                  activeTab === 'settings'
-                    ? 'bg-[#e50914] text-white shadow-md shadow-[#e50914]/40'
-                    : 'text-zinc-300 hover:text-white bg-white/5 border border-white/5'
-                )}
-              >
-                <Settings className={cn('w-4 h-4', activeTab === 'settings' ? 'text-white' : 'text-zinc-400')} />
-                <span>Налаштування системи</span>
-              </button>
+              <div className="divide-y divide-white/5">
+                {/* 1. Головна панель (Дашборд) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('dashboard');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={cn(
+                    'w-full flex items-center justify-between px-4 py-3 text-left transition-colors cursor-pointer',
+                    activeTab === 'dashboard'
+                      ? 'bg-white/10 text-white'
+                      : 'text-zinc-300 hover:bg-white/5 hover:text-white'
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      'w-7 h-7 rounded-lg flex items-center justify-center shrink-0',
+                      activeTab === 'dashboard' ? 'bg-[#e50914] text-white' : 'bg-white/5 text-zinc-400'
+                    )}>
+                      <LayoutDashboard className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-wider">Головна</span>
+                  </div>
+                  <ChevronRight className={cn('w-4 h-4', activeTab === 'dashboard' ? 'text-[#e50914]' : 'text-zinc-600')} />
+                </button>
 
-              {/* Повернення на клієнтський сайт */}
-              <Link
-                href="/pl"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider text-zinc-300 hover:text-white bg-white/5 border border-white/5 transition-all"
-              >
-                <ExternalLink className="w-4 h-4 text-blue-400" />
-                <span>Повернутися на сайт</span>
-              </Link>
+                {/* 2. Меню страв */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('menu');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={cn(
+                    'w-full flex items-center justify-between px-4 py-3 text-left transition-colors cursor-pointer',
+                    activeTab === 'menu'
+                      ? 'bg-white/10 text-white'
+                      : 'text-zinc-300 hover:bg-white/5 hover:text-white'
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      'w-7 h-7 rounded-lg flex items-center justify-center shrink-0',
+                      activeTab === 'menu' ? 'bg-[#e50914] text-white' : 'bg-white/5 text-zinc-400'
+                    )}>
+                      <UtensilsCrossed className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold uppercase tracking-wider">Меню страв</span>
+                      <span className="text-[10px] text-zinc-500">({products.length})</span>
+                    </div>
+                  </div>
+                  <ChevronRight className={cn('w-4 h-4', activeTab === 'menu' ? 'text-[#e50914]' : 'text-zinc-600')} />
+                </button>
 
-              {/* Вихід з адмінки */}
-              <button
-                type="button"
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  handleLogout();
-                }}
-                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider text-rose-400 hover:text-white bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 transition-all cursor-pointer"
-              >
-                <LogOut className="w-4 h-4 text-rose-400" />
-                <span>Вийти з адмін-панелі</span>
-              </button>
+                {/* 3. Замовлення */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('orders');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={cn(
+                    'w-full flex items-center justify-between px-4 py-3 text-left transition-colors cursor-pointer',
+                    activeTab === 'orders'
+                      ? 'bg-white/10 text-white'
+                      : 'text-zinc-300 hover:bg-white/5 hover:text-white'
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      'w-7 h-7 rounded-lg flex items-center justify-center shrink-0',
+                      activeTab === 'orders' ? 'bg-[#e50914] text-white' : 'bg-white/5 text-zinc-400'
+                    )}>
+                      <ShoppingBag className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider">Замовлення</span>
+                      {newOrdersCount > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-[#e50914] text-white text-[10px] font-black leading-none animate-pulse">
+                          {newOrdersCount}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronRight className={cn('w-4 h-4', activeTab === 'orders' ? 'text-[#e50914]' : 'text-zinc-600')} />
+                </button>
+
+                {/* 4. Маркетинг & Доставка */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('marketing');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={cn(
+                    'w-full flex items-center justify-between px-4 py-3 text-left transition-colors cursor-pointer',
+                    activeTab === 'marketing'
+                      ? 'bg-white/10 text-white'
+                      : 'text-zinc-300 hover:bg-white/5 hover:text-white'
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      'w-7 h-7 rounded-lg flex items-center justify-center shrink-0',
+                      activeTab === 'marketing' ? 'bg-[#e50914] text-white' : 'bg-rose-500/10 text-rose-400'
+                    )}>
+                      <Gift className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-wider">Маркетинг & Доставка</span>
+                  </div>
+                  <ChevronRight className={cn('w-4 h-4', activeTab === 'marketing' ? 'text-[#e50914]' : 'text-zinc-600')} />
+                </button>
+
+                {/* 5. Аналітика та статистика */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('stats');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={cn(
+                    'w-full flex items-center justify-between px-4 py-3 text-left transition-colors cursor-pointer',
+                    activeTab === 'stats'
+                      ? 'bg-white/10 text-white'
+                      : 'text-zinc-300 hover:bg-white/5 hover:text-white'
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      'w-7 h-7 rounded-lg flex items-center justify-center shrink-0',
+                      activeTab === 'stats' ? 'bg-[#e50914] text-white' : 'bg-amber-500/10 text-amber-400'
+                    )}>
+                      <BarChart3 className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-wider">Аналітика та статистика</span>
+                  </div>
+                  <ChevronRight className={cn('w-4 h-4', activeTab === 'stats' ? 'text-[#e50914]' : 'text-zinc-600')} />
+                </button>
+
+                {/* 6. Налаштування системи */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('settings');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={cn(
+                    'w-full flex items-center justify-between px-4 py-3 text-left transition-colors cursor-pointer',
+                    activeTab === 'settings'
+                      ? 'bg-white/10 text-white'
+                      : 'text-zinc-300 hover:bg-white/5 hover:text-white'
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      'w-7 h-7 rounded-lg flex items-center justify-center shrink-0',
+                      activeTab === 'settings' ? 'bg-[#e50914] text-white' : 'bg-white/5 text-zinc-400'
+                    )}>
+                      <Settings className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-wider">Налаштування системи</span>
+                  </div>
+                  <ChevronRight className={cn('w-4 h-4', activeTab === 'settings' ? 'text-[#e50914]' : 'text-zinc-600')} />
+                </button>
+              </div>
+
+              {/* РОЗДІЛ: ДІЇ ТА СИСТЕМА */}
+              <div className="px-4 py-2 text-[10px] font-black uppercase tracking-wider text-zinc-500 bg-white/[0.02] border-t border-b border-white/5">
+                Дії та профіль
+              </div>
+
+              <div className="divide-y divide-white/5">
+                <Link
+                  href="/pl"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full flex items-center justify-between px-4 py-3 text-left text-zinc-300 hover:bg-white/5 hover:text-white transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0">
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-wider">Повернутися на сайт</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-zinc-600" />
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="w-full flex items-center justify-between px-4 py-3 text-left text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center shrink-0">
+                      <LogOut className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-wider">Вийти з адмін-панелі</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-rose-400/40" />
+                </button>
+              </div>
             </div>
           </>
         )}
