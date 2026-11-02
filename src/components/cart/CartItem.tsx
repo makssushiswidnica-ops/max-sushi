@@ -84,7 +84,7 @@ export function CartItem({ item }: CartItemProps) {
               <span className="text-sm font-extrabold text-[#e50914]">
                 {formatPrice(effectiveUnit * item.quantity, locale)}
               </span>
-              {item.product.discountPercent && item.product.discountPercent > 0 && (
+              {(item.product.discountPercent ?? 0) > 0 && (
                 <span className="text-xs text-zinc-500 line-through">
                   {formatPrice(item.product.price * item.quantity, locale)}
                 </span>

@@ -461,7 +461,7 @@ export function ProductModal() {
                     <span className="text-xl sm:text-2xl font-black text-[#e50914] tracking-tight">
                       {formatPrice(getEffectivePrice(selectedProduct) * modalQuantity, locale)}
                     </span>
-                    {selectedProduct.discountPercent && selectedProduct.discountPercent > 0 && (
+                    {(selectedProduct.discountPercent ?? 0) > 0 && (
                       <span className="text-xs sm:text-sm text-zinc-500 line-through">
                         {formatPrice(selectedProduct.price * modalQuantity, locale)}
                       </span>
@@ -560,7 +560,7 @@ export function ProductModal() {
                 <span className="text-xl font-black text-[#e50914] tracking-tight">
                   {formatPrice(getEffectivePrice(selectedProduct) * modalQuantity, locale)}
                 </span>
-                {selectedProduct.discountPercent && selectedProduct.discountPercent > 0 && (
+                {(selectedProduct.discountPercent ?? 0) > 0 && (
                   <span className="text-xs text-zinc-500 line-through">
                     {formatPrice(selectedProduct.price * modalQuantity, locale)}
                   </span>
