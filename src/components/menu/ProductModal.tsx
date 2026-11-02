@@ -312,8 +312,8 @@ export function ProductModal() {
                   </button>
                 </div>
 
-                {/* Маркетинговий бейдж (ВЕГАН, ХІТ тощо) у лівому кутку фото (без плашки знижки %) */}
-                {selectedProduct.badge && (
+                {/* Маркетинговий бейдж (ВЕГАН, ХІТ тощо) у лівому кутку фото (тільки якщо немає знижки) */}
+                {selectedProduct.badge && (!selectedProduct.discountPercent || selectedProduct.discountPercent <= 0) && (
                   <div className="absolute top-3 left-3 z-20 pointer-events-none flex flex-col gap-1 items-start">
                     <ProductBadge badge={selectedProduct.badge} locale={locale} />
                   </div>
