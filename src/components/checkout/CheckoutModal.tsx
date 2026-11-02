@@ -27,7 +27,8 @@ import { useI18n } from '@/lib/i18nContext';
 import { createOrder } from '@/lib/supabase';
 import { brandTheme } from '@/config/theme';
 import { formatPrice, cn } from '@/lib/utils';
-import { DeliveryMethod, PaymentMethod, Order, OrderAddress } from '@/types';
+import { DeliveryMethod, PaymentMethod, Order, OrderAddress, DeliveryZoneId } from '@/types';
+import { useSettingsStore } from '@/store/useSettingsStore';
 import { 
   maskName, 
   maskPhone, 
@@ -100,13 +101,15 @@ export function CheckoutModal() {
   const updateProfile = useCustomerStore((s) => s.updateProfile);
 
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('delivery');
+  const [selectedZone, setSelectedZone] = useState<DeliveryZoneId>('city');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
 
+  const storeSettings = useSettingsStore();
   const isPickup = deliveryMethod === 'pickup';
   const subtotal = useCartStore((s) => s.getSubtotal)();
-  const deliveryFee = useCartStore((s) => s.getDeliveryFee)(isPickup);
-  const total = useCartStore((s) => s.getTotal)(isPickup);
+  const deliveryFee = useCartStore((s) => s.getDeliveryFee)(isPickup, selectedZone);
+  const total = useCartStore((s) => s.getTotal)(isPickup, selectedZone);
 
   // Розрахунок обмежень для вибору часу:
   // Якщо на годиннику більше ніж час закриття мінус час виконання (prepWaitTimeMinutes + 15 хв для доставки),
@@ -263,6 +266,7 @@ export function CheckoutModal() {
         address:
           values.deliveryMethod === 'delivery'
             ? {
+                zone: selectedZone,
                 street: maskStreet(values.street || ''),
                 house: maskHouse(values.house || ''),
                 apartment: values.apartment ? maskApartment(values.apartment) : undefined,
@@ -534,12 +538,79 @@ export function CheckoutModal() {
 
           {/* Адреса доставки (тільки при доставці) */}
           {deliveryMethod === 'delivery' && (
-            <div className="space-y-2 p-2.5 sm:p-3 rounded-xl bg-[#161620] border border-white/5">
+            <div className="space-y-2.5 p-2.5 sm:p-3 rounded-xl bg-[#161620] border border-white/5">
               <div className="flex items-center gap-1.5">
                 <MapPin className="w-3.5 h-3.5 text-[#e50914]" />
                 <span className="text-[11px] font-bold text-white uppercase tracking-wider">
-                  {t.checkout.addressTitle} ({brandTheme.contacts.city})
+                  {t.checkout.addressTitle}
                 </span>
+              </div>
+
+              {/* Вибір зони доставки */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                  {locale === 'pl' ? 'Strefa dostawy' : 'Зона доставки'}
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedZone('city')}
+                    className={cn(
+                      'p-2 rounded-lg border text-left transition-all cursor-pointer',
+                      selectedZone === 'city'
+                        ? 'bg-[#e50914]/15 border-[#e50914] text-white shadow-sm shadow-[#e50914]/20'
+                        : 'bg-[#121218] border-white/10 text-zinc-400 hover:text-white hover:border-white/20'
+                    )}
+                  >
+                    <div className="text-xs font-bold text-white flex items-center justify-between">
+                      <span>Świdnica</span>
+                      {selectedZone === 'city' && <span className="w-1.5 h-1.5 rounded-full bg-[#e50914]" />}
+                    </div>
+                    <div className="text-[10px] text-zinc-400 mt-0.5">
+                      {subtotal >= storeSettings.cityFreeThreshold
+                        ? (locale === 'pl' ? 'Darmowa dostawa' : 'Безкоштовно')
+                        : `${storeSettings.cityStandardFee} zł (od ${storeSettings.cityFreeThreshold} zł gratis)`}
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedZone('suburb_5km')}
+                    className={cn(
+                      'p-2 rounded-lg border text-left transition-all cursor-pointer',
+                      selectedZone === 'suburb_5km'
+                        ? 'bg-[#e50914]/15 border-[#e50914] text-white shadow-sm shadow-[#e50914]/20'
+                        : 'bg-[#121218] border-white/10 text-zinc-400 hover:text-white hover:border-white/20'
+                    )}
+                  >
+                    <div className="text-xs font-bold text-white flex items-center justify-between">
+                      <span>{locale === 'pl' ? 'Do 5 km poza miastem' : 'До 5 км за місто'}</span>
+                      {selectedZone === 'suburb_5km' && <span className="w-1.5 h-1.5 rounded-full bg-[#e50914]" />}
+                    </div>
+                    <div className="text-[10px] text-zinc-400 mt-0.5">
+                      {storeSettings.suburb5kmFee} zł ({locale === 'pl' ? 'płatna' : 'платна'})
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedZone('suburb_10km')}
+                    className={cn(
+                      'p-2 rounded-lg border text-left transition-all cursor-pointer',
+                      selectedZone === 'suburb_10km'
+                        ? 'bg-[#e50914]/15 border-[#e50914] text-white shadow-sm shadow-[#e50914]/20'
+                        : 'bg-[#121218] border-white/10 text-zinc-400 hover:text-white hover:border-white/20'
+                    )}
+                  >
+                    <div className="text-xs font-bold text-white flex items-center justify-between">
+                      <span>{locale === 'pl' ? '5 - 10 km poza miastem' : '5 - 10 км за місто'}</span>
+                      {selectedZone === 'suburb_10km' && <span className="w-1.5 h-1.5 rounded-full bg-[#e50914]" />}
+                    </div>
+                    <div className="text-[10px] text-zinc-400 mt-0.5">
+                      {storeSettings.suburb10kmFee} zł (max 10 km)
+                    </div>
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">

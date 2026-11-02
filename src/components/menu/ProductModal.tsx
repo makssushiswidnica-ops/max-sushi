@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useCartStore } from '@/store/useCartStore';
 import { useI18n } from '@/lib/i18nContext';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, getEffectivePrice } from '@/lib/utils';
 import { fetchMenuData } from '@/lib/menuService';
 import {
   Plus,
@@ -308,12 +308,17 @@ export function ProductModal() {
                   </button>
                 </div>
 
-                {/* Маркетинговий бейдж (ВЕГАН, ХІТ тощо) у лівому нижньому кутку фото */}
-                {selectedProduct.badge && (
-                  <div className="absolute bottom-3 left-3 z-20 pointer-events-none">
+                {/* Маркетинговий бейдж (ВЕГАН, ХІТ тощо) або знижка у лівому нижньому кутку фото */}
+                <div className="absolute bottom-3 left-3 z-20 pointer-events-none flex flex-col gap-1 items-start">
+                  {selectedProduct.discountPercent && selectedProduct.discountPercent > 0 ? (
+                    <span className="inline-flex items-center text-[10px] sm:text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#e50914] text-white border border-red-400 shadow-md shadow-red-950/80 select-none">
+                      -{selectedProduct.discountPercent}%
+                    </span>
+                  ) : null}
+                  {selectedProduct.badge && (
                     <ProductBadge badge={selectedProduct.badge} locale={locale} />
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {/* Фото ролу з об'ємною тінню та каліброваним масштабом на десктопі й мобільному */}
                 {productImages.length > 0 && productImages[currentImageIndex] ? (
@@ -432,13 +437,18 @@ export function ProductModal() {
               <div className="hidden sm:flex flex-col gap-2.5 pt-3 mt-3 border-t border-white/10 shrink-0">
                 {/* Рядок 1: Ціна виділена червоним шрифтом + Шматочки та вага */}
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-baseline gap-1.5">
+                  <div className="flex items-baseline gap-2">
                     <span className="text-xl sm:text-2xl font-black text-[#e50914] tracking-tight">
-                      {formatPrice(selectedProduct.price * modalQuantity, locale)}
+                      {formatPrice(getEffectivePrice(selectedProduct) * modalQuantity, locale)}
                     </span>
+                    {selectedProduct.discountPercent && selectedProduct.discountPercent > 0 && (
+                      <span className="text-xs sm:text-sm text-zinc-500 line-through">
+                        {formatPrice(selectedProduct.price * modalQuantity, locale)}
+                      </span>
+                    )}
                     {modalQuantity > 1 && (
                       <span className="text-[11px] text-zinc-500 font-medium font-mono">
-                        ({formatPrice(selectedProduct.price, locale)} / {locale === 'pl' ? 'szt.' : 'шт.'})
+                        ({formatPrice(getEffectivePrice(selectedProduct), locale)} / {locale === 'pl' ? 'szt.' : 'шт.'})
                       </span>
                     )}
                   </div>
@@ -526,13 +536,18 @@ export function ProductModal() {
           <div className="sm:hidden shrink-0 bg-[#16161e] border-t border-white/10 px-4 pt-3 pb-[calc(0.85rem+env(safe-area-inset-bottom,0px))] z-20 flex flex-col gap-2.5">
             {/* Рядок 1: Ціна виділена червоним зліва + Шматочки та вага справа */}
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-baseline gap-1.5">
+              <div className="flex items-baseline gap-2">
                 <span className="text-xl font-black text-[#e50914] tracking-tight">
-                  {formatPrice(selectedProduct.price * modalQuantity, locale)}
+                  {formatPrice(getEffectivePrice(selectedProduct) * modalQuantity, locale)}
                 </span>
+                {selectedProduct.discountPercent && selectedProduct.discountPercent > 0 && (
+                  <span className="text-xs text-zinc-500 line-through">
+                    {formatPrice(selectedProduct.price * modalQuantity, locale)}
+                  </span>
+                )}
                 {modalQuantity > 1 && (
                   <span className="text-[11px] text-zinc-500 font-medium font-mono">
-                    ({formatPrice(selectedProduct.price, locale)} / {locale === 'pl' ? 'szt.' : 'шт.'})
+                    ({formatPrice(getEffectivePrice(selectedProduct), locale)} / {locale === 'pl' ? 'szt.' : 'шт.'})
                   </span>
                 )}
               </div>

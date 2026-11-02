@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { Drawer } from '@/components/ui/Drawer';
 import { useCustomerStore } from '@/store/useCustomerStore';
+import { supabase } from '@/lib/supabase';
 import { useCartStore } from '@/store/useCartStore';
 import { useI18n } from '@/lib/i18nContext';
 import { formatPrice, cn } from '@/lib/utils';
@@ -77,13 +78,18 @@ export function CustomerDrawer() {
   const setCartOpen = useCartStore((s) => s.setOpen);
   const setIsCheckoutOpen = useCartStore((s) => s.setIsCheckoutOpen);
 
-  // Режим авторизації: вхід або реєстрація (за замовчуванням реєстрація для нових клієнтів або вхід)
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('register');
+  // Режим авторизації: вхід, реєстрація або відновлення пароля
+  const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot_password'>('register');
   const [showPassword, setShowPassword] = useState(false);
 
   // Поля входу
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+
+  // Поля відновлення пароля
+  const [forgotIdentifier, setForgotIdentifier] = useState('');
+  const [forgotSuccessMessage, setForgotSuccessMessage] = useState('');
+  const [forgotPhoneGuide, setForgotPhoneGuide] = useState(false);
 
   // Поля реєстрації
   const [regPhone, setRegPhone] = useState('');
@@ -320,6 +326,44 @@ export function CustomerDrawer() {
     } catch (err: any) {
       const msgKey = err?.message as keyof typeof t.customer;
       setAuthError(t.customer[msgKey] || err?.message || 'Błąd logowania');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Скидання / відновлення пароля
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    setForgotSuccessMessage('');
+    setForgotPhoneGuide(false);
+
+    const val = forgotIdentifier.trim();
+    if (!val) {
+      setAuthError(locale === 'pl' ? 'Podaj e-mail lub numer telefonu' : 'Вкажіть e-mail або номер телефону');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      if (val.includes('@')) {
+        const { error } = await supabase.auth.resetPasswordForEmail(val, {
+          redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback?type=recovery` : undefined,
+        });
+        if (error) {
+          setAuthError(error.message);
+        } else {
+          setForgotSuccessMessage(
+            locale === 'pl'
+              ? 'Wysłaliśmy link do zmiany hasła na Twój adres e-mail! Sprawdź skrzynkę odbiorczą oraz folder SPAM.'
+              : 'Посилання для скидання пароля надіслано на вашу електронну адресу! Перевірте скриньку (включно зі спамом).'
+          );
+        }
+      } else {
+        setForgotPhoneGuide(true);
+      }
+    } catch (err: any) {
+      setAuthError(err?.message || (locale === 'pl' ? 'Błąd resetowania hasła' : 'Помилка скидання пароля'));
     } finally {
       setIsSubmitting(false);
     }
@@ -663,6 +707,20 @@ export function CustomerDrawer() {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthError('');
+                      setForgotSuccessMessage('');
+                      setForgotPhoneGuide(false);
+                      setAuthMode('forgot_password');
+                    }}
+                    className="text-xs text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                  >
+                    {locale === 'pl' ? 'Nie pamiętasz hasła?' : 'Не памʼятаєте пароль?'}
+                  </button>
+                </div>
               </div>
 
               <button
@@ -690,6 +748,96 @@ export function CustomerDrawer() {
                   className="text-xs text-zinc-400 hover:text-white transition-colors cursor-pointer"
                 >
                   {t.customer.noAccountYet} <span className="text-[#e50914] font-bold underline">{t.customer.registerButton}</span>
+                </button>
+              </div>
+            </form>
+          )}
+
+          {authMode === 'forgot_password' && (
+            <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
+              <div className="space-y-1">
+                <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                  {locale === 'pl' ? 'Odzyskiwanie hasła' : 'Відновлення доступу'}
+                </h3>
+                <p className="text-xs text-zinc-400">
+                  {locale === 'pl'
+                    ? 'Wpisz swój e-mail lub numer telefonu powiązany z kontem'
+                    : 'Введіть email або номер телефону, вказаний при реєстрації'}
+                </p>
+              </div>
+
+              {forgotSuccessMessage && (
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />
+                  <span>{forgotSuccessMessage}</span>
+                </div>
+              )}
+
+              {forgotPhoneGuide && (
+                <div className="p-3.5 rounded-xl bg-[#1a1a26] border border-amber-500/30 text-zinc-300 text-xs space-y-2">
+                  <div className="flex items-center gap-2 font-bold text-amber-400">
+                    <Phone className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>{locale === 'pl' ? 'Reset hasła przez telefon' : 'Відновлення за номером телефону'}</span>
+                  </div>
+                  <p className="leading-relaxed text-[11px] text-zinc-400">
+                    {locale === 'pl'
+                      ? 'Dla kont zarejestrowanych samym numerem telefonu, prosimy o kontakt telefoniczny z obsługą pod numerem '
+                      : 'Для акаунтів, зареєстрованих за номером телефону, зверніться до нашого адміністратора за номером '}
+                    <strong className="text-white">+48 791 744 048</strong>
+                    {locale === 'pl' ? ' lub na Instagramie ' : ' або в Instagram '}
+                    <strong className="text-white">@makssushi_swidnica</strong>.
+                    {locale === 'pl' ? ' Natychmiast zresetujemy hasło!' : ' Ми миттєво допоможемо відновити доступ!'}
+                  </p>
+                  <a
+                    href="tel:+48791744048"
+                    className="inline-flex items-center justify-center gap-1.5 w-full py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-lg font-bold text-xs transition-colors"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>+48 791 744 048</span>
+                  </a>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-[#e50914]" />
+                  <span>{locale === 'pl' ? 'E-mail lub Numer telefonu' : 'E-mail або Номер телефону'} *</span>
+                </label>
+                <input
+                  type="text"
+                  value={forgotIdentifier}
+                  onChange={(e) => setForgotIdentifier(e.target.value)}
+                  placeholder="np. jan@example.com / 500 000 000"
+                  required
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#14141c] border border-white/10 focus:border-[#e50914] focus:ring-1 focus:ring-[#e50914] text-white text-sm placeholder:text-zinc-600 outline-hidden transition-all"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                style={{
+                  clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
+                }}
+                className="w-full py-3 px-4 bg-[#e50914] hover:bg-[#f4222d] active:scale-[0.98] text-white font-black text-xs sm:text-sm uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-lg shadow-[#e50914]/30 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <span>{locale === 'pl' ? 'Wyślij instrukcję' : 'Надіслати інструкцію'}</span>
+                )}
+              </button>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthError('');
+                    setAuthMode('login');
+                  }}
+                  className="text-xs text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  ← {locale === 'pl' ? 'Wróć do logowania' : 'Повернутися до входу'}
                 </button>
               </div>
             </form>

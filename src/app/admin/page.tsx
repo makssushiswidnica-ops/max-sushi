@@ -59,9 +59,16 @@ import {
   TrendingUp,
   Award,
   Users,
-  ArrowUpRight
+  ArrowUpRight,
+  Gift,
+  Bell,
+  BellRing,
+  Volume2,
+  Percent,
+  Tag
 } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
+import { useSettingsStore } from '@/store/useSettingsStore';
 import { cn, formatPrice } from '@/lib/utils';
 import { supabase, isSupabaseConfigured, createOrder } from '@/lib/supabase';
 import { brandTheme } from '@/config/theme';
@@ -78,7 +85,7 @@ import {
 } from '@/lib/menuService';
 import { autoTranslateDish } from '@/lib/translateService';
 
-type AdminTab = 'dashboard' | 'orders' | 'menu' | 'stats' | 'settings';
+type AdminTab = 'dashboard' | 'orders' | 'menu' | 'marketing' | 'stats' | 'settings';
 
 export interface AdminOrder {
   id: string;
@@ -88,6 +95,7 @@ export interface AdminOrder {
   delivery_method: 'delivery' | 'pickup';
   deliveryMethod?: 'delivery' | 'pickup';
   address?: {
+    zone?: string;
     street?: string;
     house?: string;
     apartment?: string;
@@ -106,6 +114,7 @@ export interface AdminOrder {
   scheduled_time?: string;
   scheduledTime?: string;
   items: Array<{
+    isGift?: boolean;
     product: {
       id?: string;
       sku?: string;
@@ -201,12 +210,46 @@ export default function AdminPage() {
   const [formIngredientsUk, setFormIngredientsUk] = useState('');
   const [formImage, setFormImage] = useState('');
   const [formIsAvailable, setFormIsAvailable] = useState(true);
+  const [formDiscountPercent, setFormDiscountPercent] = useState<0 | 10 | 15>(0);
   const [formImageFile, setFormImageFile] = useState<File | null>(null);
   const [formImagePreview, setFormImagePreview] = useState<string>('');
   const [formZoom, setFormZoom] = useState<number | ''>('');
   const [activeLangTab, setActiveLangTab] = useState<'pl' | 'uk'>('pl');
   const [isTranslating, setIsTranslating] = useState(false);
   const modalFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Налаштування доставки та маркетингу
+  const storeSettings = useSettingsStore();
+  const updateSettings = useSettingsStore((s) => s.updateSettings);
+
+  const [mktCityThreshold, setMktCityThreshold] = useState<number>(storeSettings.cityFreeThreshold);
+  const [mktCityFee, setMktCityFee] = useState<number>(storeSettings.cityStandardFee);
+  const [mktSuburb5kmFee, setMktSuburb5kmFee] = useState<number>(storeSettings.suburb5kmFee);
+  const [mktSuburb10kmFee, setMktSuburb10kmFee] = useState<number>(storeSettings.suburb10kmFee);
+
+  const [mktGiftEnabled, setMktGiftEnabled] = useState<boolean>(storeSettings.giftPromo.enabled);
+  const [mktGiftMinAmount, setMktGiftMinAmount] = useState<number>(storeSettings.giftPromo.minAmount);
+  const [mktGiftProductId, setMktGiftProductId] = useState<string>(storeSettings.giftPromo.productId);
+
+  const [mktSoundEnabled, setMktSoundEnabled] = useState<boolean>(storeSettings.soundNotificationsEnabled);
+  const [pushStatus, setPushStatus] = useState<string>('default');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setPushStatus(Notification.permission);
+    }
+  }, []);
+
+  useEffect(() => {
+    setMktCityThreshold(storeSettings.cityFreeThreshold);
+    setMktCityFee(storeSettings.cityStandardFee);
+    setMktSuburb5kmFee(storeSettings.suburb5kmFee);
+    setMktSuburb10kmFee(storeSettings.suburb10kmFee);
+    setMktGiftEnabled(storeSettings.giftPromo.enabled);
+    setMktGiftMinAmount(storeSettings.giftPromo.minAmount);
+    setMktGiftProductId(storeSettings.giftPromo.productId);
+    setMktSoundEnabled(storeSettings.soundNotificationsEnabled);
+  }, [storeSettings]);
 
   // Створення нової категорії
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
@@ -283,26 +326,85 @@ export default function AdminPage() {
     }
   }, [isModalOpen, isAddCategoryModalOpen]);
 
-  // Звукове сповіщення про нове замовлення через Web Audio API
+  // Ресторанне двотональне звукове сповіщення про нове замовлення через Web Audio API
   const playOrderSound = () => {
     if (typeof window === 'undefined') return;
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioCtx) return;
       const ctx = new AudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-      osc.frequency.setValueAtTime(880, ctx.currentTime + 0.12); // A5
-      gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.45);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.45);
+
+      // Перший тон (Ding)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(659.25, ctx.currentTime); // E5
+      gain1.gain.setValueAtTime(0.35, ctx.currentTime);
+      gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+      osc1.start(ctx.currentTime);
+      osc1.stop(ctx.currentTime + 0.35);
+
+      // Другий вищий тон (Dong)
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(880, ctx.currentTime + 0.14); // A5
+      gain2.gain.setValueAtTime(0.35, ctx.currentTime + 0.14);
+      gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+      osc2.start(ctx.currentTime + 0.14);
+      osc2.stop(ctx.currentTime + 0.6);
     } catch {
       // ігноруємо обмеження аудіоконтексту браузера
+    }
+  };
+
+  // Запит системних Web Push сповіщень
+  const handleRequestPush = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      alert('Ваш браузер не підтримує Web Push сповіщення');
+      return;
+    }
+    try {
+      const perm = await Notification.requestPermission();
+      setPushStatus(perm);
+      if (perm === 'granted') {
+        new Notification('🔔 Maks Sushi Admin', {
+          body: 'Push-сповіщення увімкнено! Ви отримуватимете повідомлення навіть зі згорнутим браузером.',
+          icon: brandTheme.logo,
+        });
+        showToast('Push-сповіщення успішно активовано!');
+      } else {
+        showToast('Сповіщення заблоковано в браузері');
+      }
+    } catch (e) {
+      console.warn('Push error:', e);
+    }
+  };
+
+  // Швидке перемикання знижки на картці страви в меню (0% / 10% / 15%)
+  const handleToggleDiscount = async (product: Product, percent: 0 | 10 | 15) => {
+    const updated = {
+      ...product,
+      discountPercent: percent,
+    };
+    setProducts((prev) => prev.map((p) => (p.id === product.id ? updated : p)));
+    const res = await updateProduct(product.id, {
+      ...product,
+      discountPercent: percent,
+      nutrition: {
+        ...(product.nutrition || { calories: 0, proteins: 0, fats: 0, carbs: 0 }),
+        sku: product.sku,
+        discountPercent: percent,
+      },
+    });
+    if (res.success) {
+      showToast(percent > 0 ? `Знижку ${percent}% увімкнено!` : 'Знижку знято (0%)');
+    } else {
+      showToast('Помилка оновлення знижки');
     }
   };
 
@@ -472,7 +574,19 @@ export default function AdminPage() {
 
         if (hasBrandNewPendingOrder) {
           setOrderStatusFilter('pending');
-          playOrderSound();
+          if (storeSettings.soundNotificationsEnabled) {
+            playOrderSound();
+          }
+          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+            try {
+              new Notification('🔔 Нове замовлення Maks Sushi!', {
+                body: 'Отримано нове замовлення! Перейдіть в адмінку для обробки.',
+                icon: brandTheme.logo,
+              });
+            } catch (e) {
+              console.warn('Push error:', e);
+            }
+          }
         }
 
         knownOrderIdsRef.current = new Set(loaded.map((o) => o.id));
@@ -667,6 +781,14 @@ export default function AdminPage() {
       ? `вул. ${order.address.street || ''} ${order.address.house || ''}${order.address.apartment ? `, кв. ${order.address.apartment}` : ''}${order.address.floor ? `, пов. ${order.address.floor}` : ''}${order.address.entryCode ? `, код ${order.address.entryCode}` : ''}`
       : 'Адреса не вказана';
 
+    const zoneStr = order.address?.zone === 'suburb_5km'
+      ? 'Передмістя (до 5 км)'
+      : order.address?.zone === 'suburb_10km'
+      ? 'Передмістя (5-10 км)'
+      : order.address?.zone === 'city'
+      ? 'Свідниця'
+      : '';
+
     const itemsHtml = order.items
       .map((item) => {
         const prod = item.product || {};
@@ -675,17 +797,20 @@ export default function AdminPage() {
         const price = Number(prod.price || 0);
         const sku = prod.sku || (prod as any).nutrition?.sku || '';
         const skuText = sku ? ` ${sku}` : '';
+        const isGift = Boolean(item.isGift);
+        const displayPrice = isGift ? '0 zł (GRATIS 🎁)' : `${price * item.quantity} zł`;
+        const giftLabel = isGift ? '<span style="font-size: 10px; font-weight: 900; background: #000; color: #fff; padding: 1px 4px; border-radius: 2px; margin-left: 4px;">ПОДАРУНОК</span>' : '';
         return `
           <tr style="border-bottom: 1px dashed #666;">
             <td style="padding: 6px 0; font-size: 16px; font-weight: 900; width: 36px; vertical-align: top;">
               ${item.quantity}×
             </td>
             <td style="padding: 6px 4px; font-size: 14px; font-weight: bold; vertical-align: top;">
-              <div>${titleUk}${skuText}</div>
+              <div>${titleUk}${skuText}${giftLabel}</div>
               ${titlePl && titlePl !== titleUk ? `<div style="font-size: 11px; font-weight: normal; color: #444; margin-top: 1px;">${titlePl}${skuText}</div>` : ''}
             </td>
             <td style="padding: 6px 0; font-size: 13px; text-align: right; vertical-align: top; white-space: nowrap;">
-              ${price * item.quantity} zł
+              ${displayPrice}
             </td>
           </tr>
         `;
@@ -804,6 +929,7 @@ export default function AdminPage() {
             <span class="bold" style="font-size: 13px;">${isPickup ? 'САМОВИВІЗ' : 'ДОСТАВКА КУРʼЄРОМ'}</span>
           </div>
           ${!isPickup ? `<div style="font-size: 12px; margin: 3px 0 6px 0;"><strong>Адреса:</strong> ${addressStr}</div>` : ''}
+          ${(!isPickup && zoneStr) ? `<div style="font-size: 11px; margin: -2px 0 6px 0; font-weight: bold; color: #222;">📍 Зона: ${zoneStr}</div>` : ''}
 
           <div class="info-row">
             <span>Клієнт:</span>
@@ -1435,6 +1561,7 @@ export default function AdminPage() {
     setFormImageFile(null);
     setFormImagePreview('');
     setFormZoom('');
+    setFormDiscountPercent(0);
     setFormIsAvailable(true);
     setIsModalOpen(true);
   };
@@ -1455,6 +1582,7 @@ export default function AdminPage() {
     setFormWeight(product.weight);
     setFormPieces(product.pieces ? String(product.pieces) : '');
     setFormBadge(product.badge || '');
+    setFormDiscountPercent(product.discountPercent || (product.nutrition as any)?.discountPercent || 0);
     setFormIngredientsPl(product.ingredients.pl?.join(', ') || '');
     setFormIngredientsUk(product.ingredients.uk?.join(', ') || '');
     setFormImage(product.image || '');
@@ -1701,10 +1829,16 @@ export default function AdminPage() {
       } else {
         delete baseNutrition.sku;
       }
+      if (formDiscountPercent > 0) {
+        baseNutrition.discountPercent = formDiscountPercent;
+      } else {
+        delete baseNutrition.discountPercent;
+      }
 
       const productPayload: Product = {
         id: formId,
         sku: formSku.trim() || undefined,
+        discountPercent: formDiscountPercent,
         categoryId: formCategoryId,
         name: { pl: formNamePl.trim(), uk: finalNameUk },
         description: { pl: formDescPl.trim(), uk: finalDescUk },
@@ -2200,6 +2334,17 @@ export default function AdminPage() {
                     {order.address?.entryCode && `, код ${order.address.entryCode}`}
                   </span>
                 </div>
+                {order.address?.zone && (
+                  <div className="pt-1">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                      {order.address.zone === 'suburb_5km'
+                        ? 'Передмістя до 5 км'
+                        : order.address.zone === 'suburb_10km'
+                        ? 'Передмістя 5-10 км'
+                        : 'Свідниця'}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -2322,6 +2467,11 @@ export default function AdminPage() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <p className="text-xs sm:text-sm font-bold text-white truncate">{title}</p>
+                          {item.isGift && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-red-500/25 text-[#ff4d58] border border-red-500/40">
+                              🎁 ПОДАРУНОК
+                            </span>
+                          )}
                           {(prod.sku || (prod as any).nutrition?.sku) && (
                             <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-400/20 text-amber-300 border border-amber-400/30">
                               #{prod.sku || (prod as any).nutrition?.sku}
@@ -2337,10 +2487,14 @@ export default function AdminPage() {
                     <div className="text-right shrink-0">
                       <div className="text-xs sm:text-sm font-black text-white">
                         <span className="text-[#e50914] font-bold mr-1.5">×{item.quantity}</span>
-                        <span>{formatPrice(price * (item.quantity || 1))}</span>
+                        {item.isGift ? (
+                          <span className="text-emerald-400 font-bold">0 zł</span>
+                        ) : (
+                          <span>{formatPrice(price * (item.quantity || 1))}</span>
+                        )}
                       </div>
                       <div className="text-[10px] text-zinc-400">
-                        {formatPrice(price)} / шт
+                        {item.isGift ? 'Gratis' : `${formatPrice(price)} / шт`}
                       </div>
                     </div>
                   </div>
@@ -2581,6 +2735,24 @@ export default function AdminPage() {
               className="sm:hidden fixed inset-0 top-16 z-35 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150"
             />
             <div className="sm:hidden absolute inset-x-0 top-16 z-40 bg-[#0e0e16] border-b border-white/15 p-3.5 shadow-2xl animate-in slide-in-from-top-2 duration-150 space-y-1.5">
+              {/* Вкладка Маркетинг & Доставка */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('marketing');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={cn(
+                  'w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all',
+                  activeTab === 'marketing'
+                    ? 'bg-[#e50914] text-white shadow-md shadow-[#e50914]/40'
+                    : 'text-zinc-300 hover:text-white bg-white/5 border border-white/5'
+                )}
+              >
+                <Gift className={cn('w-4 h-4', activeTab === 'marketing' ? 'text-white' : 'text-rose-400')} />
+                <span>Маркетинг & Доставка</span>
+              </button>
+
               {/* Вкладка Статистика */}
               <button
                 type="button"
@@ -2648,13 +2820,13 @@ export default function AdminPage() {
       {activeTab !== 'dashboard' && (
         <div className="sticky top-16 z-30 w-full bg-[#0d0d14]/95 backdrop-blur-xl border-b border-white/10 shadow-md">
           <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-2 sm:flex sm:w-auto sm:items-center sm:gap-4 w-full py-0.5">
+            <div className="flex items-center gap-1 sm:gap-4 overflow-x-auto scrollbar-none w-full py-0.5">
               {/* Розділ МЕНЮ */}
               <button
                 type="button"
                 onClick={() => setActiveTab('menu')}
                 className={cn(
-                  'relative py-3 px-2 sm:px-4 text-xs sm:text-sm font-bold tracking-wider uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none flex items-center justify-center gap-1.5 sm:gap-2',
+                  'relative py-3 px-3 sm:px-4 text-xs sm:text-sm font-bold tracking-wider uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none flex items-center justify-center gap-1.5 sm:gap-2 shrink-0',
                   activeTab === 'menu' ? 'text-white font-black' : 'text-zinc-400 hover:text-zinc-200'
                 )}
               >
@@ -2670,7 +2842,7 @@ export default function AdminPage() {
                 type="button"
                 onClick={() => setActiveTab('orders')}
                 className={cn(
-                  'relative py-3 px-2 sm:px-4 text-xs sm:text-sm font-bold tracking-wider uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none flex items-center justify-center gap-1.5 sm:gap-2',
+                  'relative py-3 px-3 sm:px-4 text-xs sm:text-sm font-bold tracking-wider uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none flex items-center justify-center gap-1.5 sm:gap-2 shrink-0',
                   activeTab === 'orders' ? 'text-white font-black' : 'text-zinc-400 hover:text-zinc-200'
                 )}
               >
@@ -2691,12 +2863,28 @@ export default function AdminPage() {
                 )}
               </button>
 
-              {/* Розділ СТАТИСТИКА (на мобілці сховано у бургер-меню, на десктопі показується) */}
+              {/* Розділ МАРКЕТИНГ & ДОСТАВКА */}
+              <button
+                type="button"
+                onClick={() => setActiveTab('marketing')}
+                className={cn(
+                  'relative py-3 px-3 sm:px-4 text-xs sm:text-sm font-bold tracking-wider uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none flex items-center justify-center gap-1.5 sm:gap-2 shrink-0',
+                  activeTab === 'marketing' ? 'text-white font-black' : 'text-zinc-400 hover:text-zinc-200'
+                )}
+              >
+                <Gift className={cn('w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0', activeTab === 'marketing' ? 'text-[#e50914]' : 'text-zinc-400')} />
+                <span className="truncate">МАРКЕТИНГ & ДОСТАВКА</span>
+                {activeTab === 'marketing' && (
+                  <span className="absolute bottom-0 left-2 right-2 sm:left-2 sm:right-2 h-[2.5px] rounded-full bg-gradient-to-r from-[#e50914] via-[#ff4d58] to-[#e50914] shadow-[0_0_12px_#e50914]" />
+                )}
+              </button>
+
+              {/* Розділ СТАТИСТИКА */}
               <button
                 type="button"
                 onClick={() => setActiveTab('stats')}
                 className={cn(
-                  'hidden sm:flex relative py-3 px-4 text-xs sm:text-sm font-bold tracking-wider uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none items-center justify-center gap-2',
+                  'relative py-3 px-3 sm:px-4 text-xs sm:text-sm font-bold tracking-wider uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none flex items-center justify-center gap-1.5 sm:gap-2 shrink-0',
                   activeTab === 'stats' ? 'text-white font-black' : 'text-zinc-400 hover:text-zinc-200'
                 )}
               >
@@ -2707,12 +2895,12 @@ export default function AdminPage() {
                 )}
               </button>
 
-              {/* Розділ НАЛАШТУВАННЯ (на десктопі при активному переході через шестерню) */}
+              {/* Розділ НАЛАШТУВАННЯ */}
               {activeTab === 'settings' && (
                 <button
                   type="button"
                   onClick={() => setActiveTab('settings')}
-                  className="hidden sm:flex relative py-3 px-4 text-xs sm:text-sm font-black tracking-wider uppercase whitespace-nowrap text-white select-none items-center justify-center gap-2"
+                  className="relative py-3 px-3 sm:px-4 text-xs sm:text-sm font-black tracking-wider uppercase whitespace-nowrap text-white select-none flex items-center justify-center gap-1.5 sm:gap-2 shrink-0"
                 >
                   <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#e50914] shrink-0" />
                   <span className="truncate">ОПЦІЇ</span>
@@ -3301,9 +3489,20 @@ export default function AdminPage() {
                           </p>
 
                           <div className="flex items-center gap-2 mt-2">
-                            <span className="text-sm font-black text-[#e50914]">
-                              {product.price} zł
-                            </span>
+                            {product.discountPercent && product.discountPercent > 0 ? (
+                              <div className="flex items-baseline gap-1.5">
+                                <span className="text-sm font-black text-[#ff4d58]">
+                                  {Math.round(product.price * (1 - product.discountPercent / 100))} zł
+                                </span>
+                                <span className="text-xs text-zinc-500 line-through">
+                                  {product.price} zł
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-sm font-black text-[#e50914]">
+                                {product.price} zł
+                              </span>
+                            )}
                             <span className="text-[11px] text-zinc-500">
                               {product.weight}g {product.pieces ? `(${product.pieces} шт)` : ''}
                             </span>
@@ -3353,6 +3552,52 @@ export default function AdminPage() {
                         >
                           В меню
                         </span>
+                      </div>
+
+                      {/* Швидкі кнопки знижки 0% / 10% / 15% */}
+                      <div 
+                        onClick={(e) => e.stopPropagation()} 
+                        className="flex items-center gap-0.5 bg-[#14141e] border border-white/10 p-0.5 rounded-lg select-none"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleToggleDiscount(product, 0)}
+                          title="Без знижки (0%)"
+                          className={cn(
+                            'px-1.5 py-0.5 text-[10px] font-bold rounded transition-all cursor-pointer',
+                            !product.discountPercent
+                              ? 'bg-white/15 text-white font-extrabold'
+                              : 'text-zinc-500 hover:text-zinc-300'
+                          )}
+                        >
+                          0%
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleDiscount(product, 10)}
+                          title="Знижка 10%"
+                          className={cn(
+                            'px-1.5 py-0.5 text-[10px] font-black rounded transition-all cursor-pointer',
+                            product.discountPercent === 10
+                              ? 'bg-amber-500 text-black shadow-xs shadow-amber-500/30'
+                              : 'text-zinc-400 hover:text-amber-400'
+                          )}
+                        >
+                          -10%
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleDiscount(product, 15)}
+                          title="Знижка 15%"
+                          className={cn(
+                            'px-1.5 py-0.5 text-[10px] font-black rounded transition-all cursor-pointer',
+                            product.discountPercent === 15
+                              ? 'bg-[#e50914] text-white shadow-xs shadow-[#e50914]/40'
+                              : 'text-zinc-400 hover:text-red-400'
+                          )}
+                        >
+                          -15%
+                        </button>
                       </div>
 
                       {/* Кнопки редагування та видалення */}
@@ -4345,7 +4590,353 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* 4. РОЗДІЛ: НАЛАШТУВАННЯ */}
+        {/* 4. РОЗДІЛ: МАРКЕТИНГ & ДОСТАВКА */}
+        {activeTab === 'marketing' && (
+          <div className="space-y-6 w-full min-w-0 max-w-full">
+            {/* Верхня плашка розділу */}
+            <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#e50914]/20 border border-[#e50914]/40 flex items-center justify-center text-[#e50914] shrink-0 shadow-lg shadow-[#e50914]/20">
+                  <Gift className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-black text-white uppercase tracking-wide">
+                    Маркетинг & Доставка
+                  </h2>
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    Керування тарифами доставки по Свідниці та за місто, акційними подарунками та звуковими/push сповіщеннями
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* 1. Блок тарифів та зон доставки */}
+              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-5 sm:p-6 space-y-5 flex flex-col justify-between">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2.5 pb-3 border-b border-white/10">
+                    <Truck className="w-5 h-5 text-[#e50914]" />
+                    <h3 className="text-sm sm:text-base font-black text-white uppercase tracking-wider">
+                      Зони та вартість доставки
+                    </h3>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Поріг безкоштовної доставки по місту */}
+                    <div className="p-3.5 bg-[#141420] border border-white/5 rounded-xl space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <label className="text-xs font-bold text-white">
+                          Безкоштовна доставка по Свідниці (від PLN)
+                        </label>
+                        <span className="text-xs font-black text-emerald-400">
+                          від {mktCityThreshold} zł
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        min="0"
+                        step="5"
+                        value={mktCityThreshold}
+                        onChange={(e) => setMktCityThreshold(Number(e.target.value))}
+                        className="w-full bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-3 py-2 text-sm text-white font-bold focus:outline-none"
+                      />
+                      <p className="text-[11px] text-zinc-400">
+                        При замовленні від цієї суми доставка по Свідниці стає безкоштовною (0 zł).
+                      </p>
+                    </div>
+
+                    {/* Стандартна ціна по місту */}
+                    <div className="p-3.5 bg-[#141420] border border-white/5 rounded-xl space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <label className="text-xs font-bold text-white">
+                          Стандартна доставка по Свідниці (PLN)
+                        </label>
+                        <span className="text-xs font-black text-white">
+                          {mktCityFee} zł
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={mktCityFee}
+                        onChange={(e) => setMktCityFee(Number(e.target.value))}
+                        className="w-full bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-3 py-2 text-sm text-white font-bold focus:outline-none"
+                      />
+                      <p className="text-[11px] text-zinc-400">
+                        Стягується, якщо сума замовлення по місту менша за поріг безкоштовної доставки.
+                      </p>
+                    </div>
+
+                    {/* Передмістя до 5 км */}
+                    <div className="p-3.5 bg-[#141420] border border-white/5 rounded-xl space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <label className="text-xs font-bold text-white">
+                          За місто до 5 км (PLN, завжди платна)
+                        </label>
+                        <span className="text-xs font-black text-amber-400">
+                          {mktSuburb5kmFee} zł
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={mktSuburb5kmFee}
+                        onChange={(e) => setMktSuburb5kmFee(Number(e.target.value))}
+                        className="w-full bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-3 py-2 text-sm text-white font-bold focus:outline-none"
+                      />
+                      <p className="text-[11px] text-zinc-400">
+                        Фіксований тариф для передмістя на відстані до 5 км від закладу.
+                      </p>
+                    </div>
+
+                    {/* Передмістя 5 - 10 км */}
+                    <div className="p-3.5 bg-[#141420] border border-white/5 rounded-xl space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <label className="text-xs font-bold text-white">
+                          За місто 5–10 км (PLN, завжди платна)
+                        </label>
+                        <span className="text-xs font-black text-[#ff4d58]">
+                          {mktSuburb10kmFee} zł
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={mktSuburb10kmFee}
+                        onChange={(e) => setMktSuburb10kmFee(Number(e.target.value))}
+                        className="w-full bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-3 py-2 text-sm text-white font-bold focus:outline-none"
+                      />
+                      <p className="text-[11px] text-zinc-400">
+                        Фіксований тариф для передмістя від 5 до 10 км. Доставка далі ніж 10 км закладом не здійснюється.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateSettings({
+                        cityFreeThreshold: Number(mktCityThreshold),
+                        cityStandardFee: Number(mktCityFee),
+                        suburb5kmFee: Number(mktSuburb5kmFee),
+                        suburb10kmFee: Number(mktSuburb10kmFee),
+                      });
+                      showToast('Тарифи доставки успішно збережено!');
+                    }}
+                    style={{
+                      clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
+                    }}
+                    className="w-full py-2.5 px-4 bg-[#e50914] hover:bg-[#f4222d] text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-[#e50914]/30 active:scale-98 flex items-center justify-center gap-2"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Зберегти тарифи доставки</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. Блок Акції "Рол у подарунок" & Сповіщення */}
+              <div className="space-y-6 flex flex-col justify-between">
+                {/* Акція: Рол у подарунок */}
+                <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-5 sm:p-6 space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                    <div className="flex items-center gap-2.5">
+                      <Gift className="w-5 h-5 text-amber-400" />
+                      <h3 className="text-sm sm:text-base font-black text-white uppercase tracking-wider">
+                        Акція: Рол у подарунок
+                      </h3>
+                    </div>
+
+                    {/* Тумблер активності акції */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={mktGiftEnabled}
+                        onClick={() => setMktGiftEnabled(!mktGiftEnabled)}
+                        className={cn(
+                          'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-none border border-white/15',
+                          mktGiftEnabled
+                            ? 'bg-emerald-500 shadow-sm shadow-emerald-500/40'
+                            : 'bg-zinc-700'
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform duration-200 ease-in-out',
+                            mktGiftEnabled ? 'translate-x-4' : 'translate-x-0'
+                          )}
+                        />
+                      </button>
+                      <span className="text-xs font-bold text-zinc-300 select-none">
+                        {mktGiftEnabled ? 'Увімкнено' : 'Вимкнено'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3.5">
+                    {/* Мінімальна сума для подарунка */}
+                    <div className="p-3.5 bg-[#141420] border border-white/5 rounded-xl space-y-1.5">
+                      <label className="text-xs font-bold text-white block">
+                        Мінімальна сума замовлення для подарунка (PLN)
+                      </label>
+                      <input
+                        type="number"
+                        min="50"
+                        step="10"
+                        value={mktGiftMinAmount}
+                        onChange={(e) => setMktGiftMinAmount(Number(e.target.value))}
+                        className="w-full bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-3 py-2 text-sm text-white font-bold focus:outline-none"
+                      />
+                      <p className="text-[11px] text-zinc-400">
+                        Коли клієнт додає страв на суму {mktGiftMinAmount} zł або більше, подарунковий рол автоматично додається до кошика за 0 zł.
+                      </p>
+                    </div>
+
+                    {/* Вибір страви у подарунок */}
+                    <div className="p-3.5 bg-[#141420] border border-white/5 rounded-xl space-y-1.5">
+                      <label className="text-xs font-bold text-white block">
+                        Страва, що видається у подарунок
+                      </label>
+                      <select
+                        value={mktGiftProductId}
+                        onChange={(e) => setMktGiftProductId(e.target.value)}
+                        className="w-full bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-3 py-2.5 text-xs sm:text-sm text-white focus:outline-none cursor-pointer"
+                      >
+                        {products.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name.uk || p.name.pl} (код #{p.sku || (p as any).nutrition?.sku || '—'}) — {p.price} zł
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[11px] text-zinc-400">
+                        Обрана позиція додаватиметься в чеки для кухні з позначкою GRATIS.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateSettings({
+                          giftPromo: {
+                            enabled: mktGiftEnabled,
+                            minAmount: Number(mktGiftMinAmount),
+                            productId: mktGiftProductId,
+                          },
+                        });
+                        showToast('Налаштування подарункової акції збережено!');
+                      }}
+                      style={{
+                        clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
+                      }}
+                      className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-600 text-black font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-amber-500/25 active:scale-98 flex items-center justify-center gap-2"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span>Зберегти умови подарунка</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Сповіщення про нові замовлення */}
+                <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-5 sm:p-6 space-y-4">
+                  <div className="flex items-center gap-2.5 pb-3 border-b border-white/10">
+                    <BellRing className="w-5 h-5 text-emerald-400" />
+                    <h3 className="text-sm sm:text-base font-black text-white uppercase tracking-wider">
+                      Сповіщення про нові замовлення
+                    </h3>
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* Звуковий сигнал */}
+                    <div className="p-3.5 bg-[#141420] border border-white/5 rounded-xl flex items-center justify-between gap-3">
+                      <div className="space-y-0.5">
+                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                          <Volume2 className="w-4 h-4 text-[#e50914]" />
+                          Звуковий сигнал (дзвіночок)
+                        </span>
+                        <p className="text-[11px] text-zinc-400">
+                          Ресторанний подвійний сигнал при надходженні нового замовлення
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            playOrderSound();
+                            showToast('Звуковий сигнал перевірено! 🔔');
+                          }}
+                          title="Протестувати звук"
+                          className="px-2 py-1 bg-white/10 hover:bg-white/20 text-white rounded text-[11px] font-bold cursor-pointer transition-colors"
+                        >
+                          🔔 Тест
+                        </button>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={mktSoundEnabled}
+                          onClick={() => {
+                            const next = !mktSoundEnabled;
+                            setMktSoundEnabled(next);
+                            updateSettings({ soundNotificationsEnabled: next });
+                            showToast(next ? 'Звук замовлень увімкнено!' : 'Звук вимкнено');
+                          }}
+                          className={cn(
+                            'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-none border border-white/15',
+                            mktSoundEnabled
+                              ? 'bg-emerald-500 shadow-sm shadow-emerald-500/40'
+                              : 'bg-zinc-700'
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              'pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform duration-200 ease-in-out',
+                              mktSoundEnabled ? 'translate-x-4' : 'translate-x-0'
+                            )}
+                          />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Браузерні Push сповіщення */}
+                    <div className="p-3.5 bg-[#141420] border border-white/5 rounded-xl flex items-center justify-between gap-3">
+                      <div className="space-y-0.5">
+                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                          <Bell className="w-4 h-4 text-amber-400" />
+                          Системні Push-сповіщення браузера
+                        </span>
+                        <p className="text-[11px] text-zinc-400">
+                          {pushStatus === 'granted'
+                            ? 'Статус: Активно! Сповіщення працюють навіть якщо вкладку згорнуто.'
+                            : 'Дозвольте браузеру надсилати push-повідомлення при нових замовленнях.'}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleRequestPush}
+                        className={cn(
+                          'px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all shrink-0',
+                          pushStatus === 'granted'
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                            : 'bg-[#e50914] text-white shadow-sm hover:bg-[#f4222d]'
+                        )}
+                      >
+                        {pushStatus === 'granted' ? '✓ Активно' : 'Увімкнути Push'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 5. РОЗДІЛ: НАЛАШТУВАННЯ */}
         {activeTab === 'settings' && (
           <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-6 sm:p-8 space-y-6">
             <div>
@@ -4852,6 +5443,51 @@ export default function AdminPage() {
                       <option value="spicy">SPICY — Гостре</option>
                       <option value="sale">SALE — Акція</option>
                     </select>
+                  </div>
+                </div>
+
+                {/* Швидкий вибір акційної знижки в модалці */}
+                <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between gap-3 flex-wrap">
+                  <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                    Акційна знижка на страву:
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setFormDiscountPercent(0)}
+                      className={cn(
+                        'px-2.5 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer',
+                        formDiscountPercent === 0
+                          ? 'bg-white/20 text-white border-white/40'
+                          : 'bg-[#1b1b2a] text-zinc-400 border-white/10 hover:text-white'
+                      )}
+                    >
+                      Без знижки (0%)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormDiscountPercent(10)}
+                      className={cn(
+                        'px-2.5 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer',
+                        formDiscountPercent === 10
+                          ? 'bg-amber-500 text-black border-amber-400 shadow-md font-black'
+                          : 'bg-[#1b1b2a] text-amber-400/80 border-white/10 hover:text-amber-400'
+                      )}
+                    >
+                      -10%
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormDiscountPercent(15)}
+                      className={cn(
+                        'px-2.5 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer',
+                        formDiscountPercent === 15
+                          ? 'bg-[#e50914] text-white border-red-400 shadow-md font-black'
+                          : 'bg-[#1b1b2a] text-red-400/80 border-white/10 hover:text-red-400'
+                      )}
+                    >
+                      -15%
+                    </button>
                   </div>
                 </div>
               </div>

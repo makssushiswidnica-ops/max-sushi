@@ -44,6 +44,7 @@ export async function fetchMenuData(): Promise<MenuData> {
     const products: Product[] = productsRes.data.map((prod: any, idx: number) => ({
       id: prod.id,
       sku: prod.sku || prod.nutrition?.sku || defaultSkuMap.get(prod.id) || String(idx + 1),
+      discountPercent: (prod.discount_percent !== undefined ? prod.discount_percent : prod.nutrition?.discountPercent) || 0,
       categoryId: prod.category_id,
       name: prod.name,
       description: prod.description,
@@ -282,10 +283,11 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
     if (updates.image !== undefined) payload.image = updates.image;
     if (updates.badge !== undefined) payload.badge = updates.badge || null;
     if (updates.ingredients !== undefined) payload.ingredients = updates.ingredients;
-    if (updates.nutrition !== undefined || updates.sku !== undefined) {
+    if (updates.nutrition !== undefined || updates.sku !== undefined || updates.discountPercent !== undefined) {
       payload.nutrition = {
         ...(updates.nutrition || {}),
         ...(updates.sku !== undefined ? { sku: updates.sku } : {}),
+        ...(updates.discountPercent !== undefined ? { discountPercent: updates.discountPercent } : {}),
       };
     }
     if (updates.isAvailable !== undefined) payload.is_available = updates.isAvailable;
@@ -328,6 +330,7 @@ export async function createProduct(product: Product): Promise<{ success: boolea
           nutrition: {
             ...(product.nutrition || { calories: 0, proteins: 0, fats: 0, carbs: 0 }),
             ...(product.sku ? { sku: product.sku } : {}),
+            ...(product.discountPercent !== undefined ? { discountPercent: product.discountPercent } : {}),
           },
           is_available: product.isAvailable,
         },

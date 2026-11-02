@@ -7,6 +7,7 @@ import { ProductBadge } from '@/components/menu/ProductBadge';
 import { getProductZoom } from '@/lib/imageZoom';
 import { useCartStore } from '@/store/useCartStore';
 import { useI18n } from '@/lib/i18nContext';
+import { getEffectivePrice } from '@/lib/utils';
 
 interface ProductCardProps {
   product: Product;
@@ -95,12 +96,17 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* Просте прямокутне зображення страви з гострими кутами та м'яким студійним світлом */}
         {!isDodatki ? (
           <div className="relative w-full aspect-[4/3] overflow-hidden bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.08)_0%,_#07070b_70%)] border border-white/10 group-hover:border-[#e50914]/50 flex items-center justify-center mb-3 transition-colors duration-300 shadow-md shadow-black/80 rounded-none">
-            {/* Маркетинговий бейдж (ВЕГАН, ХІТ тощо) */}
-            {product.badge && (
-              <div className="absolute top-2 left-2 z-20 pointer-events-none">
+            {/* Маркетинговий бейдж (ВЕГАН, ХІТ тощо) або знижка */}
+            <div className="absolute top-2 left-2 z-20 pointer-events-none flex flex-col gap-1 items-start">
+              {product.discountPercent && product.discountPercent > 0 ? (
+                <span className="inline-flex items-center text-[10px] sm:text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#e50914] text-white border border-red-400 shadow-md shadow-red-950/80 select-none">
+                  -{product.discountPercent}%
+                </span>
+              ) : null}
+              {product.badge && (
                 <ProductBadge badge={product.badge} locale={locale} />
-              </div>
-            )}
+              )}
+            </div>
             {product.image ? (
               <div className="w-full h-full flex items-center justify-center transition-transform duration-500 ease-out group-hover:scale-105">
                 <div
@@ -164,9 +170,20 @@ export function ProductCard({ product }: ProductCardProps) {
         className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between gap-2"
       >
         <div className="text-left shrink-0">
-          <div className="text-lg sm:text-xl font-black text-white tracking-tight leading-none">
-            {formattedPrice}
-          </div>
+          {product.discountPercent && product.discountPercent > 0 ? (
+            <div className="flex flex-col">
+              <span className="text-[11px] text-zinc-500 line-through leading-none">
+                {product.price.toFixed(2).replace('.', ',')} PLN
+              </span>
+              <span className="text-lg sm:text-xl font-black text-[#ff4d58] tracking-tight leading-tight mt-0.5">
+                {getEffectivePrice(product).toFixed(2).replace('.', ',')} PLN
+              </span>
+            </div>
+          ) : (
+            <div className="text-lg sm:text-xl font-black text-white tracking-tight leading-none">
+              {formattedPrice}
+            </div>
+          )}
         </div>
 
         {/* Фіксована висота h-9 (36px), кнопка притиснута до правого краю зі скошеними кутами */}

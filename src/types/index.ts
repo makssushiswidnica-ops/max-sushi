@@ -5,6 +5,9 @@ export interface Nutrition {
   proteins: number; // г
   fats: number;     // г
   carbs: number;    // г
+  sku?: string;
+  discountPercent?: number;
+  zoom?: number;
 }
 
 export type ProductBadge = 'hit' | 'new' | 'spicy' | 'veg' | 'sale';
@@ -22,6 +25,7 @@ export interface LocalizedArray {
 export interface Product {
   id: string;
   sku?: string; // Артикул / номер страви на касі (PLU)
+  discountPercent?: 0 | 10 | 15; // Знижка 0, 10 або 15%
   name: LocalizedString;
   description: LocalizedString;
   price: number; // в PLN / грн
@@ -47,6 +51,22 @@ export interface Category {
 export interface CartItem {
   product: Product;
   quantity: number;
+  isGift?: boolean;
+}
+
+export type DeliveryZoneId = 'city' | 'suburb_5km' | 'suburb_10km';
+
+export interface StoreSettings {
+  cityFreeThreshold: number;
+  cityStandardFee: number;
+  suburb5kmFee: number;
+  suburb10kmFee: number;
+  giftPromo: {
+    enabled: boolean;
+    minAmount: number;
+    productId: string;
+  };
+  soundNotificationsEnabled: boolean;
 }
 
 export type DeliveryMethod = 'delivery' | 'pickup';
@@ -54,6 +74,7 @@ export type PaymentMethod = 'cash' | 'card_courier' | 'blik_online';
 export type OrderTimingType = 'asap' | 'scheduled';
 
 export interface OrderAddress {
+  zone?: DeliveryZoneId;
   street: string;
   house: string;
   apartment?: string;

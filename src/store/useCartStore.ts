@@ -1,7 +1,55 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { CartItem, Product, Category } from '@/types';
+import { CartItem, Product, Category, DeliveryZoneId } from '@/types';
 import { brandTheme } from '@/config/theme';
+import { getEffectivePrice } from '@/lib/utils';
+import { useSettingsStore } from '@/store/useSettingsStore';
+import { products as defaultProducts } from '@/lib/mockData';
+
+function syncGiftItem(items: CartItem[], menuProducts: Product[]): CartItem[] {
+  try {
+    const settings = useSettingsStore.getState();
+    const rawItems = items.filter((i) => !i.isGift);
+    const subtotal = rawItems.reduce(
+      (sum, item) => sum + getEffectivePrice(item.product) * item.quantity,
+      0
+    );
+
+    if (
+      settings.giftPromo?.enabled &&
+      subtotal >= settings.giftPromo.minAmount &&
+      rawItems.length > 0
+    ) {
+      const giftProdId = settings.giftPromo.productId || 'maki-ogorek';
+      const allDishes = menuProducts && menuProducts.length > 0 ? menuProducts : defaultProducts;
+      const found =
+        allDishes.find((p) => p.id === giftProdId) ||
+        defaultProducts.find((p) => p.id === giftProdId) ||
+        allDishes[0];
+
+      if (found) {
+        const giftItem: CartItem = {
+          product: { ...found, price: 0 },
+          quantity: 1,
+          isGift: true,
+        };
+        const existingGiftIdx = items.findIndex((i) => i.isGift);
+        if (existingGiftIdx > -1) {
+          if (items[existingGiftIdx].product.id === found.id) {
+            return items;
+          }
+          const next = [...rawItems];
+          next.push(giftItem);
+          return next;
+        }
+        return [...rawItems, giftItem];
+      }
+    }
+    return rawItems;
+  } catch {
+    return items;
+  }
+}
 
 interface CartState {
   items: CartItem[];
@@ -41,8 +89,8 @@ interface CartState {
   // Обчислення
   getTotalCount: () => number;
   getSubtotal: () => number;
-  getDeliveryFee: (isPickup?: boolean) => number;
-  getTotal: (isPickup?: boolean) => number;
+  getDeliveryFee: (isPickup?: boolean, zone?: DeliveryZoneId) => number;
+  getTotal: (isPickup?: boolean, zone?: DeliveryZoneId) => number;
   getRemainingForFreeDelivery: () => number;
 }
 
@@ -53,7 +101,12 @@ export const useCartStore = create<CartState>()(
       isOpen: false,
       selectedProduct: null,
       menuProducts: [],
-      setMenuProducts: (products: Product[]) => set({ menuProducts: products }),
+      setMenuProducts: (products: Product[]) => {
+        set((state) => ({
+          menuProducts: products,
+          items: syncGiftItem(state.items, products),
+        }));
+      },
       menuCategories: [],
       setMenuCategories: (categories: Category[]) => set({ menuCategories: categories }),
       isCheckoutOpen: false,
@@ -67,41 +120,44 @@ export const useCartStore = create<CartState>()(
 
       addItem: (product: Product, quantity = 1) => {
         set((state) => {
-          const existingIndex = state.items.findIndex(
+          const rawItems = state.items.filter((i) => !i.isGift);
+          const existingIndex = rawItems.findIndex(
             (item) => item.product.id === product.id
           );
 
+          let updated: CartItem[];
           if (existingIndex > -1) {
-            const updatedItems = [...state.items];
-            updatedItems[existingIndex].quantity += quantity;
-            return { items: updatedItems };
+            updated = [...rawItems];
+            updated[existingIndex].quantity += quantity;
+          } else {
+            updated = [...rawItems, { product, quantity }];
           }
 
-          return {
-            items: [...state.items, { product, quantity }],
-          };
+          return { items: syncGiftItem(updated, state.menuProducts) };
         });
       },
 
       removeItem: (productId: string) => {
-        set((state) => ({
-          items: state.items.filter((item) => item.product.id !== productId),
-        }));
+        set((state) => {
+          const updated = state.items.filter(
+            (item) => item.product.id !== productId && !item.isGift
+          );
+          return { items: syncGiftItem(updated, state.menuProducts) };
+        });
       },
 
       updateQuantity: (productId: string, quantity: number) => {
         set((state) => {
+          const rawItems = state.items.filter((i) => !i.isGift);
+          let updated: CartItem[];
           if (quantity <= 0) {
-            return {
-              items: state.items.filter((item) => item.product.id !== productId),
-            };
-          }
-
-          return {
-            items: state.items.map((item) =>
+            updated = rawItems.filter((item) => item.product.id !== productId);
+          } else {
+            updated = rawItems.map((item) =>
               item.product.id === productId ? { ...item, quantity } : item
-            ),
-          };
+            );
+          }
+          return { items: syncGiftItem(updated, state.menuProducts) };
         });
       },
 
@@ -136,24 +192,22 @@ export const useCartStore = create<CartState>()(
 
       getSubtotal: () => {
         const { items } = get();
-        return items.reduce(
-          (sum, item) => sum + item.product.price * item.quantity,
-          0
-        );
+        return items.reduce((sum, item) => {
+          if (item.isGift) return sum;
+          return sum + getEffectivePrice(item.product) * item.quantity;
+        }, 0);
       },
 
-      getDeliveryFee: (isPickup = false) => {
+      getDeliveryFee: (isPickup = false, zone: DeliveryZoneId = 'city') => {
         if (isPickup) return 0;
         const subtotal = get().getSubtotal();
-        if (subtotal >= brandTheme.delivery.freeDeliveryThreshold || subtotal === 0) {
-          return 0;
-        }
-        return brandTheme.delivery.deliveryFee;
+        const settings = useSettingsStore.getState();
+        return settings.getDeliveryFee(zone, subtotal, isPickup);
       },
 
-      getTotal: (isPickup = false) => {
+      getTotal: (isPickup = false, zone: DeliveryZoneId = 'city') => {
         const subtotal = get().getSubtotal();
-        const deliveryFee = get().getDeliveryFee(isPickup);
+        const deliveryFee = get().getDeliveryFee(isPickup, zone);
         if (isPickup) {
           // Знижка на самовивіз 5%
           const discounted = Math.round(subtotal * (1 - brandTheme.delivery.pickupDiscountPercent / 100));
@@ -164,9 +218,8 @@ export const useCartStore = create<CartState>()(
 
       getRemainingForFreeDelivery: () => {
         const subtotal = get().getSubtotal();
-        const threshold = brandTheme.delivery.freeDeliveryThreshold;
-        if (subtotal >= threshold) return 0;
-        return threshold - subtotal;
+        const settings = useSettingsStore.getState();
+        return settings.getRemainingForFreeCity(subtotal);
       },
     }),
     {
@@ -181,3 +234,11 @@ export const useCartStore = create<CartState>()(
     }
   )
 );
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('store-settings-updated', () => {
+    useCartStore.setState((state) => ({
+      items: syncGiftItem(state.items, state.menuProducts),
+    }));
+  });
+}
