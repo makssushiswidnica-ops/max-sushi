@@ -641,6 +641,8 @@ export const products: Product[] = [
     weight: 260,
     pieces: 8,
     categoryId: 'lux-rolki',
+    discountPercent: 15,
+    badge: 'sale',
     image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'ŁOSOŚ', 'SER ŚMIETANKOWY', 'AWOKADO', 'KAWIOR MASAGO'],
@@ -669,6 +671,8 @@ export const products: Product[] = [
     weight: 260,
     pieces: 8,
     categoryId: 'lux-rolki',
+    discountPercent: 15,
+    badge: 'sale',
     image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'SER ŚMIETANKOWY', 'TUŃCZYK', 'OGÓREK', 'SOS SRIRACHA MAYO'],
@@ -753,6 +757,8 @@ export const products: Product[] = [
     weight: 260,
     pieces: 8,
     categoryId: 'lux-rolki',
+    discountPercent: 15,
+    badge: 'sale',
     image: '',
     ingredients: {
       pl: ['NORI', 'RYŻ', 'KREWETKI', 'MANGO', 'SOS MANGO JALAPENO', 'SER ŚMIETANKOWY'],

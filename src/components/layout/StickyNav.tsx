@@ -15,6 +15,7 @@ interface StickyNavProps {
   selectedCategory?: string;
   onSelectCategory?: (categoryId: string) => void;
   categoriesList?: Category[];
+  promoCount?: number;
 }
 
 export function StickyNav({
@@ -23,10 +24,13 @@ export function StickyNav({
   selectedCategory,
   onSelectCategory,
   categoriesList,
+  promoCount,
 }: StickyNavProps) {
   const categoriesData = categoriesList && categoriesList.length > 0 ? categoriesList : categories;
   const { locale } = useI18n();
   const setIsMenuOpenStore = useCartStore((s) => s.setIsMenuOpen);
+  const menuProducts = useCartStore((s) => s.menuProducts);
+  const productsData = menuProducts.length > 0 ? menuProducts : products;
   const [internalCategory, setInternalCategory] = useState<string>(categoriesData[0]?.id || 'mini-maki');
   const activeCategory = selectedCategory !== undefined ? selectedCategory : internalCategory;
   const setActiveCategory = (catId: string) => {
@@ -66,10 +70,14 @@ export function StickyNav({
   const categoryCounts = React.useMemo(() => {
     const counts: Record<string, number> = {};
     for (const cat of categoriesData) {
-      counts[cat.id] = products.filter((p) => p.categoryId === cat.id).length;
+      if (cat.id === 'promocje') {
+        counts[cat.id] = promoCount ?? 0;
+      } else {
+        counts[cat.id] = productsData.filter((p) => p.categoryId === cat.id).length;
+      }
     }
     return counts;
-  }, [categoriesData]);
+  }, [categoriesData, productsData, promoCount]);
 
   // Відкриття та фокус на інпуті
   const toggleSearch = () => {
@@ -159,8 +167,8 @@ export function StickyNav({
       const isDesktop = window.innerWidth >= 640;
       const scrollPosition = window.scrollY + (isDesktop ? 210 : 150);
 
-      for (let i = categories.length - 1; i >= 0; i--) {
-        const cat = categories[i];
+      for (let i = categoriesData.length - 1; i >= 0; i--) {
+        const cat = categoriesData[i];
         const el = document.getElementById(`category-${cat.id}`);
         if (el) {
           const top = el.offsetTop;
@@ -350,6 +358,7 @@ export function StickyNav({
                 <div className="flex flex-col gap-1">
                   {categoriesData.map((cat) => {
                     const isActive = cat.id === activeCategory;
+                    const isPromo = cat.id === 'promocje';
                     const count = categoryCounts[cat.id] || 0;
                     return (
                       <button
@@ -362,13 +371,19 @@ export function StickyNav({
                           'w-full flex items-center justify-between gap-2 px-3 py-2 text-left transition-all cursor-pointer group select-none',
                           isActive
                             ? 'bg-gradient-to-r from-[#e50914]/25 to-[#e50914]/10 border-l-2 border-[#e50914] text-white font-extrabold shadow-sm'
-                            : 'text-zinc-300 hover:text-white hover:bg-white/10'
+                            : isPromo
+                              ? 'bg-gradient-to-r from-red-950/40 to-transparent border-l-2 border-[#e50914] text-red-200 hover:text-white hover:from-red-900/50'
+                              : 'text-zinc-300 hover:text-white hover:bg-white/10'
                         )}
                       >
                         <span
                           className={cn(
-                            'truncate shrink-0 transition-all',
-                            isActive ? 'text-sm sm:text-base font-extrabold text-white' : 'text-xs sm:text-sm font-semibold'
+                            'truncate shrink-0 transition-all flex items-center gap-1.5',
+                            isActive 
+                              ? 'text-sm sm:text-base font-extrabold text-white' 
+                              : isPromo
+                                ? 'text-xs sm:text-sm font-black text-[#ff4d58]'
+                                : 'text-xs sm:text-sm font-semibold'
                           )}
                         >
                           {cat.name[locale]}
@@ -386,7 +401,11 @@ export function StickyNav({
                         <span
                           className={cn(
                             'text-xs sm:text-sm font-bold tracking-tight shrink-0 transition-colors',
-                            isActive ? 'text-red-300 font-extrabold' : 'text-zinc-400 group-hover:text-zinc-200'
+                            isActive 
+                              ? 'text-red-300 font-extrabold' 
+                              : isPromo
+                                ? 'text-[#ff4d58] font-black'
+                                : 'text-zinc-400 group-hover:text-zinc-200'
                           )}
                         >
                           {count} {locale === 'pl' ? 'poz.' : 'поз.'}
@@ -407,6 +426,7 @@ export function StickyNav({
         <div className="hidden lg:flex flex-1 flex-wrap items-center justify-center gap-x-2 lg:gap-x-3.5 gap-y-1 sm:gap-y-1.5 py-1 px-1 min-w-0">
           {categoriesData.map((category) => {
             const isActive = category.id === activeCategory;
+            const isPromo = category.id === 'promocje';
             return (
               <button
                 key={category.id}
@@ -416,7 +436,9 @@ export function StickyNav({
                   'relative px-2.5 lg:px-3 py-1 text-xs lg:text-[13px] font-bold tracking-wide uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none flex items-center gap-1',
                   isActive
                     ? 'text-white font-black scale-105'
-                    : 'text-zinc-400 hover:text-white hover:scale-102'
+                    : isPromo
+                      ? 'text-[#ff4d58] hover:text-[#ff7880] font-black hover:scale-105 drop-shadow-[0_0_8px_rgba(229,9,20,0.4)]'
+                      : 'text-zinc-400 hover:text-white hover:scale-102'
                 )}
               >
                 <span>{category.name[locale]}</span>
@@ -445,6 +467,7 @@ export function StickyNav({
           >
             {cyclicItems.map(({ category, offset }) => {
               const isCenter = offset === 0;
+              const isPromo = category.id === 'promocje';
               return (
                 <button
                   key={`${category.id}-${offset}`}
@@ -454,7 +477,9 @@ export function StickyNav({
                     'relative px-3 py-1.5 text-sm font-bold whitespace-nowrap transition-all duration-300 ease-out cursor-pointer shrink-0 select-none active:scale-95',
                     isCenter
                       ? 'text-white scale-105'
-                      : 'text-zinc-500 opacity-60 scale-100'
+                      : isPromo
+                        ? 'text-[#ff4d58] opacity-95 scale-100 font-black'
+                        : 'text-zinc-500 opacity-60 scale-100'
                   )}
                 >
                   <span className="relative z-10 transition-colors duration-300">{category.name[locale]}</span>

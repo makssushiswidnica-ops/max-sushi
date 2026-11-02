@@ -8,6 +8,7 @@ import { Category, Product } from '@/types';
 import { StickyNav } from '@/components/layout/StickyNav';
 import { useI18n } from '@/lib/i18nContext';
 import { useCartStore } from '@/store/useCartStore';
+import { useSettingsStore } from '@/store/useSettingsStore';
 import { ProductCard } from '@/components/menu/ProductCard';
 import { CategorySection } from '@/components/menu/CategorySection';
 
@@ -20,6 +21,7 @@ export function MenuCatalog() {
   const { locale } = useI18n();
   const setMenuProducts = useCartStore((s) => s.setMenuProducts);
   const setMenuCategories = useCartStore((s) => s.setMenuCategories);
+  const giftPromo = useSettingsStore((s) => s.giftPromo);
 
   // Динамічний стан меню з Supabase (з надійним резервним fallback на mockData)
   const [categoriesList, setCategoriesList] = useState<Category[]>(defaultCategories);
@@ -47,20 +49,77 @@ export function MenuCatalog() {
     };
   }, [setMenuProducts, setMenuCategories]);
 
-  // За замовчуванням завжди відкривається перша категорія з каталогу (для 100% відповідності SSR та гідрації)
+  // Фільтрація та сортування страв для розділу промоцій:
+  // 1. Подарунковий рол першим (якщо акція увімкнена)
+  // 2. Страви зі скидками від більшої знижки до меншої
+  const promoProducts = useMemo(() => {
+    const result: Product[] = [];
+    const addedIds = new Set<string>();
+
+    if (giftPromo?.enabled && giftPromo.productId) {
+      const giftProd = productsList.find((p) => p.id === giftPromo.productId);
+      if (giftProd) {
+        result.push(giftProd);
+        addedIds.add(giftProd.id);
+      }
+    }
+
+    const discounted = productsList
+      .filter((p) => !addedIds.has(p.id) && (Boolean(p.discountPercent && p.discountPercent > 0) || p.badge === 'sale'))
+      .sort((a, b) => {
+        const discA = a.discountPercent || 0;
+        const discB = b.discountPercent || 0;
+        return discB - discA;
+      });
+
+    result.push(...discounted);
+    return result;
+  }, [productsList, giftPromo]);
+
+  const hasPromos = promoProducts.length > 0;
+
+  const promoCategory: Category = useMemo(
+    () => ({
+      id: 'promocje',
+      name: {
+        pl: 'Promocje',
+        uk: 'Промоції',
+      },
+      icon: 'Gift',
+      image: '',
+    }),
+    []
+  );
+
+  // Об'єднаний список категорій: якщо є активні промоції, додаємо категорію в кінець списку
+  const categoriesWithPromo = useMemo(() => {
+    if (hasPromos) {
+      return [...categoriesList, promoCategory];
+    }
+    return categoriesList;
+  }, [hasPromos, promoCategory, categoriesList]);
+
+  // За замовчуванням завжди відкривається перша звичайна категорія з каталогу
   const [selectedCategory, setSelectedCategory] = useState<string>(
     categoriesList[0]?.id || 'mini-maki'
   );
+
+  // Якщо обрано промоції, але акції закінчилися — автоматично перемикаємо на першу звичайну категорію
+  useEffect(() => {
+    if (selectedCategory === 'promocje' && !hasPromos) {
+      setSelectedCategory(categoriesList[0]?.id || 'mini-maki');
+    }
+  }, [selectedCategory, hasPromos, categoriesList]);
 
   // Відновлюємо збережену користувачем категорію виключно після завершення гідрації на клієнті
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem('maks_active_category');
-      if (saved && saved !== selectedCategory && categoriesList.some((c) => c.id === saved)) {
+      if (saved && saved !== selectedCategory && categoriesWithPromo.some((c) => c.id === saved)) {
         setSelectedCategory(saved);
       }
     } catch {}
-  }, [categoriesList]);
+  }, [categoriesWithPromo]);
 
   // Запам'ятовуємо обрану категорію при переходах по сайту, кошику чи модалках
   useEffect(() => {
@@ -75,12 +134,12 @@ export function MenuCatalog() {
   const catalogContentRef = useRef<HTMLDivElement>(null);
 
   // Знаходимо поточну категорію та сусідні для кнопок пагінації та свайпів (повна циклічність)
-  const totalCats = categoriesList.length;
-  const currentIndex = categoriesList.findIndex((c) => c.id === selectedCategory);
+  const totalCats = categoriesWithPromo.length;
+  const currentIndex = categoriesWithPromo.findIndex((c) => c.id === selectedCategory);
   const validCatIndex = currentIndex >= 0 ? currentIndex : 0;
-  const activeCategoryObj = categoriesList[validCatIndex] || categoriesList[0];
-  const prevCategory = totalCats > 1 ? categoriesList[(validCatIndex - 1 + totalCats) % totalCats] : null;
-  const nextCategory = totalCats > 1 ? categoriesList[(validCatIndex + 1) % totalCats] : null;
+  const activeCategoryObj = categoriesWithPromo[validCatIndex] || categoriesWithPromo[0];
+  const prevCategory = totalCats > 1 ? categoriesWithPromo[(validCatIndex - 1 + totalCats) % totalCats] : null;
+  const nextCategory = totalCats > 1 ? categoriesWithPromo[(validCatIndex + 1) % totalCats] : null;
 
   // Обробка жестів свайпу вліво/вправо на екрані для перемикання категорій
   const touchStartX = useRef<number | null>(null);
@@ -180,6 +239,18 @@ export function MenuCatalog() {
     return () => window.removeEventListener('reset-to-initial-catalog', handleReset);
   }, [categoriesList]);
 
+  // Слухач прямого вибору категорії меню ззовні (наприклад, клік на банер акції в шапці)
+  useEffect(() => {
+    const handleSelectMenuCategory = (e: Event) => {
+      const customEvent = e as CustomEvent<{ categoryId: string }>;
+      if (customEvent.detail?.categoryId) {
+        handleSelectCategory(customEvent.detail.categoryId);
+      }
+    };
+    window.addEventListener('select-menu-category', handleSelectMenuCategory);
+    return () => window.removeEventListener('select-menu-category', handleSelectMenuCategory);
+  }, [handleSelectCategory]);
+
   // Синхронізація активної категорії з модалки перегляду страв (якщо гортав страви і закрив)
   useEffect(() => {
     const handleSync = (e: Event) => {
@@ -228,8 +299,11 @@ export function MenuCatalog() {
 
   const isFiltering = searchQuery.trim().length > 0;
   const currentCategoryProducts = useMemo(() => {
+    if (selectedCategory === 'promocje') {
+      return promoProducts;
+    }
     return productsList.filter((p) => p.categoryId === selectedCategory);
-  }, [selectedCategory, productsList]);
+  }, [selectedCategory, promoProducts, productsList]);
 
   return (
     <div>
@@ -239,7 +313,8 @@ export function MenuCatalog() {
         onSearchChange={handleSearchChange}
         selectedCategory={selectedCategory}
         onSelectCategory={handleSelectCategory}
-        categoriesList={categoriesList}
+        categoriesList={categoriesWithPromo}
+        promoCount={promoProducts.length}
       />
 
       <div
@@ -301,10 +376,10 @@ export function MenuCatalog() {
               </button>
             </div>
 
-            {categoriesList.map((category) => {
-              const categoryProducts = productsList.filter(
-                (p) => p.categoryId === category.id
-              );
+            {categoriesWithPromo.map((category) => {
+              const categoryProducts = category.id === 'promocje'
+                ? promoProducts
+                : productsList.filter((p) => p.categoryId === category.id);
               return (
                 <div key={category.id} id={`category-${category.id}`}>
                   <CategorySection
@@ -381,10 +456,10 @@ export function MenuCatalog() {
                 </button>
 
                 {/* Номери сторінок категорій */}
-                {categoriesList.map((cat, idx) => {
+                {categoriesWithPromo.map((cat, idx) => {
                   const pageNum = idx + 1;
                   const isActive = cat.id === selectedCategory;
-                  const totalPages = categoriesList.length;
+                  const totalPages = categoriesWithPromo.length;
 
                   // Показуємо першу, останню, поточну та сусідні навколо поточної
                   const showPage =

@@ -352,7 +352,8 @@ export function Header() {
                   key="promo"
                   type="button"
                   onClick={() => {
-                    const el = document.getElementById('catalog') || document.getElementById('menu') || document.querySelector('[data-menu-section]');
+                    window.dispatchEvent(new CustomEvent('select-menu-category', { detail: { categoryId: 'promocje' } }));
+                    const el = document.getElementById('catalog-active-category') || document.getElementById('catalog') || document.getElementById('menu');
                     if (el) el.scrollIntoView({ behavior: 'smooth' });
                   }}
                   className="flex items-center gap-1.5 text-left min-w-0 truncate animate-in fade-in duration-300 cursor-pointer group"
