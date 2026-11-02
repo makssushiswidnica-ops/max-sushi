@@ -4678,17 +4678,32 @@ export default function AdminPage() {
                 {/* Вміст вкладки PL */}
                 {activeLangTab === 'pl' && (
                   <div className="space-y-3">
-                    <div>
-                      <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5">
-                        Назва *
-                      </label>
-                      <input
-                        type="text"
-                        value={formNamePl}
-                        onChange={(e) => setFormNamePl(e.target.value)}
-                        placeholder="np. Philadelphia z Łososiem"
-                        className="w-full bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-3.5 py-2 text-sm text-white focus:outline-none"
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                      <div className="sm:col-span-3">
+                        <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5 whitespace-nowrap">
+                          Назва *
+                        </label>
+                        <input
+                          type="text"
+                          value={formNamePl}
+                          onChange={(e) => setFormNamePl(e.target.value)}
+                          placeholder="np. Philadelphia z Łososiem"
+                          className="w-full bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-3.5 py-2 text-sm text-white focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-1">
+                        <label className="block text-xs font-bold text-amber-300 uppercase tracking-wider mb-1.5 whitespace-nowrap">
+                          Код каси (PLU)
+                        </label>
+                        <input
+                          type="text"
+                          value={formSku}
+                          onChange={(e) => setFormSku(e.target.value.replace(/[^\w\d-]/g, '').slice(0, 10))}
+                          placeholder="напр. 97"
+                          className="w-full bg-[#1b1b2a] border border-amber-400/40 focus:border-amber-400 rounded-lg px-3 py-2 text-sm text-amber-300 font-mono font-bold focus:outline-none"
+                        />
+                      </div>
                     </div>
 
                     <div>
@@ -4722,17 +4737,32 @@ export default function AdminPage() {
                 {/* Вміст вкладки UK */}
                 {activeLangTab === 'uk' && (
                   <div className="space-y-3">
-                    <div>
-                      <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5">
-                        Назва *
-                      </label>
-                      <input
-                        type="text"
-                        value={formNameUk}
-                        onChange={(e) => setFormNameUk(e.target.value)}
-                        placeholder="напр. Філадельфія з Лососем (якщо порожньо — перекладеться автоматично)"
-                        className="w-full bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-3.5 py-2 text-sm text-white focus:outline-none"
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                      <div className="sm:col-span-3">
+                        <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5 whitespace-nowrap">
+                          Назва *
+                        </label>
+                        <input
+                          type="text"
+                          value={formNameUk}
+                          onChange={(e) => setFormNameUk(e.target.value)}
+                          placeholder="напр. Філадельфія з Лососем (якщо порожньо — перекладеться автоматично)"
+                          className="w-full bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-3.5 py-2 text-sm text-white focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-1">
+                        <label className="block text-xs font-bold text-amber-300 uppercase tracking-wider mb-1.5 whitespace-nowrap">
+                          Код каси (PLU)
+                        </label>
+                        <input
+                          type="text"
+                          value={formSku}
+                          onChange={(e) => setFormSku(e.target.value.replace(/[^\w\d-]/g, '').slice(0, 10))}
+                          placeholder="напр. 97"
+                          className="w-full bg-[#1b1b2a] border border-amber-400/40 focus:border-amber-400 rounded-lg px-3 py-2 text-sm text-amber-300 font-mono font-bold focus:outline-none"
+                        />
+                      </div>
                     </div>
 
                     <div>
@@ -4764,24 +4794,11 @@ export default function AdminPage() {
                 )}
               </div>
 
-              {/* Блок параметрів страви (Код на касі, ціна, вага, шматочки, бейдж) */}
+              {/* Блок параметрів страви (Ціна, вага, шматочки, бейдж) */}
               <div className="bg-[#141420] border border-white/10 rounded-xl p-3 sm:p-4">
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-amber-300 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                      <span>Код каси (PLU)</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formSku}
-                      onChange={(e) => setFormSku(e.target.value.replace(/[^\w\d-]/g, '').slice(0, 10))}
-                      placeholder="напр. 97"
-                      className="w-full bg-[#1b1b2a] border border-amber-400/40 focus:border-amber-400 rounded-lg px-3 py-2 text-sm text-amber-300 font-mono font-bold focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5 whitespace-nowrap">
                       Ціна (PLN) *
                     </label>
                     <input
@@ -4795,7 +4812,7 @@ export default function AdminPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5 whitespace-nowrap">
                       Вага (грами)
                     </label>
                     <input
@@ -4807,7 +4824,7 @@ export default function AdminPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5 whitespace-nowrap">
                       Шматочки (шт)
                     </label>
                     <input
@@ -4820,7 +4837,7 @@ export default function AdminPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5 whitespace-nowrap">
                       Бейдж
                     </label>
                     <select
