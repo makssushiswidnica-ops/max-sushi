@@ -4641,20 +4641,16 @@ export default function AdminPage() {
                   <div className="space-y-2.5">
                     {/* Поріг безкоштовної доставки по місту */}
                     <div className="p-3 bg-[#141420] border border-white/5 rounded-xl flex items-center justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs sm:text-sm font-bold text-white">
-                            Безкоштовна доставка
-                          </span>
-                          <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
-                            Свідниця
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-zinc-400 mt-0.5 leading-tight">
-                          Сума замовлення по місту, від якої доставка безкоштовна (0 zł)
-                        </p>
+                      <div className="flex items-center gap-2 flex-wrap min-w-0">
+                        <span className="text-xs sm:text-sm font-bold text-white">
+                          Безкоштовна доставка
+                        </span>
+                        <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
+                          Свідниця
+                        </span>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-xs font-bold text-zinc-400 uppercase">від:</span>
                         <input
                           type="number"
                           min="0"
@@ -4669,18 +4665,13 @@ export default function AdminPage() {
 
                     {/* Стандартна ціна по місту */}
                     <div className="p-3 bg-[#141420] border border-white/5 rounded-xl flex items-center justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs sm:text-sm font-bold text-white">
-                            Стандартна доставка
-                          </span>
-                          <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-white/10 text-zinc-300 border border-white/15 shrink-0">
-                            Свідниця
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-zinc-400 mt-0.5 leading-tight">
-                          Тариф по місту, якщо чек менший за поріг безкоштовної доставки
-                        </p>
+                      <div className="flex items-center gap-2 flex-wrap min-w-0">
+                        <span className="text-xs sm:text-sm font-bold text-white">
+                          Стандартна доставка
+                        </span>
+                        <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-white/10 text-zinc-300 border border-white/15 shrink-0">
+                          Свідниця
+                        </span>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <input
@@ -4697,18 +4688,13 @@ export default function AdminPage() {
 
                     {/* За місто до 10 км */}
                     <div className="p-3 bg-[#141420] border border-white/5 rounded-xl flex items-center justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs sm:text-sm font-bold text-white">
-                            За місто (до 10 км)
-                          </span>
-                          <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30 shrink-0">
-                            завжди платна
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-zinc-400 mt-0.5 leading-tight">
-                          Фіксований тариф доставки за місто (до 10 км). Далі ніж 10 км не доставляємо
-                        </p>
+                      <div className="flex items-center gap-2 flex-wrap min-w-0">
+                        <span className="text-xs sm:text-sm font-bold text-white">
+                          За місто (до 10 км)
+                        </span>
+                        <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30 shrink-0">
+                          завжди платна
+                        </span>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <input
