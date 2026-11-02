@@ -210,35 +210,22 @@ export function CartDrawer() {
               </div>
             )}
 
-            {/* Статус-бар подарункового ролу */}
-            {giftPromo?.enabled && (
-              <div className={cn(
-                'px-3 py-2 rounded-xl flex items-center justify-between gap-2.5 transition-colors',
-                hasGiftInCart
-                  ? 'bg-emerald-950/30 text-emerald-300'
-                  : 'bg-[#1b1717] border border-red-500/20 text-zinc-300'
-              )}>
+            {/* Статус-бар подарункового ролу (показується тільки поки рол ще не додано) */}
+            {giftPromo?.enabled && !hasGiftInCart && (
+              <div className="px-3 py-2 rounded-xl bg-[#1b1717] border border-red-500/20 text-zinc-300 flex items-center justify-between gap-2.5">
                 <div className="flex items-center gap-1.5 text-[11px] sm:text-xs shrink-0">
-                  <Gift className={cn('w-3.5 h-3.5 shrink-0', hasGiftInCart ? 'text-emerald-400' : 'text-[#e50914]')} />
-                  {hasGiftInCart ? (
-                    <span className="font-bold text-emerald-300">
-                      {locale === 'pl' ? 'Prezent: Rolka dodana gratis!' : 'Подарунок: Рол додано безкоштовно!'}
-                    </span>
-                  ) : (
-                    <span>
-                      <strong className="text-white font-bold">{remainingForGift} zł</strong>{' '}
-                      {locale === 'pl' ? 'do darmowej rolki w prezencie' : 'до подарункового ролу'}
-                    </span>
-                  )}
+                  <Gift className="w-3.5 h-3.5 shrink-0 text-[#e50914]" />
+                  <span>
+                    <strong className="text-white font-bold">{remainingForGift} zł</strong>{' '}
+                    {locale === 'pl' ? 'do darmowej rolki w prezencie' : 'до подарункового ролу'}
+                  </span>
                 </div>
-                {!hasGiftInCart && (
-                  <div className="w-16 sm:w-24 shrink-0 h-1.5 rounded-full bg-zinc-800 overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-red-500 to-emerald-400 transition-all duration-300 rounded-full"
-                      style={{ width: `${giftProgress}%` }}
-                    />
-                  </div>
-                )}
+                <div className="w-16 sm:w-24 shrink-0 h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-red-500 to-emerald-400 transition-all duration-300 rounded-full"
+                    style={{ width: `${giftProgress}%` }}
+                  />
+                </div>
               </div>
             )}
 
