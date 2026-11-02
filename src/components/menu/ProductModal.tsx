@@ -15,9 +15,11 @@ import {
   ChevronLeft,
   ChevronRight,
   UtensilsCrossed,
+  Gift,
 } from 'lucide-react';
 import { ProductBadge } from '@/components/menu/ProductBadge';
 import { getProductZoom } from '@/lib/imageZoom';
+import { useSettingsStore } from '@/store/useSettingsStore';
 
 export function ProductModal() {
   const { locale, t } = useI18n();
@@ -28,6 +30,8 @@ export function ProductModal() {
   const menuCategories = useCartStore((s) => s.menuCategories);
   const setMenuCategories = useCartStore((s) => s.setMenuCategories);
   const addItem = useCartStore((s) => s.addItem);
+  const giftPromo = useSettingsStore((s) => s.giftPromo);
+  const isGiftProduct = giftPromo?.enabled && selectedProduct && giftPromo.productId === selectedProduct.id;
 
   const [modalQuantity, setModalQuantity] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
@@ -308,8 +312,18 @@ export function ProductModal() {
                   </button>
                 </div>
 
-                {/* Маркетинговий бейдж (ВЕГАН, ХІТ тощо) або знижка у лівому нижньому кутку фото */}
+                {/* Маркетинговий бейдж (ВЕГАН, ХІТ тощо) або знижка / подарунок у лівому нижньому кутку фото */}
                 <div className="absolute bottom-3 left-3 z-20 pointer-events-none flex flex-col gap-1 items-start">
+                  {isGiftProduct && (
+                    <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-gradient-to-r from-amber-500 via-rose-500 to-[#e50914] text-white border border-amber-300/40 shadow-lg shadow-amber-950/80 select-none animate-pulse">
+                      <Gift className="w-3 h-3 text-amber-200 shrink-0" />
+                      <span>
+                        {locale === 'pl' 
+                          ? `Za darmo od ${giftPromo.minAmount} zł` 
+                          : `Безкоштовно від ${giftPromo.minAmount} zł`}
+                      </span>
+                    </span>
+                  )}
                   {selectedProduct.discountPercent && selectedProduct.discountPercent > 0 ? (
                     <span className="inline-flex items-center text-[10px] sm:text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#e50914] text-white border border-red-400 shadow-md shadow-red-950/80 select-none">
                       -{selectedProduct.discountPercent}%

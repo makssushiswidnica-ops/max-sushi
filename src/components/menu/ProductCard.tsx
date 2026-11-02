@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Minus, Check, UtensilsCrossed } from 'lucide-react';
+import { Plus, Minus, Check, UtensilsCrossed, Gift } from 'lucide-react';
 import { Product } from '@/types';
 import { ProductBadge } from '@/components/menu/ProductBadge';
 import { getProductZoom } from '@/lib/imageZoom';
 import { useCartStore } from '@/store/useCartStore';
+import { useSettingsStore } from '@/store/useSettingsStore';
 import { useI18n } from '@/lib/i18nContext';
 import { getEffectivePrice } from '@/lib/utils';
 
@@ -28,6 +29,8 @@ export function ProductCard({ product }: ProductCardProps) {
   const activeCardId = useCartStore((s) => s.activeCardId);
   const setActiveCardId = useCartStore((s) => s.setActiveCardId);
   const isMenuOpen = useCartStore((s) => s.isMenuOpen);
+  const giftPromo = useSettingsStore((s) => s.giftPromo);
+  const isGiftProduct = mounted && giftPromo?.enabled && giftPromo.productId === product.id;
 
   const cartItem = mounted ? items.find((item) => item.product.id === product.id) : undefined;
   const quantity = cartItem?.quantity || 0;
@@ -96,8 +99,18 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* Просте прямокутне зображення страви з гострими кутами та м'яким студійним світлом */}
         {!isDodatki ? (
           <div className="relative w-full aspect-[4/3] overflow-hidden bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.08)_0%,_#07070b_70%)] border border-white/10 group-hover:border-[#e50914]/50 flex items-center justify-center mb-3 transition-colors duration-300 shadow-md shadow-black/80 rounded-none">
-            {/* Маркетинговий бейдж (ВЕГАН, ХІТ тощо) або знижка */}
+            {/* Маркетинговий бейдж (ВЕГАН, ХІТ тощо) або знижка / подарунок */}
             <div className="absolute top-2 left-2 z-20 pointer-events-none flex flex-col gap-1 items-start">
+              {isGiftProduct && (
+                <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-gradient-to-r from-amber-500 via-rose-500 to-[#e50914] text-white border border-amber-300/40 shadow-lg shadow-amber-950/80 select-none animate-pulse">
+                  <Gift className="w-3 h-3 text-amber-200 shrink-0" />
+                  <span>
+                    {locale === 'pl' 
+                      ? `Za darmo od ${giftPromo.minAmount} zł` 
+                      : `Безкоштовно від ${giftPromo.minAmount} zł`}
+                  </span>
+                </span>
+              )}
               {product.discountPercent && product.discountPercent > 0 ? (
                 <span className="inline-flex items-center text-[10px] sm:text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#e50914] text-white border border-red-400 shadow-md shadow-red-950/80 select-none">
                   -{product.discountPercent}%

@@ -360,13 +360,22 @@ export function Header() {
                     <Gift className="w-2.5 h-2.5 animate-bounce" />
                   </span>
                   <span className="font-bold text-amber-300 group-hover:text-amber-200 transition-colors truncate">
-                    {giftProduct 
-                      ? (locale === 'pl' 
-                          ? `${giftProduct.name.pl} gratis od ${giftPromo.minAmount} zł!` 
-                          : `${giftProduct.name.uk} безкоштовно від ${giftPromo.minAmount} zł!`)
-                      : (locale === 'pl' 
-                          ? `Rolka gratis przy zamówieniu od ${giftPromo.minAmount} zł!` 
-                          : `Рол безкоштовно при замовленні від ${giftPromo.minAmount} zł!`)}
+                    {/* На телефоні: короткий напис, що гарантовано поміщається в 1 рядок */}
+                    <span className="inline sm:hidden">
+                      {locale === 'pl' 
+                        ? `Rolka gratis od ${giftPromo.minAmount} zł!` 
+                        : `Рол безкоштовно від ${giftPromo.minAmount} zł!`}
+                    </span>
+                    {/* На планшетах та ПК: повна назва страви */}
+                    <span className="hidden sm:inline">
+                      {giftProduct 
+                        ? (locale === 'pl' 
+                            ? `${giftProduct.name.pl} gratis od ${giftPromo.minAmount} zł!` 
+                            : `${giftProduct.name.uk} безкоштовно від ${giftPromo.minAmount} zł!`)
+                        : (locale === 'pl' 
+                            ? `Rolka gratis od ${giftPromo.minAmount} zł!` 
+                            : `Рол безкоштовно від ${giftPromo.minAmount} zł!`)}
+                    </span>
                   </span>
                 </button>
               )}
