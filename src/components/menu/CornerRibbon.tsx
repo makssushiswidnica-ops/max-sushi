@@ -5,6 +5,7 @@ interface CornerRibbonProps {
   productId: string;
   discountPercent?: number;
   badge?: string;
+  isGift?: boolean | null;
   className?: string;
 }
 
@@ -12,19 +13,25 @@ export function CornerRibbon({
   productId,
   discountPercent,
   badge,
+  isGift,
   className = 'w-16 h-16 sm:w-20 sm:h-20',
 }: CornerRibbonProps) {
   const hasDiscount = Boolean(discountPercent && discountPercent > 0);
-  const activeBadge = !hasDiscount ? badge : undefined;
+  const activeBadge = !isGift && !hasDiscount ? badge : undefined;
 
-  if (!hasDiscount && !activeBadge) return null;
+  if (!isGift && !hasDiscount && !activeBadge) return null;
 
   let label = '';
   let gradStops = { from: '#e50914', via: '#85050b', to: '#0a0a10' };
   let strokeColor = '#e50914';
   let fontSize = '11';
 
-  if (hasDiscount) {
+  if (isGift) {
+    label = 'GRATIS';
+    fontSize = '9.5';
+    gradStops = { from: '#e50914', via: '#85050b', to: '#0a0a10' };
+    strokeColor = '#ff4d58';
+  } else if (hasDiscount) {
     label = `-${discountPercent}%`;
   } else if (activeBadge === 'veg') {
     label = 'VEGAN';

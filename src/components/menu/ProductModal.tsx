@@ -292,11 +292,12 @@ export function ProductModal() {
                   <X className="w-4 h-4 stroke-[2.5]" />
                 </button>
 
-                {/* Єдиний кутовий самурайський бейдж-стрічка з відкритим кутом і пріоритетом знижки (і на ПК, і на мобільному) */}
+                {/* Єдиний кутовий самурайський бейдж-стрічка з відкритим кутом і пріоритетом знижки / подарунка */}
                 <CornerRibbon
                   productId={selectedProduct.id}
                   discountPercent={selectedProduct.discountPercent}
                   badge={selectedProduct.badge}
+                  isGift={Boolean(isGiftProduct)}
                   className="w-18 h-18 sm:w-22 sm:h-22"
                 />
 
