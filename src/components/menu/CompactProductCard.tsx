@@ -105,15 +105,15 @@ export function CompactProductCard({ product }: CompactProductCardProps) {
           </div>
         </div>
 
-        {/* Нижня компактна панель: Ціна зліва + Швидка кнопка "+" справа */}
-        <div className="px-2 py-1.5 sm:px-2.5 sm:py-2 flex items-center justify-between gap-1 bg-[#0d0d12]">
-          <div className="text-left shrink-0">
+        {/* Нижня компактна панель: фіксована висота, ідеальне горизонтальне вирівнювання цін та кнопок */}
+        <div className="h-9 sm:h-10 px-2 sm:px-2.5 flex items-center justify-between gap-1 bg-[#0d0d12] border-t border-white/5 shrink-0">
+          <div className="text-left shrink-0 flex items-center">
             {hasDiscount ? (
-              <div className="flex items-baseline gap-1">
+              <div className="flex items-center gap-1.5">
                 <span className="text-[11px] sm:text-xs font-black text-[#ff4d58] tracking-tight leading-none">
                   {effectivePrice.toFixed(2).replace('.', ',')} zł
                 </span>
-                <span className="text-[8.5px] text-zinc-500 line-through leading-none">
+                <span className="text-[9px] sm:text-[9.5px] text-zinc-400 font-semibold line-through leading-none opacity-90">
                   {product.price.toFixed(2).replace('.', ',')}
                 </span>
               </div>
@@ -124,8 +124,8 @@ export function CompactProductCard({ product }: CompactProductCardProps) {
             )}
           </div>
 
-          {/* Швидка кнопка додавання в кошик без відкриття модалки */}
-          <div className="shrink-0">
+          {/* Швидка кнопка додавання в кошик без відкриття модалки: строго відцентрована по висоті */}
+          <div className="shrink-0 flex items-center justify-end">
             {quantity === 0 ? (
               <button
                 type="button"
@@ -157,7 +157,7 @@ export function CompactProductCard({ product }: CompactProductCardProps) {
                 >
                   <Minus className="w-2.5 h-2.5" />
                 </button>
-                <span className="text-[10px] sm:text-[10.5px] font-bold text-white px-1 font-mono min-w-[14px] text-center select-none">
+                <span className="text-[10px] sm:text-[10.5px] font-bold text-white px-1 font-mono min-w-[14px] text-center select-none leading-none">
                   {quantity}
                 </span>
                 <button
