@@ -10,17 +10,20 @@ import { useI18n } from '@/lib/i18nContext';
 import { useCartStore } from '@/store/useCartStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { ProductCard } from '@/components/menu/ProductCard';
+import { CompactProductCard } from '@/components/menu/CompactProductCard';
 import { CategorySection } from '@/components/menu/CategorySection';
 
 // Допоміжна функція для центрування сітки, коли позицій у категорії менше 4
 // Класи для адаптивної сітки страв із центруванням неповного останнього ряду
 const PRODUCT_CONTAINER_CLASS = 'flex flex-wrap justify-center gap-4 sm:gap-5';
 const PRODUCT_ITEM_CLASS = 'w-full sm:w-[calc(50%-10px)] lg:w-[calc((100%-40px)/3)] xl:w-[calc(25%-15px)] max-w-sm sm:max-w-none flex';
+const COMPACT_GRID_CLASS = 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-4';
 
 export function MenuCatalog() {
   const { locale } = useI18n();
   const setMenuProducts = useCartStore((s) => s.setMenuProducts);
   const setMenuCategories = useCartStore((s) => s.setMenuCategories);
+  const isCompactView = useCartStore((s) => s.isCompactView);
   const giftPromo = useSettingsStore((s) => s.giftPromo);
 
   // Динамічний стан меню з Supabase (з надійним резервним fallback на mockData)
@@ -375,6 +378,14 @@ export function MenuCatalog() {
                   {locale === 'pl' ? 'Wyczyść wyszukiwanie' : 'Скинути пошук'}
                 </button>
               </div>
+            ) : isCompactView ? (
+              <div className={COMPACT_GRID_CLASS}>
+                {filteredProducts.map((product) => (
+                  <div key={product.id} id={`product-card-${product.id}`} className="h-full">
+                    <CompactProductCard product={product} />
+                  </div>
+                ))}
+              </div>
             ) : (
               <div className={PRODUCT_CONTAINER_CLASS}>
                 {filteredProducts.map((product) => (
@@ -448,14 +459,24 @@ export function MenuCatalog() {
               </div>
             </div>
 
-            {/* Сітка товарів вибраної категорії: неповні ряди автоматично центруються */}
-            <div className={PRODUCT_CONTAINER_CLASS}>
-              {currentCategoryProducts.map((product) => (
-                <div key={product.id} id={`product-card-${product.id}`} className={PRODUCT_ITEM_CLASS}>
-                  <ProductCard product={product} />
-                </div>
-              ))}
-            </div>
+            {/* Сітка товарів вибраної категорії: компактна сітка або стандартні великі картки */}
+            {isCompactView ? (
+              <div className={COMPACT_GRID_CLASS}>
+                {currentCategoryProducts.map((product) => (
+                  <div key={product.id} id={`product-card-${product.id}`} className="h-full">
+                    <CompactProductCard product={product} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className={PRODUCT_CONTAINER_CLASS}>
+                {currentCategoryProducts.map((product) => (
+                  <div key={product.id} id={`product-card-${product.id}`} className={PRODUCT_ITEM_CLASS}>
+                    <ProductCard product={product} />
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Блок переходу: Кнопка "Переглянути все меню" та номери сторінок категорій */}
             <div className="mt-12 pt-6 border-t border-white/10 flex flex-col items-center gap-5">

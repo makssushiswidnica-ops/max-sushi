@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, LayoutGrid, ChevronDown, Check, Search, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LayoutGrid, ChevronDown, Check, Search, X, Grid2X2, Rows2 } from 'lucide-react';
 import { categories, products } from '@/lib/mockData';
 import { useI18n } from '@/lib/i18nContext';
 import { useCartStore } from '@/store/useCartStore';
@@ -29,6 +29,8 @@ export function StickyNav({
   const categoriesData = categoriesList && categoriesList.length > 0 ? categoriesList : categories;
   const { locale } = useI18n();
   const setIsMenuOpenStore = useCartStore((s) => s.setIsMenuOpen);
+  const isCompactView = useCartStore((s) => s.isCompactView);
+  const toggleCompactView = useCartStore((s) => s.toggleCompactView);
   const menuProducts = useCartStore((s) => s.menuProducts);
   const productsData = menuProducts.length > 0 ? menuProducts : products;
   const [internalCategory, setInternalCategory] = useState<string>(categoriesData[0]?.id || 'mini-maki');
@@ -580,19 +582,42 @@ export function StickyNav({
               )}
             </div>
 
-            {/* Компактна кнопка пошуку: точно така ж ширина й самурайський клин, як у кнопки меню зліва */}
+            {/* Кнопка перемикання між компактним (2 колонки) та стандартним (1 колонка) виглядом меню */}
             {!isSearchOpen && (
               <button
                 type="button"
-                onClick={toggleSearch}
-                aria-label="Пошук у меню"
-                title={locale === 'pl' ? 'Szukaj w menu' : 'Пошук у меню'}
+                onClick={toggleCompactView}
+                aria-label={isCompactView 
+                  ? (locale === 'pl' ? 'Widok standardowy' : 'Стандартний вигляд')
+                  : (locale === 'pl' ? 'Widok kompaktowy' : 'Компактний вигляд')}
+                title={isCompactView 
+                  ? (locale === 'pl' ? 'Przełącz na widok standardowy (1 kolumna)' : 'Перемкнути на стандартний вигляд (1 колонка)')
+                  : (locale === 'pl' ? 'Przełącz na widok kompaktowy (2 kolumny)' : 'Перемкнути на компактний вигляд (2 колонки)')}
                 style={{
                   clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
                 }}
-                className="flex items-center justify-center w-[96px] sm:w-[116px] min-h-[44px] bg-[#18181f] hover:bg-[#22222b] text-zinc-300 hover:text-white border border-white/15 hover:border-[#e50914] transition-all cursor-pointer shadow-sm group select-none active:scale-95 shrink-0"
+                className={cn(
+                  "flex items-center justify-center gap-1.5 sm:gap-2 w-[96px] sm:w-[116px] min-h-[44px] border transition-all cursor-pointer shadow-sm group select-none active:scale-95 shrink-0",
+                  isCompactView
+                    ? "bg-[#1f1618] hover:bg-[#2a1a1e] text-[#ff4d58] border-[#e50914]/60 shadow-[0_0_12px_rgba(229,9,20,0.25)]"
+                    : "bg-[#18181f] hover:bg-[#22222b] text-zinc-300 hover:text-white border-white/15 hover:border-[#e50914]"
+                )}
               >
-                <Search className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-[#e50914] group-hover:scale-110 transition-transform" />
+                {isCompactView ? (
+                  <>
+                    <Rows2 className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-[#ff4d58] group-hover:scale-110 transition-transform" />
+                    <span className="text-xs sm:text-sm font-black tracking-wide text-[#ff4d58]">
+                      {locale === 'pl' ? 'Duże' : 'Великі'}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Grid2X2 className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-[#e50914] group-hover:scale-110 transition-transform" />
+                    <span className="text-xs sm:text-sm font-black tracking-wide text-zinc-200 group-hover:text-white">
+                      {locale === 'pl' ? 'Siatka' : 'Сітка'}
+                    </span>
+                  </>
+                )}
               </button>
             )}
           </div>

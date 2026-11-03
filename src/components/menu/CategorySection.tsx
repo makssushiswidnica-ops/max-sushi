@@ -3,6 +3,8 @@
 import React from 'react';
 import { Category, Product } from '@/types';
 import { ProductCard } from '@/components/menu/ProductCard';
+import { CompactProductCard } from '@/components/menu/CompactProductCard';
+import { useCartStore } from '@/store/useCartStore';
 import { useI18n } from '@/lib/i18nContext';
 
 interface CategorySectionProps {
@@ -12,6 +14,7 @@ interface CategorySectionProps {
 
 export function CategorySection({ category, products }: CategorySectionProps) {
   const { locale } = useI18n();
+  const isCompactView = useCartStore((s) => s.isCompactView);
 
   if (products.length === 0) return null;
 
@@ -35,17 +38,27 @@ export function CategorySection({ category, products }: CategorySectionProps) {
         </span>
       </div>
 
-      {/* Сітка меню: неповні ряди автоматично центруються посередині */}
-      <div className="flex flex-wrap justify-center gap-4 sm:gap-5">
-        {products.map((product) => (
-          <div
-            key={product.id}
-            className="w-full sm:w-[calc(50%-10px)] lg:w-[calc((100%-40px)/3)] xl:w-[calc(25%-15px)] max-w-sm sm:max-w-none flex"
-          >
-            <ProductCard product={product} />
-          </div>
-        ))}
-      </div>
+      {/* Сітка меню: компактна або стандартна */}
+      {isCompactView ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-4">
+          {products.map((product) => (
+            <div key={product.id} className="h-full">
+              <CompactProductCard product={product} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-wrap justify-center gap-4 sm:gap-5">
+          {products.map((product) => (
+            <div
+              key={product.id}
+              className="w-full sm:w-[calc(50%-10px)] lg:w-[calc((100%-40px)/3)] xl:w-[calc(25%-15px)] max-w-sm sm:max-w-none flex"
+            >
+              <ProductCard product={product} />
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

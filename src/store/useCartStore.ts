@@ -86,6 +86,11 @@ interface CartState {
   prepWaitTimeMinutes: number;
   setPrepWaitTimeMinutes: (minutes: number) => void;
 
+  // Компактний вигляд меню (2 колонки на телефоні)
+  isCompactView: boolean;
+  setIsCompactView: (compact: boolean) => void;
+  toggleCompactView: () => void;
+
   // Обчислення
   getTotalCount: () => number;
   getSubtotal: () => number;
@@ -117,6 +122,9 @@ export const useCartStore = create<CartState>()(
       setIsMenuOpen: (open: boolean) => set({ isMenuOpen: open }),
       prepWaitTimeMinutes: 40,
       setPrepWaitTimeMinutes: (minutes: number) => set({ prepWaitTimeMinutes: Math.max(10, Math.min(minutes, 240)) }),
+      isCompactView: false,
+      setIsCompactView: (compact: boolean) => set({ isCompactView: compact }),
+      toggleCompactView: () => set((state) => ({ isCompactView: !state.isCompactView })),
 
       addItem: (product: Product, quantity = 1) => {
         set((state) => {
@@ -240,6 +248,7 @@ export const useCartStore = create<CartState>()(
         items: state.items,
         personsCount: state.personsCount,
         prepWaitTimeMinutes: state.prepWaitTimeMinutes,
+        isCompactView: state.isCompactView,
       }),
     }
   )
