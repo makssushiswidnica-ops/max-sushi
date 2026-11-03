@@ -65,33 +65,33 @@ export function CompactProductCard({ product }: CompactProductCardProps) {
             className="w-11 h-11 sm:w-13 sm:h-13"
           />
 
-          {/* Правий верхній кут: Кількість штук та вага */}
+          {/* Правий верхній кут: Кількість штук та вага БЕЗ рамки */}
           {(product.pieces || product.weight) && (
-            <div className="absolute top-1.5 right-1.5 z-20 pointer-events-none px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-xs border border-white/15 text-[8.5px] sm:text-[9px] font-bold text-zinc-300 shadow-md select-none tracking-tight">
+            <div className="absolute top-1.5 right-1.5 z-20 pointer-events-none px-1.5 py-0.5 rounded bg-black/50 text-[8.5px] sm:text-[9px] font-bold text-zinc-300 select-none tracking-tight">
               {product.pieces ? `${product.pieces} ${locale === 'pl' ? 'szt.' : 'шт.'}` : ''}
               {product.pieces && product.weight ? ' • ' : ''}
               {product.weight ? `${product.weight}${isDodatki && product.id.includes('sos') ? 'ml' : 'g'}` : ''}
             </div>
           )}
 
-          {/* Зображення ролу */}
+          {/* Зображення ролу: наближений фокус ролу по центру */}
           {product.image ? (
-            <div className="w-full h-full flex items-center justify-center pb-4 pt-1 px-2 transition-transform duration-300 ease-out group-hover:scale-105">
+            <div className="w-full h-full flex items-center justify-center pb-3.5 pt-0.5 px-1.5 transition-transform duration-300 ease-out group-hover:scale-105">
               <div
                 className="w-full h-full flex items-center justify-center"
-                style={{ transform: `scale(${Math.min(getProductZoom(product) * 0.82, 1.35)})` }}
+                style={{ transform: `scale(${Math.min(getProductZoom(product) * 1.12, 1.9)})` }}
               >
                 <img
                   src={product.image}
                   alt={product.name[locale]}
                   loading="lazy"
                   decoding="async"
-                  className="w-full h-full object-contain filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.95)]"
+                  className="w-full h-full object-contain filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.95)]"
                 />
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center text-zinc-600 gap-1 select-none pb-4 pt-1">
+            <div className="flex flex-col items-center justify-center text-zinc-600 gap-1 select-none pb-3.5 pt-1">
               <UtensilsCrossed className="w-5 h-5 text-zinc-700 group-hover:text-[#e50914]/60 transition-colors" />
               <span className="text-[8.5px] font-bold tracking-wider uppercase text-zinc-500">Maks Sushi</span>
             </div>
