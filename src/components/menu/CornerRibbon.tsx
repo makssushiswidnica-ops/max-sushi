@@ -25,36 +25,29 @@ export function CornerRibbon({
   if (!isGift && !hasDiscount && !activeBadge) return null;
 
   let label = '';
-  // Соковитий червоний градієнт за замовчуванням (як на скріншоті)
-  let gradStops = { from: '#e50914', via: '#a80710', to: '#5c0207' };
-  let strokeColor = '#ff3340';
+  // Наш фірмовий червоно-чорний градієнт за замовчуванням для ВСІХ стрічок
+  let gradStops = { from: '#e50914', via: '#85050b', to: '#0a0a10' };
+  let strokeColor = '#e50914';
   let fontSize = '11';
 
   if (isGift) {
     label = 'GRATIS';
     fontSize = '9.5';
-    gradStops = { from: '#e50914', via: '#a80710', to: '#5c0207' };
-    strokeColor = '#ff4d58';
   } else if (hasDiscount) {
     label = `-${discountPercent}%`;
-    gradStops = { from: '#e50914', via: '#a80710', to: '#5c0207' };
-    strokeColor = '#ff3340';
   } else if (activeBadge === 'veg') {
     label = 'VEGAN';
-    // Насичений смарагдовий градієнт для веганських ролів (як на скріншоті)
+    // Тільки для VEGAN залишаємо фірмовий зелений градієнт
     gradStops = { from: '#059669', via: '#047857', to: '#064e3b' };
     strokeColor = '#34d399';
     fontSize = '10';
   } else if (activeBadge === 'hit') {
     label = 'HIT';
-    gradStops = { from: '#f59e0b', via: '#d97706', to: '#78350f' };
-    strokeColor = '#fbbf24';
   } else if (activeBadge === 'new') {
     label = 'NEW';
-    gradStops = { from: '#3b82f6', via: '#2563eb', to: '#1e3a8a' };
-    strokeColor = '#60a5fa';
   } else if (activeBadge) {
     label = String(activeBadge).toUpperCase();
+    fontSize = '10';
   }
 
   return (
