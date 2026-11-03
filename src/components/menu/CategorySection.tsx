@@ -7,6 +7,9 @@ import { CompactProductCard } from '@/components/menu/CompactProductCard';
 import { useCartStore } from '@/store/useCartStore';
 import { useI18n } from '@/lib/i18nContext';
 
+const COMPACT_CONTAINER_CLASS = 'flex flex-wrap justify-center gap-2.5 sm:gap-3.5 md:gap-4';
+const COMPACT_ITEM_CLASS = 'w-[calc(50%-5px)] sm:w-[calc((100%-28px)/3)] md:w-[calc((100%-42px)/4)] lg:w-[calc((100%-64px)/5)] xl:w-[calc((100%-80px)/6)] max-w-[195px] sm:max-w-[210px] flex';
+
 interface CategorySectionProps {
   category: Category;
   products: Product[];
@@ -38,11 +41,11 @@ export function CategorySection({ category, products }: CategorySectionProps) {
         </span>
       </div>
 
-      {/* Сітка меню: компактна або стандартна */}
+      {/* Сітка меню: компактна з центруванням або стандартна */}
       {isCompactView ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-4">
+        <div className={COMPACT_CONTAINER_CLASS}>
           {products.map((product) => (
-            <div key={product.id} className="h-full">
+            <div key={product.id} className={COMPACT_ITEM_CLASS}>
               <CompactProductCard product={product} />
             </div>
           ))}
