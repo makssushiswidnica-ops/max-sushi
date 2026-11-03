@@ -119,17 +119,17 @@ export function HeroBanner() {
               }}
             />
 
-            {/* Внутрішнє тіло кнопки: насичений фірмовий червоний фон, збільшений розмір */}
+            {/* Внутрішнє тіло кнопки: фірмовий червоно-чорний градієнт */}
             <span 
-              className="relative flex items-center justify-center gap-3 px-8 sm:px-16 py-4 sm:py-5 bg-gradient-to-r from-[#e50914] via-[#f4222d] to-[#b80710] group-hover:brightness-110 transition-all duration-300 w-full h-full shadow-inner"
+              className="relative flex items-center justify-center gap-3 px-8 sm:px-16 py-4 sm:py-5 bg-gradient-to-r from-[#e50914] via-[#85050b] to-[#0a0a10] group-hover:brightness-110 transition-all duration-300 w-full h-full shadow-inner"
               style={{
                 clipPath: 'polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px)',
               }}
             >
-              <span className="text-sm sm:text-lg font-black tracking-[0.22em] uppercase text-white select-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
+              <span className="text-sm sm:text-lg font-black tracking-[0.22em] uppercase text-white select-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                 {locale === 'pl' ? 'Wybierz rolki' : 'Обрати роли'}
               </span>
-              <span className="text-white text-base sm:text-xl font-black group-hover:translate-x-1.5 transition-transform drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
+              <span className="text-white text-base sm:text-xl font-black group-hover:translate-x-1.5 transition-transform drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                 ›
               </span>
             </span>
