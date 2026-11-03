@@ -16,32 +16,43 @@ export function CornerRibbon({
   isGift,
   className = 'w-16 h-16 sm:w-20 sm:h-20',
 }: CornerRibbonProps) {
+  const reactId = React.useId().replace(/[^a-zA-Z0-9_-]/g, '');
+  const gradId = `grad-ribbon-${productId}-${reactId}`;
+
   const hasDiscount = Boolean(discountPercent && discountPercent > 0);
   const activeBadge = !isGift && !hasDiscount ? badge : undefined;
 
   if (!isGift && !hasDiscount && !activeBadge) return null;
 
   let label = '';
-  let gradStops = { from: '#e50914', via: '#85050b', to: '#0a0a10' };
-  let strokeColor = '#e50914';
+  // Соковитий червоний градієнт за замовчуванням (як на скріншоті)
+  let gradStops = { from: '#e50914', via: '#a80710', to: '#5c0207' };
+  let strokeColor = '#ff3340';
   let fontSize = '11';
 
   if (isGift) {
     label = 'GRATIS';
     fontSize = '9.5';
-    gradStops = { from: '#e50914', via: '#85050b', to: '#0a0a10' };
+    gradStops = { from: '#e50914', via: '#a80710', to: '#5c0207' };
     strokeColor = '#ff4d58';
   } else if (hasDiscount) {
     label = `-${discountPercent}%`;
+    gradStops = { from: '#e50914', via: '#a80710', to: '#5c0207' };
+    strokeColor = '#ff3340';
   } else if (activeBadge === 'veg') {
     label = 'VEGAN';
-    gradStops = { from: '#059669', via: '#064e3b', to: '#0a0a10' };
-    strokeColor = '#10b981';
+    // Насичений смарагдовий градієнт для веганських ролів (як на скріншоті)
+    gradStops = { from: '#059669', via: '#047857', to: '#064e3b' };
+    strokeColor = '#34d399';
     fontSize = '10';
   } else if (activeBadge === 'hit') {
     label = 'HIT';
+    gradStops = { from: '#f59e0b', via: '#d97706', to: '#78350f' };
+    strokeColor = '#fbbf24';
   } else if (activeBadge === 'new') {
     label = 'NEW';
+    gradStops = { from: '#3b82f6', via: '#2563eb', to: '#1e3a8a' };
+    strokeColor = '#60a5fa';
   } else if (activeBadge) {
     label = String(activeBadge).toUpperCase();
   }
@@ -56,7 +67,7 @@ export function CornerRibbon({
       aria-hidden="true"
     >
       <defs>
-        <linearGradient id={`grad-ribbon-${productId}`} x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor={gradStops.from} />
           <stop offset="50%" stopColor={gradStops.via} />
           <stop offset="100%" stopColor={gradStops.to} />
@@ -64,7 +75,7 @@ export function CornerRibbon({
       </defs>
       <polygon
         points="34,0 78,0 0,78 0,34"
-        fill={`url(#grad-ribbon-${productId})`}
+        fill={`url(#${gradId})`}
       />
       <line
         x1="34"

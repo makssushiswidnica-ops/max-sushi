@@ -598,43 +598,50 @@ export function StickyNav({
               </button>
             )}
 
-            {/* ТЕЛЕФОН: Кнопка перемикання компактного перегляду меню (md:hidden) */}
+            {/* ТЕЛЕФОН: Дві самурайські кнопки 2-в-1 поруч: [ 🔍 Пошук ] + [ ⊞ Сітка / ☰ Великі ] */}
             {!isSearchOpen && (
-              <button
-                type="button"
-                onClick={toggleCompactView}
-                aria-label={isCompactView 
-                  ? (locale === 'pl' ? 'Widok standardowy' : 'Стандартний вигляд')
-                  : (locale === 'pl' ? 'Widok kompaktowy' : 'Компактний вигляд')}
-                title={isCompactView 
-                  ? (locale === 'pl' ? 'Przełącz na widok standardowy (1 kolumna)' : 'Перемкнути на стандартний вигляд (1 колонка)')
-                  : (locale === 'pl' ? 'Przełącz na widok kompaktowy (2 kolumny)' : 'Перемкнути на компактний вигляд (2 колонки)')}
-                style={{
-                  clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
-                }}
-                className={cn(
-                  "flex md:hidden items-center justify-center gap-1.5 sm:gap-2 w-[96px] sm:w-[116px] min-h-[44px] border transition-all cursor-pointer shadow-sm group select-none active:scale-95 shrink-0",
-                  isCompactView
-                    ? "bg-[#1f1618] hover:bg-[#2a1a1e] text-[#ff4d58] border-[#e50914]/60 shadow-[0_0_12px_rgba(229,9,20,0.25)]"
-                    : "bg-[#18181f] hover:bg-[#22222b] text-zinc-300 hover:text-white border-white/15 hover:border-[#e50914]"
-                )}
-              >
-                {isCompactView ? (
-                  <>
-                    <Rows2 className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-[#ff4d58] group-hover:scale-110 transition-transform" />
-                    <span className="text-xs sm:text-sm font-black tracking-wide text-[#ff4d58]">
-                      {locale === 'pl' ? 'Duże' : 'Великі'}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <Grid2X2 className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-[#e50914] group-hover:scale-110 transition-transform" />
-                    <span className="text-xs sm:text-sm font-black tracking-wide text-zinc-200 group-hover:text-white">
-                      {locale === 'pl' ? 'Siatka' : 'Сітка'}
-                    </span>
-                  </>
-                )}
-              </button>
+              <div className="flex md:hidden items-center gap-1.5 shrink-0">
+                {/* 1. Кнопка швидкого пошуку на телефоні */}
+                <button
+                  type="button"
+                  onClick={toggleSearch}
+                  aria-label={locale === 'pl' ? 'Szukaj w menu' : 'Пошук у меню'}
+                  title={locale === 'pl' ? 'Szukaj w menu' : 'Пошук у меню'}
+                  style={{
+                    clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                  }}
+                  className="w-[44px] min-h-[44px] flex items-center justify-center bg-[#18181f] hover:bg-[#22222b] text-zinc-300 hover:text-white border border-white/15 hover:border-[#e50914] transition-all cursor-pointer shadow-sm group select-none active:scale-95 shrink-0"
+                >
+                  <Search className="w-4.5 h-4.5 text-[#e50914] group-hover:scale-110 transition-transform" />
+                </button>
+
+                {/* 2. Кнопка перемикання компактної сітки на телефоні */}
+                <button
+                  type="button"
+                  onClick={toggleCompactView}
+                  aria-label={isCompactView 
+                    ? (locale === 'pl' ? 'Widok standardowy' : 'Стандартний вигляд')
+                    : (locale === 'pl' ? 'Widok kompaktowy' : 'Компактний вигляд')}
+                  title={isCompactView 
+                    ? (locale === 'pl' ? 'Przełącz na widok standardowy (1 kolumna)' : 'Перемкнути на стандартний вигляд (1 колонка)')
+                    : (locale === 'pl' ? 'Przełącz na widok kompaktowy (2 kolumny)' : 'Перемкнути на компактний вигляд (2 колонки)')}
+                  style={{
+                    clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                  }}
+                  className={cn(
+                    "w-[44px] min-h-[44px] flex items-center justify-center border transition-all cursor-pointer shadow-sm group select-none active:scale-95 shrink-0",
+                    isCompactView
+                      ? "bg-[#1f1618] hover:bg-[#2a1a1e] text-[#ff4d58] border-[#e50914]/60 shadow-[0_0_12px_rgba(229,9,20,0.25)]"
+                      : "bg-[#18181f] hover:bg-[#22222b] text-zinc-300 hover:text-white border-white/15 hover:border-[#e50914]"
+                  )}
+                >
+                  {isCompactView ? (
+                    <Rows2 className="w-4.5 h-4.5 text-[#ff4d58] group-hover:scale-110 transition-transform" />
+                  ) : (
+                    <Grid2X2 className="w-4.5 h-4.5 text-[#e50914] group-hover:scale-110 transition-transform" />
+                  )}
+                </button>
+              </div>
             )}
           </div>
         )}
