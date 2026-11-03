@@ -41,15 +41,29 @@ export function CategorySection({ category, products }: CategorySectionProps) {
         </span>
       </div>
 
-      {/* Сітка меню: компактна з центруванням або стандартна */}
+      {/* Сітка меню: на телефонах залежить від перемикача isCompactView, на комп'ютерах завжди стандартна */}
       {isCompactView ? (
-        <div className={COMPACT_CONTAINER_CLASS}>
-          {products.map((product) => (
-            <div key={product.id} className={COMPACT_ITEM_CLASS}>
-              <CompactProductCard product={product} />
-            </div>
-          ))}
-        </div>
+        <>
+          {/* Мобільний компактний вигляд (тільки для телефонів) */}
+          <div className={`${COMPACT_CONTAINER_CLASS} md:hidden`}>
+            {products.map((product) => (
+              <div key={product.id} className={COMPACT_ITEM_CLASS}>
+                <CompactProductCard product={product} />
+              </div>
+            ))}
+          </div>
+          {/* Комп'ютерний та планшетний вигляд: завжди звичні великі картки */}
+          <div className="hidden md:flex flex-wrap justify-center gap-4 sm:gap-5">
+            {products.map((product) => (
+              <div
+                key={product.id}
+                className="w-full sm:w-[calc(50%-10px)] lg:w-[calc((100%-40px)/3)] xl:w-[calc(25%-15px)] max-w-sm sm:max-w-none flex"
+              >
+                <ProductCard product={product} />
+              </div>
+            ))}
+          </div>
+        </>
       ) : (
         <div className="flex flex-wrap justify-center gap-4 sm:gap-5">
           {products.map((product) => (

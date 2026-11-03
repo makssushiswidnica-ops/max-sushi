@@ -582,7 +582,23 @@ export function StickyNav({
               )}
             </div>
 
-            {/* Кнопка перемикання між компактним (2 колонки) та стандартним (1 колонка) виглядом меню */}
+            {/* ДЕСКТОП: Повертаємо класичну кнопку пошуку на комп'ютерах (hidden md:flex) */}
+            {!isSearchOpen && (
+              <button
+                type="button"
+                onClick={toggleSearch}
+                aria-label={locale === 'pl' ? 'Szukaj w menu' : 'Пошук у меню'}
+                title={locale === 'pl' ? 'Szukaj w menu' : 'Пошук у меню'}
+                style={{
+                  clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
+                }}
+                className="hidden md:flex items-center justify-center w-[96px] sm:w-[116px] min-h-[44px] bg-[#18181f] hover:bg-[#22222b] text-zinc-300 hover:text-white border border-white/15 hover:border-[#e50914] transition-all cursor-pointer shadow-sm group select-none active:scale-95 shrink-0"
+              >
+                <Search className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-[#e50914] group-hover:scale-110 transition-transform" />
+              </button>
+            )}
+
+            {/* ТЕЛЕФОН: Кнопка перемикання компактного перегляду меню (md:hidden) */}
             {!isSearchOpen && (
               <button
                 type="button"
@@ -597,7 +613,7 @@ export function StickyNav({
                   clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
                 }}
                 className={cn(
-                  "flex items-center justify-center gap-1.5 sm:gap-2 w-[96px] sm:w-[116px] min-h-[44px] border transition-all cursor-pointer shadow-sm group select-none active:scale-95 shrink-0",
+                  "flex md:hidden items-center justify-center gap-1.5 sm:gap-2 w-[96px] sm:w-[116px] min-h-[44px] border transition-all cursor-pointer shadow-sm group select-none active:scale-95 shrink-0",
                   isCompactView
                     ? "bg-[#1f1618] hover:bg-[#2a1a1e] text-[#ff4d58] border-[#e50914]/60 shadow-[0_0_12px_rgba(229,9,20,0.25)]"
                     : "bg-[#18181f] hover:bg-[#22222b] text-zinc-300 hover:text-white border-white/15 hover:border-[#e50914]"

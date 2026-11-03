@@ -380,13 +380,24 @@ export function MenuCatalog() {
                 </button>
               </div>
             ) : isCompactView ? (
-              <div className={COMPACT_CONTAINER_CLASS}>
-                {filteredProducts.map((product) => (
-                  <div key={product.id} id={`product-card-${product.id}`} className={COMPACT_ITEM_CLASS}>
-                    <CompactProductCard product={product} />
-                  </div>
-                ))}
-              </div>
+              <>
+                {/* Мобільний компактний перегляд результатів пошуку (тільки для телефонів) */}
+                <div className={`${COMPACT_CONTAINER_CLASS} md:hidden`}>
+                  {filteredProducts.map((product) => (
+                    <div key={product.id} id={`product-card-${product.id}`} className={COMPACT_ITEM_CLASS}>
+                      <CompactProductCard product={product} />
+                    </div>
+                  ))}
+                </div>
+                {/* Комп'ютерний перегляд: завжди звичні великі картки */}
+                <div className={`${PRODUCT_CONTAINER_CLASS} hidden md:flex`}>
+                  {filteredProducts.map((product) => (
+                    <div key={product.id} id={`product-card-${product.id}`} className={PRODUCT_ITEM_CLASS}>
+                      <ProductCard product={product} />
+                    </div>
+                  ))}
+                </div>
+              </>
             ) : (
               <div className={PRODUCT_CONTAINER_CLASS}>
                 {filteredProducts.map((product) => (
@@ -460,15 +471,26 @@ export function MenuCatalog() {
               </div>
             </div>
 
-            {/* Сітка товарів вибраної категорії: компактна сітка або стандартні великі картки */}
+            {/* Сітка товарів вибраної категорії: на телефонах залежить від isCompactView, на комп'ютерах завжди великі картки */}
             {isCompactView ? (
-              <div className={COMPACT_CONTAINER_CLASS}>
-                {currentCategoryProducts.map((product) => (
-                  <div key={product.id} id={`product-card-${product.id}`} className={COMPACT_ITEM_CLASS}>
-                    <CompactProductCard product={product} />
-                  </div>
-                ))}
-              </div>
+              <>
+                {/* Мобільний компактний перегляд (тільки для телефонів) */}
+                <div className={`${COMPACT_CONTAINER_CLASS} md:hidden`}>
+                  {currentCategoryProducts.map((product) => (
+                    <div key={product.id} id={`product-card-${product.id}`} className={COMPACT_ITEM_CLASS}>
+                      <CompactProductCard product={product} />
+                    </div>
+                  ))}
+                </div>
+                {/* Комп'ютерний перегляд: завжди звичні великі картки */}
+                <div className={`${PRODUCT_CONTAINER_CLASS} hidden md:flex`}>
+                  {currentCategoryProducts.map((product) => (
+                    <div key={product.id} id={`product-card-${product.id}`} className={PRODUCT_ITEM_CLASS}>
+                      <ProductCard product={product} />
+                    </div>
+                  ))}
+                </div>
+              </>
             ) : (
               <div className={PRODUCT_CONTAINER_CLASS}>
                 {currentCategoryProducts.map((product) => (
