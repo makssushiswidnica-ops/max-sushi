@@ -16,11 +16,15 @@ import {
   ChevronRight,
   UtensilsCrossed,
   Gift,
+  AlertTriangle,
+  ChevronDown,
 } from 'lucide-react';
 import { ProductBadge } from '@/components/menu/ProductBadge';
 import { CornerRibbon } from '@/components/menu/CornerRibbon';
 import { getProductZoom } from '@/lib/imageZoom';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { ALLERGENS, AllergenKey } from '@/types';
+import { DEFAULT_PRODUCT_ALLERGENS } from '@/lib/allergenData';
 
 export function ProductModal() {
   const { locale, t } = useI18n();
@@ -39,11 +43,13 @@ export function ProductModal() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isBakedSelected, setIsBakedSelected] = useState(false);
   const [isTempuraSelected, setIsTempuraSelected] = useState(false);
+  const [isAllergensOpen, setIsAllergensOpen] = useState(false);
 
-  // Скидання вибору модифікаторів при зміні страви
+  // Скидання вибору модифікаторів та алергенів при зміні страви
   useEffect(() => {
     setIsBakedSelected(false);
     setIsTempuraSelected(false);
+    setIsAllergensOpen(false);
   }, [selectedProduct?.id]);
 
   // Тач-координати для свайпів
@@ -159,6 +165,13 @@ export function ProductModal() {
   const optionExtraPrice = (isBakedSelected ? bakedPrice : 0) + (isTempuraSelected ? tempuraPrice : 0);
   const modalUnitPrice = getEffectivePrice(selectedProduct) + optionExtraPrice;
   const modalTotalPrice = modalUnitPrice * modalQuantity;
+
+  // Алергени страви (з моделі або офіційної карти ресторану)
+  const productAllergens: AllergenKey[] =
+    selectedProduct.allergens ||
+    (selectedProduct.nutrition as any)?.allergens ||
+    DEFAULT_PRODUCT_ALLERGENS[selectedProduct.id] ||
+    [];
 
   // Додавання до кошика (не закриваємо модалку, залишаємо користувача в картці)
   const handleAddToCart = () => {
@@ -468,6 +481,48 @@ export function ProductModal() {
                         </span>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Блок алергенів (Варіант 1: компактний акордеон) */}
+                {productAllergens.length > 0 && (
+                  <div className="pt-2 border-t border-white/5">
+                    <button
+                      type="button"
+                      onClick={() => setIsAllergensOpen((prev) => !prev)}
+                      className="flex items-center justify-between w-full py-1 text-left cursor-pointer group select-none"
+                    >
+                      <div className="flex items-center gap-1.5 text-zinc-400 group-hover:text-zinc-200 transition-colors">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-500/80 shrink-0" />
+                        <span className="text-[11px] font-bold uppercase tracking-wider">
+                          {locale === 'pl' ? `Alergeny (${productAllergens.length})` : `Алергени (${productAllergens.length})`}
+                        </span>
+                      </div>
+                      <ChevronDown
+                        className={cn(
+                          'w-3.5 h-3.5 text-zinc-500 transition-transform duration-200',
+                          isAllergensOpen && 'rotate-180 text-white'
+                        )}
+                      />
+                    </button>
+
+                    {isAllergensOpen && (
+                      <div className="flex flex-wrap gap-1.5 pt-2 pb-0.5 animate-in fade-in duration-150">
+                        {productAllergens.map((key) => {
+                          const def = ALLERGENS.find((a) => a.key === key);
+                          if (!def) return null;
+                          return (
+                            <span
+                              key={key}
+                              title={def.name[locale]}
+                              className="text-[10.5px] font-medium px-2 py-0.5 rounded bg-white/5 text-zinc-300 border border-white/10"
+                            >
+                              {def.short[locale]}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
 

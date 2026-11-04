@@ -74,7 +74,8 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { cn, formatPrice } from '@/lib/utils';
 import { supabase, isSupabaseConfigured, createOrder } from '@/lib/supabase';
 import { brandTheme } from '@/config/theme';
-import { Category, Product, ProductBadge as ProductBadgeType } from '@/types';
+import { Category, Product, ProductBadge as ProductBadgeType, ALLERGENS, AllergenKey } from '@/types';
+import { DEFAULT_PRODUCT_ALLERGENS } from '@/lib/allergenData';
 import { ProductBadge } from '@/components/menu/ProductBadge';
 import { getProductZoom, ZOOM_PRESETS } from '@/lib/imageZoom';
 import { 
@@ -258,6 +259,7 @@ export default function AdminPage() {
   const [formCanBeTempura, setFormCanBeTempura] = useState(false);
   const [formBakedPrice, setFormBakedPrice] = useState<number>(1);
   const [formTempuraPrice, setFormTempuraPrice] = useState<number>(2);
+  const [formAllergens, setFormAllergens] = useState<AllergenKey[]>([]);
   const [formDiscountPercent, setFormDiscountPercent] = useState<0 | 10 | 15>(0);
   const [formImageFile, setFormImageFile] = useState<File | null>(null);
   const [formImagePreview, setFormImagePreview] = useState<string>('');
@@ -963,7 +965,7 @@ export default function AdminPage() {
         const optsHtml = opts.length > 0 
           ? `<div style="font-size: 11px; font-weight: 900; color: #000; margin-top: 2px;">➔ ${opts.join(', ')}</div>` 
           : '';
-        const displayPrice = isGift ? '0 zł (GRATIS 🎁)' : `${price * item.quantity} zł`;
+        const displayPrice = isGift ? '0 zł' : `${price * item.quantity} zł`;
         const giftLabel = isGift ? '<span style="font-size: 10px; font-weight: 900; background: #000; color: #fff; padding: 1px 4px; border-radius: 2px; margin-left: 4px;">ПОДАРУНОК</span>' : '';
         return `
           <tr style="border-bottom: 1px dashed #666;">
@@ -1736,6 +1738,7 @@ export default function AdminPage() {
     setFormCanBeTempura(false);
     setFormBakedPrice(1);
     setFormTempuraPrice(2);
+    setFormAllergens([]);
     setIsModalOpen(true);
   };
 
@@ -1768,6 +1771,7 @@ export default function AdminPage() {
     setFormCanBeTempura(Boolean(product.canBeTempura || (product.nutrition as any)?.canBeTempura));
     setFormBakedPrice(product.bakedPrice ?? (product.nutrition as any)?.bakedPrice ?? 1);
     setFormTempuraPrice(product.tempuraPrice ?? (product.nutrition as any)?.tempuraPrice ?? 2);
+    setFormAllergens(product.allergens || (product.nutrition as any)?.allergens || DEFAULT_PRODUCT_ALLERGENS[product.id] || []);
     setIsModalOpen(true);
   };
 
@@ -2015,6 +2019,7 @@ export default function AdminPage() {
       baseNutrition.canBeTempura = formCanBeTempura;
       baseNutrition.bakedPrice = formBakedPrice;
       baseNutrition.tempuraPrice = formTempuraPrice;
+      baseNutrition.allergens = formAllergens;
 
       const productPayload: Product = {
         id: formId,
@@ -2035,6 +2040,7 @@ export default function AdminPage() {
         canBeTempura: formCanBeTempura,
         bakedPrice: formBakedPrice,
         tempuraPrice: formTempuraPrice,
+        allergens: formAllergens,
       };
 
       if (editingProduct) {
@@ -2652,7 +2658,7 @@ export default function AdminPage() {
                           <p className="text-xs sm:text-sm font-bold text-white truncate">{title}</p>
                           {item.isGift && (
                             <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-red-500/25 text-[#ff4d58] border border-red-500/40">
-                              🎁 ПОДАРУНОК
+                              ПОДАРУНОК
                             </span>
                           )}
                           {(prod.sku || (prod as any).nutrition?.sku) && (
@@ -5998,6 +6004,55 @@ export default function AdminPage() {
                         <span className="text-zinc-400 text-xs">zł</span>
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                {/* Алергени страви (без смайликів) */}
+                <div className="mt-3 pt-3 border-t border-white/5 flex flex-col gap-2.5 bg-[#1b1b2a]/40 p-3 rounded-lg border border-white/5">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
+                        Алергени ({formAllergens.length}):
+                      </span>
+                      {formAllergens.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setFormAllergens([])}
+                          className="text-[11px] text-zinc-400 hover:text-red-400 transition-colors underline cursor-pointer"
+                        >
+                          Очистити
+                        </button>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-zinc-400">
+                      Оберіть алергени, які містить страва
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {ALLERGENS.map((al) => {
+                      const isSelected = formAllergens.includes(al.key);
+                      return (
+                        <button
+                          key={al.key}
+                          type="button"
+                          onClick={() => {
+                            setFormAllergens((prev) =>
+                              isSelected ? prev.filter((k) => k !== al.key) : [...prev, al.key]
+                            );
+                          }}
+                          className={cn(
+                            'px-2.5 py-1 text-xs rounded border transition-all cursor-pointer font-medium select-none',
+                            isSelected
+                              ? 'bg-[#e50914] text-white border-red-500 shadow-sm font-semibold'
+                              : 'bg-[#12121a] text-zinc-400 border-white/10 hover:text-white hover:border-white/20'
+                          )}
+                          title={`${al.name.pl} / ${al.name.uk}`}
+                        >
+                          {al.short.pl}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

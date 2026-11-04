@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { Category, Product } from '@/types';
 import { categories as defaultCategories, products as defaultProducts } from '@/lib/mockData';
+import { DEFAULT_PRODUCT_ALLERGENS } from '@/lib/allergenData';
 
 export interface MenuData {
   categories: Category[];
@@ -77,6 +78,11 @@ export async function fetchMenuData(): Promise<MenuData> {
         : (prod.nutrition?.tempuraPrice !== undefined
             ? Number(prod.nutrition?.tempuraPrice)
             : 2),
+      allergens: Array.isArray(prod.allergens)
+        ? prod.allergens
+        : (Array.isArray(prod.nutrition?.allergens)
+            ? prod.nutrition.allergens
+            : (DEFAULT_PRODUCT_ALLERGENS[prod.id] || [])),
     }));
 
     // Впорядковуємо страви послідовно за категоріями меню (Міні-макі -> Футомакі -> Роли тощо)
@@ -310,7 +316,8 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
       updates.canBeBaked !== undefined ||
       updates.canBeTempura !== undefined ||
       updates.bakedPrice !== undefined ||
-      updates.tempuraPrice !== undefined
+      updates.tempuraPrice !== undefined ||
+      updates.allergens !== undefined
     ) {
       payload.nutrition = {
         ...(updates.nutrition || {}),
@@ -320,6 +327,7 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
         ...(updates.canBeTempura !== undefined ? { canBeTempura: updates.canBeTempura } : {}),
         ...(updates.bakedPrice !== undefined ? { bakedPrice: updates.bakedPrice } : {}),
         ...(updates.tempuraPrice !== undefined ? { tempuraPrice: updates.tempuraPrice } : {}),
+        ...(updates.allergens !== undefined ? { allergens: updates.allergens } : {}),
       };
     }
     if (updates.isAvailable !== undefined) payload.is_available = updates.isAvailable;
@@ -367,6 +375,7 @@ export async function createProduct(product: Product): Promise<{ success: boolea
             ...(product.canBeTempura !== undefined ? { canBeTempura: product.canBeTempura } : {}),
             ...(product.bakedPrice !== undefined ? { bakedPrice: product.bakedPrice } : {}),
             ...(product.tempuraPrice !== undefined ? { tempuraPrice: product.tempuraPrice } : {}),
+            ...(product.allergens !== undefined ? { allergens: product.allergens } : {}),
           },
           is_available: product.isAvailable,
         },

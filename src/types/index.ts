@@ -22,6 +22,45 @@ export interface LocalizedArray {
   uk: string[];
 }
 
+export type AllergenKey =
+  | 'gluten'
+  | 'crustaceans'
+  | 'eggs'
+  | 'fish'
+  | 'peanuts'
+  | 'soy'
+  | 'milk'
+  | 'nuts'
+  | 'celery'
+  | 'mustard'
+  | 'sesame'
+  | 'sulphites'
+  | 'lupin'
+  | 'molluscs';
+
+export interface AllergenDef {
+  key: AllergenKey;
+  name: { pl: string; uk: string };
+  short: { pl: string; uk: string };
+}
+
+export const ALLERGENS: AllergenDef[] = [
+  { key: 'gluten', name: { pl: 'Zboża zawierające gluten', uk: 'Злаки з вмістом глютену' }, short: { pl: 'Gluten', uk: 'Глютен' } },
+  { key: 'crustaceans', name: { pl: 'Skorupiaki i produkty pochodne', uk: 'Ракоподібні' }, short: { pl: 'Skorupiaki', uk: 'Ракоподібні' } },
+  { key: 'eggs', name: { pl: 'Jaja i produkty pochodne', uk: 'Яйця' }, short: { pl: 'Jaja', uk: 'Яйця' } },
+  { key: 'fish', name: { pl: 'Ryby i produkty pochodne', uk: 'Риба' }, short: { pl: 'Ryby', uk: 'Риба' } },
+  { key: 'peanuts', name: { pl: 'Orzeszki ziemne (arachidowe)', uk: 'Арахіс' }, short: { pl: 'Orzeszki ziemne', uk: 'Арахіс' } },
+  { key: 'soy', name: { pl: 'Soja i produkty pochodne', uk: 'Соя' }, short: { pl: 'Soja', uk: 'Соя' } },
+  { key: 'milk', name: { pl: 'Mleko i produkty pochodne', uk: 'Молоко та лактоза' }, short: { pl: 'Mleko', uk: 'Молоко' } },
+  { key: 'nuts', name: { pl: 'Orzechy (migdały, włoskie, nerkowca)', uk: 'Горіхи (мигдаль, волоські, кешʼю)' }, short: { pl: 'Orzechy', uk: 'Горіхи' } },
+  { key: 'celery', name: { pl: 'Seler i produkty pochodne', uk: 'Селера' }, short: { pl: 'Seler', uk: 'Селера' } },
+  { key: 'mustard', name: { pl: 'Gorczyca i produkty pochodne', uk: 'Гірчиця' }, short: { pl: 'Gorczyca', uk: 'Гірчиця' } },
+  { key: 'sesame', name: { pl: 'Nasiona sezamu i produkty pochodne', uk: 'Насіння кунжуту' }, short: { pl: 'Sezam', uk: 'Кунжут' } },
+  { key: 'sulphites', name: { pl: 'Dwutlenek siarki i siarczyny', uk: 'Діоксид сірки та сульфіти' }, short: { pl: 'Siarczyny', uk: 'Сульфіти' } },
+  { key: 'lupin', name: { pl: 'Łubin i produkty pochodne', uk: 'Люпин' }, short: { pl: 'Łubin', uk: 'Люпин' } },
+  { key: 'molluscs', name: { pl: 'Mięczaki i produkty pochodne', uk: 'Молюски' }, short: { pl: 'Mięczaki', uk: 'Молюски' } },
+];
+
 export interface Product {
   id: string;
   sku?: string; // Артикул / номер страви на касі (PLU)
@@ -42,6 +81,7 @@ export interface Product {
   bakedPrice?: number;    // Ціна за печену рибу (за замовчуванням 1 zł)
   canBeTempura?: boolean; // Дозволена опція "У темпурі"
   tempuraPrice?: number;  // Ціна за темпуру (за замовчуванням 2 zł)
+  allergens?: AllergenKey[]; // Список алергенів
 }
 
 export interface Category {
