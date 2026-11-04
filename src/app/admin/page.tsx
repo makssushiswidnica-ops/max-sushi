@@ -125,6 +125,10 @@ export interface AdminOrder {
       price?: number;
       image?: string;
       nutrition?: any;
+      canBeBaked?: boolean;
+      canBeTempura?: boolean;
+      bakedPrice?: number;
+      tempuraPrice?: number;
     };
     quantity: number;
     selectedOptions?: {
@@ -252,6 +256,8 @@ export default function AdminPage() {
   const [formIsAvailable, setFormIsAvailable] = useState(true);
   const [formCanBeBaked, setFormCanBeBaked] = useState(false);
   const [formCanBeTempura, setFormCanBeTempura] = useState(false);
+  const [formBakedPrice, setFormBakedPrice] = useState<number>(1);
+  const [formTempuraPrice, setFormTempuraPrice] = useState<number>(2);
   const [formDiscountPercent, setFormDiscountPercent] = useState<0 | 10 | 15>(0);
   const [formImageFile, setFormImageFile] = useState<File | null>(null);
   const [formImagePreview, setFormImagePreview] = useState<string>('');
@@ -950,8 +956,10 @@ export default function AdminPage() {
         const skuText = sku ? ` ${sku}` : '';
         const isGift = Boolean(item.isGift);
         const opts: string[] = [];
-        if (item.selectedOptions?.baked) opts.push('🔥 ПЕЧЕНА РИБА (+1 zł)');
-        if (item.selectedOptions?.tempura) opts.push('⚡ В ТЕМПУРІ (+2 zł)');
+        const optBakedP = prod.bakedPrice ?? (prod as any).nutrition?.bakedPrice ?? 1;
+        const optTempuraP = prod.tempuraPrice ?? (prod as any).nutrition?.tempuraPrice ?? 2;
+        if (item.selectedOptions?.baked) opts.push(`ПЕЧЕНА РИБА (+${optBakedP} zł)`);
+        if (item.selectedOptions?.tempura) opts.push(`В ТЕМПУРІ (+${optTempuraP} zł)`);
         const optsHtml = opts.length > 0 
           ? `<div style="font-size: 11px; font-weight: 900; color: #000; margin-top: 2px;">➔ ${opts.join(', ')}</div>` 
           : '';
@@ -1726,6 +1734,8 @@ export default function AdminPage() {
     setFormIsAvailable(true);
     setFormCanBeBaked(false);
     setFormCanBeTempura(false);
+    setFormBakedPrice(1);
+    setFormTempuraPrice(2);
     setIsModalOpen(true);
   };
 
@@ -1756,6 +1766,8 @@ export default function AdminPage() {
     setFormIsAvailable(product.isAvailable);
     setFormCanBeBaked(Boolean(product.canBeBaked || (product.nutrition as any)?.canBeBaked));
     setFormCanBeTempura(Boolean(product.canBeTempura || (product.nutrition as any)?.canBeTempura));
+    setFormBakedPrice(product.bakedPrice ?? (product.nutrition as any)?.bakedPrice ?? 1);
+    setFormTempuraPrice(product.tempuraPrice ?? (product.nutrition as any)?.tempuraPrice ?? 2);
     setIsModalOpen(true);
   };
 
@@ -2001,6 +2013,8 @@ export default function AdminPage() {
       }
       baseNutrition.canBeBaked = formCanBeBaked;
       baseNutrition.canBeTempura = formCanBeTempura;
+      baseNutrition.bakedPrice = formBakedPrice;
+      baseNutrition.tempuraPrice = formTempuraPrice;
 
       const productPayload: Product = {
         id: formId,
@@ -2019,6 +2033,8 @@ export default function AdminPage() {
         isAvailable: formIsAvailable,
         canBeBaked: formCanBeBaked,
         canBeTempura: formCanBeTempura,
+        bakedPrice: formBakedPrice,
+        tempuraPrice: formTempuraPrice,
       };
 
       if (editingProduct) {
@@ -2649,12 +2665,12 @@ export default function AdminPage() {
                           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                             {item.selectedOptions?.baked && (
                               <span className="px-1.5 py-0.5 rounded text-[10.5px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                🔥 Печена риба (+1 zł)
+                                Печена риба (+{item.product.bakedPrice ?? (item.product as any)?.nutrition?.bakedPrice ?? 1} zł)
                               </span>
                             )}
                             {item.selectedOptions?.tempura && (
                               <span className="px-1.5 py-0.5 rounded text-[10.5px] font-bold bg-red-500/20 text-[#ff4d58] border border-red-500/30">
-                                ⚡ У темпурі (+2 zł)
+                                У темпурі (+{item.product.tempuraPrice ?? (item.product as any)?.nutrition?.tempuraPrice ?? 2} zł)
                               </span>
                             )}
                           </div>
@@ -5923,39 +5939,65 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Додаткові опції / модифікатори страви для покупця */}
-                <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between gap-3 flex-wrap bg-[#1b1b2a]/40 p-3 rounded-lg border border-white/5">
-                  <div className="flex flex-col">
-                    <span className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
-                      Додаткові опції при замовленні:
-                    </span>
-                    <span className="text-[11px] text-zinc-400 mt-0.5">
-                      Клієнт зможе обрати ці допи у модалці страви за додаткову плату
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer select-none group">
-                      <input
-                        type="checkbox"
-                        checked={formCanBeBaked}
-                        onChange={(e) => setFormCanBeBaked(e.target.checked)}
-                        className="w-4 h-4 accent-[#e50914] cursor-pointer"
-                      />
-                      <span className="text-xs font-semibold text-zinc-300 group-hover:text-white transition-colors">
-                        🔥 Печена риба (+1 zł)
-                      </span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer select-none group">
-                      <input
-                        type="checkbox"
-                        checked={formCanBeTempura}
-                        onChange={(e) => setFormCanBeTempura(e.target.checked)}
-                        className="w-4 h-4 accent-[#e50914] cursor-pointer"
-                      />
-                      <span className="text-xs font-semibold text-zinc-300 group-hover:text-white transition-colors">
-                        ⚡ У темпурі (+2 zł)
-                      </span>
-                    </label>
+                {/* Додаткові опції */}
+                <div className="mt-3 pt-3 border-t border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#1b1b2a]/40 p-3 rounded-lg border border-white/5">
+                  <span className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
+                    Додаткові опції:
+                  </span>
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <label className="flex items-center gap-2 cursor-pointer select-none group">
+                        <input
+                          type="checkbox"
+                          checked={formCanBeBaked}
+                          onChange={(e) => setFormCanBeBaked(e.target.checked)}
+                          className="w-4 h-4 accent-[#e50914] cursor-pointer"
+                        />
+                        <span className="text-xs font-semibold text-zinc-300 group-hover:text-white transition-colors">
+                          Печена риба
+                        </span>
+                      </label>
+                      <div className="flex items-center gap-1 bg-[#12121a] px-2 py-1 rounded border border-white/10">
+                        <span className="text-zinc-500 text-xs font-bold">+</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.5"
+                          value={formBakedPrice}
+                          onChange={(e) => setFormBakedPrice(Number(e.target.value) || 0)}
+                          className="w-12 bg-transparent text-xs text-white font-medium focus:outline-none text-right"
+                          title="Ціна опції Печена риба"
+                        />
+                        <span className="text-zinc-400 text-xs">zł</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <label className="flex items-center gap-2 cursor-pointer select-none group">
+                        <input
+                          type="checkbox"
+                          checked={formCanBeTempura}
+                          onChange={(e) => setFormCanBeTempura(e.target.checked)}
+                          className="w-4 h-4 accent-[#e50914] cursor-pointer"
+                        />
+                        <span className="text-xs font-semibold text-zinc-300 group-hover:text-white transition-colors">
+                          У темпурі
+                        </span>
+                      </label>
+                      <div className="flex items-center gap-1 bg-[#12121a] px-2 py-1 rounded border border-white/10">
+                        <span className="text-zinc-500 text-xs font-bold">+</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.5"
+                          value={formTempuraPrice}
+                          onChange={(e) => setFormTempuraPrice(Number(e.target.value) || 0)}
+                          className="w-12 bg-transparent text-xs text-white font-medium focus:outline-none text-right"
+                          title="Ціна опції У темпурі"
+                        />
+                        <span className="text-zinc-400 text-xs">zł</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -20,8 +20,8 @@ export function getEffectivePrice(product: Product): number {
 
 export function getItemUnitPrice(product: Product, options?: SelectedProductOptions): number {
   let price = getEffectivePrice(product);
-  if (options?.baked) price += 1;
-  if (options?.tempura) price += 2;
+  if (options?.baked) price += (product.bakedPrice !== undefined ? product.bakedPrice : 1);
+  if (options?.tempura) price += (product.tempuraPrice !== undefined ? product.tempuraPrice : 2);
   return price;
 }
 

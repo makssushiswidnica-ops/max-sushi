@@ -67,6 +67,16 @@ export async function fetchMenuData(): Promise<MenuData> {
         : (prod.nutrition?.canBeTempura !== undefined
             ? Boolean(prod.nutrition?.canBeTempura)
             : (prod.category_id === 'mini-maki' && prod.id !== 'maki-ogorek')),
+      bakedPrice: prod.baked_price !== undefined
+        ? Number(prod.baked_price)
+        : (prod.nutrition?.bakedPrice !== undefined
+            ? Number(prod.nutrition?.bakedPrice)
+            : 1),
+      tempuraPrice: prod.tempura_price !== undefined
+        ? Number(prod.tempura_price)
+        : (prod.nutrition?.tempuraPrice !== undefined
+            ? Number(prod.nutrition?.tempuraPrice)
+            : 2),
     }));
 
     // Впорядковуємо страви послідовно за категоріями меню (Міні-макі -> Футомакі -> Роли тощо)
@@ -293,13 +303,23 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
     if (updates.image !== undefined) payload.image = updates.image;
     if (updates.badge !== undefined) payload.badge = updates.badge || null;
     if (updates.ingredients !== undefined) payload.ingredients = updates.ingredients;
-    if (updates.nutrition !== undefined || updates.sku !== undefined || updates.discountPercent !== undefined || updates.canBeBaked !== undefined || updates.canBeTempura !== undefined) {
+    if (
+      updates.nutrition !== undefined ||
+      updates.sku !== undefined ||
+      updates.discountPercent !== undefined ||
+      updates.canBeBaked !== undefined ||
+      updates.canBeTempura !== undefined ||
+      updates.bakedPrice !== undefined ||
+      updates.tempuraPrice !== undefined
+    ) {
       payload.nutrition = {
         ...(updates.nutrition || {}),
         ...(updates.sku !== undefined ? { sku: updates.sku } : {}),
         ...(updates.discountPercent !== undefined ? { discountPercent: updates.discountPercent } : {}),
         ...(updates.canBeBaked !== undefined ? { canBeBaked: updates.canBeBaked } : {}),
         ...(updates.canBeTempura !== undefined ? { canBeTempura: updates.canBeTempura } : {}),
+        ...(updates.bakedPrice !== undefined ? { bakedPrice: updates.bakedPrice } : {}),
+        ...(updates.tempuraPrice !== undefined ? { tempuraPrice: updates.tempuraPrice } : {}),
       };
     }
     if (updates.isAvailable !== undefined) payload.is_available = updates.isAvailable;
@@ -345,6 +365,8 @@ export async function createProduct(product: Product): Promise<{ success: boolea
             ...(product.discountPercent !== undefined ? { discountPercent: product.discountPercent } : {}),
             ...(product.canBeBaked !== undefined ? { canBeBaked: product.canBeBaked } : {}),
             ...(product.canBeTempura !== undefined ? { canBeTempura: product.canBeTempura } : {}),
+            ...(product.bakedPrice !== undefined ? { bakedPrice: product.bakedPrice } : {}),
+            ...(product.tempuraPrice !== undefined ? { tempuraPrice: product.tempuraPrice } : {}),
           },
           is_available: product.isAvailable,
         },

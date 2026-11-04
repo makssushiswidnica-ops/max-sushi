@@ -154,7 +154,9 @@ export function ProductModal() {
   if (!selectedProduct) return null;
 
   // Розрахунок вартості з урахуванням обраних модифікаторів
-  const optionExtraPrice = (isBakedSelected ? 1 : 0) + (isTempuraSelected ? 2 : 0);
+  const bakedPrice = selectedProduct.bakedPrice ?? (selectedProduct.nutrition as any)?.bakedPrice ?? 1;
+  const tempuraPrice = selectedProduct.tempuraPrice ?? (selectedProduct.nutrition as any)?.tempuraPrice ?? 2;
+  const optionExtraPrice = (isBakedSelected ? bakedPrice : 0) + (isTempuraSelected ? tempuraPrice : 0);
   const modalUnitPrice = getEffectivePrice(selectedProduct) + optionExtraPrice;
   const modalTotalPrice = modalUnitPrice * modalQuantity;
 
@@ -452,26 +454,9 @@ export function ProductModal() {
                   </p>
                 )}
 
-                {/* Блок інгредієнтів у стовпчик капсом */}
-                {selectedProduct.ingredients?.[locale]?.length > 0 && (
-                  <div className="pt-2.5 border-t border-white/5">
-                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">
-                      {t.product.ingredients}:
-                    </span>
-                    <div className={`grid grid-cols-1 ${selectedProduct.ingredients[locale].length > 5 ? 'sm:grid-cols-2' : ''} gap-x-4 gap-y-1.5 text-xs text-zinc-300 font-semibold uppercase tracking-wider`}>
-                      {selectedProduct.ingredients[locale].map((ingredient, idx) => (
-                        <span key={idx} className="flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#e50914] shrink-0" />
-                          <span className="truncate">{ingredient}</span>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Блок вибору додаткових модифікаторів: печена риба (+1 zł) / рол у темпурі (+2 zł) */}
+                {/* Блок вибору додаткових модифікаторів: печена риба / рол у темпурі (помітно одразу під описом) */}
                 {(selectedProduct.canBeBaked || selectedProduct.canBeTempura) && (
-                  <div className="pt-3 border-t border-white/10 space-y-2">
+                  <div className="pt-2.5 border-t border-white/10 space-y-2">
                     <span className="text-[10.5px] font-bold text-zinc-400 uppercase tracking-wider block">
                       {locale === 'pl' ? 'Opcje do wyboru:' : 'Додаткові опції:'}
                     </span>
@@ -492,16 +477,16 @@ export function ProductModal() {
                         >
                           <div className="flex items-center gap-2">
                             <span className={cn(
-                              'w-4 h-4 rounded-xs border flex items-center justify-center transition-colors',
+                              'w-4 h-4 rounded-xs border flex items-center justify-center transition-colors shrink-0',
                               isBakedSelected ? 'bg-amber-500 border-amber-400 text-black' : 'border-white/30 bg-transparent'
                             )}>
                               {isBakedSelected && <Check className="w-3 h-3 stroke-[3]" />}
                             </span>
-                            <span className="text-xs font-bold">
+                            <span className="text-xs font-bold leading-tight">
                               {locale === 'pl' ? 'Pieczona ryba' : 'Печена риба'}
                             </span>
                           </div>
-                          <span className="text-xs font-black text-amber-400">+1 zł</span>
+                          <span className="text-xs font-black text-amber-400 shrink-0 ml-1">+{bakedPrice} zł</span>
                         </button>
                       )}
 
@@ -521,18 +506,35 @@ export function ProductModal() {
                         >
                           <div className="flex items-center gap-2">
                             <span className={cn(
-                              'w-4 h-4 rounded-xs border flex items-center justify-center transition-colors',
+                              'w-4 h-4 rounded-xs border flex items-center justify-center transition-colors shrink-0',
                               isTempuraSelected ? 'bg-[#e50914] border-red-400 text-white' : 'border-white/30 bg-transparent'
                             )}>
                               {isTempuraSelected && <Check className="w-3 h-3 stroke-[3]" />}
                             </span>
-                            <span className="text-xs font-bold">
+                            <span className="text-xs font-bold leading-tight">
                               {locale === 'pl' ? 'W tempurze' : 'У темпурі'}
                             </span>
                           </div>
-                          <span className="text-xs font-black text-[#ff4d58]">+2 zł</span>
+                          <span className="text-xs font-black text-[#ff4d58] shrink-0 ml-1">+{tempuraPrice} zł</span>
                         </button>
                       )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Блок інгредієнтів у стовпчик капсом (без обрізання тексту) */}
+                {selectedProduct.ingredients?.[locale]?.length > 0 && (
+                  <div className="pt-2.5 border-t border-white/5">
+                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">
+                      {t.product.ingredients}:
+                    </span>
+                    <div className={`grid grid-cols-1 ${selectedProduct.ingredients[locale].length > 5 ? 'sm:grid-cols-2' : ''} gap-x-4 gap-y-1.5 text-xs text-zinc-300 font-semibold uppercase tracking-wider`}>
+                      {selectedProduct.ingredients[locale].map((ingredient, idx) => (
+                        <span key={idx} className="flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#e50914] shrink-0 mt-1" />
+                          <span className="leading-snug break-words">{ingredient}</span>
+                        </span>
+                      ))}
                     </div>
                   </div>
                 )}

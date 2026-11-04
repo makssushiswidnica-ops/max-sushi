@@ -38,8 +38,10 @@ export interface Product {
   ingredients: LocalizedArray;
   nutrition: Nutrition;
   isAvailable: boolean;
-  canBeBaked?: boolean;   // Дозволена опція "Печена риба" (+1 zł)
-  canBeTempura?: boolean; // Дозволена опція "У темпурі" (+2 zł)
+  canBeBaked?: boolean;   // Дозволена опція "Печена риба"
+  bakedPrice?: number;    // Ціна за печену рибу (за замовчуванням 1 zł)
+  canBeTempura?: boolean; // Дозволена опція "У темпурі"
+  tempuraPrice?: number;  // Ціна за темпуру (за замовчуванням 2 zł)
 }
 
 export interface Category {

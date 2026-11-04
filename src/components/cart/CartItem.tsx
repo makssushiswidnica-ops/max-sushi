@@ -77,12 +77,16 @@ export function CartItem({ item }: CartItemProps) {
           <div className="flex flex-wrap gap-1 mt-1">
             {item.selectedOptions?.baked && (
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                {locale === 'pl' ? '🔥 Pieczona ryba (+1 zł)' : '🔥 Печена риба (+1 zł)'}
+                {locale === 'pl'
+                  ? `Pieczona ryba (+${item.product.bakedPrice ?? (item.product as any)?.nutrition?.bakedPrice ?? 1} zł)`
+                  : `Печена риба (+${item.product.bakedPrice ?? (item.product as any)?.nutrition?.bakedPrice ?? 1} zł)`}
               </span>
             )}
             {item.selectedOptions?.tempura && (
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-500/15 text-[#ff4d58] border border-red-500/30">
-                {locale === 'pl' ? '⚡ W tempurze (+2 zł)' : '⚡ У темпурі (+2 zł)'}
+                {locale === 'pl'
+                  ? `W tempurze (+${item.product.tempuraPrice ?? (item.product as any)?.nutrition?.tempuraPrice ?? 2} zł)`
+                  : `У темпурі (+${item.product.tempuraPrice ?? (item.product as any)?.nutrition?.tempuraPrice ?? 2} zł)`}
               </span>
             )}
           </div>
