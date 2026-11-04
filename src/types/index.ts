@@ -45,20 +45,20 @@ export interface AllergenDef {
 }
 
 export const ALLERGENS: AllergenDef[] = [
-  { key: 'gluten', name: { pl: 'Zboża zawierające gluten', uk: 'Злаки з вмістом глютену' }, short: { pl: 'Gluten', uk: 'Глютен' } },
-  { key: 'crustaceans', name: { pl: 'Skorupiaki i produkty pochodne', uk: 'Ракоподібні' }, short: { pl: 'Skorupiaki', uk: 'Ракоподібні' } },
-  { key: 'eggs', name: { pl: 'Jaja i produkty pochodne', uk: 'Яйця' }, short: { pl: 'Jaja', uk: 'Яйця' } },
-  { key: 'fish', name: { pl: 'Ryby i produkty pochodne', uk: 'Риба' }, short: { pl: 'Ryby', uk: 'Риба' } },
-  { key: 'peanuts', name: { pl: 'Orzeszki ziemne (arachidowe)', uk: 'Арахіс' }, short: { pl: 'Orzeszki ziemne', uk: 'Арахіс' } },
-  { key: 'soy', name: { pl: 'Soja i produkty pochodne', uk: 'Соя' }, short: { pl: 'Soja', uk: 'Соя' } },
-  { key: 'milk', name: { pl: 'Mleko i produkty pochodne', uk: 'Молоко та лактоза' }, short: { pl: 'Mleko', uk: 'Молоко' } },
-  { key: 'nuts', name: { pl: 'Orzechy (migdały, włoskie, nerkowca)', uk: 'Горіхи (мигдаль, волоські, кешʼю)' }, short: { pl: 'Orzechy', uk: 'Горіхи' } },
-  { key: 'celery', name: { pl: 'Seler i produkty pochodne', uk: 'Селера' }, short: { pl: 'Seler', uk: 'Селера' } },
-  { key: 'mustard', name: { pl: 'Gorczyca i produkty pochodne', uk: 'Гірчиця' }, short: { pl: 'Gorczyca', uk: 'Гірчиця' } },
-  { key: 'sesame', name: { pl: 'Nasiona sezamu i produkty pochodne', uk: 'Насіння кунжуту' }, short: { pl: 'Sezam', uk: 'Кунжут' } },
-  { key: 'sulphites', name: { pl: 'Dwutlenek siarki i siarczyny', uk: 'Діоксид сірки та сульфіти' }, short: { pl: 'Siarczyny', uk: 'Сульфіти' } },
-  { key: 'lupin', name: { pl: 'Łubin i produkty pochodne', uk: 'Люпин' }, short: { pl: 'Łubin', uk: 'Люпин' } },
-  { key: 'molluscs', name: { pl: 'Mięczaki i produkty pochodne', uk: 'Молюски' }, short: { pl: 'Mięczaki', uk: 'Молюски' } },
+  { key: 'gluten', name: { pl: 'Zboża (zawierające gluten)', uk: 'Злаки (з вмістом глютену)' }, short: { pl: 'Zboża', uk: 'Злаки' } },
+  { key: 'crustaceans', name: { pl: 'Skorupiaki i produkty pochodne', uk: 'Ракоподібні та продукти з них' }, short: { pl: 'Skorupiaki', uk: 'Ракоподібні' } },
+  { key: 'eggs', name: { pl: 'Jaja i produkty pochodne', uk: 'Яйця та продукти з них' }, short: { pl: 'Jaja', uk: 'Яйця' } },
+  { key: 'fish', name: { pl: 'Ryby i produkty pochodne', uk: 'Риба та продукти з неї' }, short: { pl: 'Ryby', uk: 'Риба' } },
+  { key: 'peanuts', name: { pl: 'Orzeszki ziemne (arachidowe)', uk: 'Арахіс та продукти з нього' }, short: { pl: 'Orzeszki ziemne', uk: 'Арахіс' } },
+  { key: 'soy', name: { pl: 'Soja i produkty pochodne', uk: 'Соя та продукти з неї' }, short: { pl: 'Soja', uk: 'Соя' } },
+  { key: 'milk', name: { pl: 'Mleko i produkty pochodne', uk: 'Молоко та молочні продукти' }, short: { pl: 'Mleko', uk: 'Молоко' } },
+  { key: 'nuts', name: { pl: 'Orzechy (migdały, laskowe, włoskie, nerkowca)', uk: 'Горіхи (мигдаль, лісові, волоські, кешʼю)' }, short: { pl: 'Orzechy', uk: 'Горіхи' } },
+  { key: 'celery', name: { pl: 'Seler i produkty pochodne', uk: 'Селера та продукти з неї' }, short: { pl: 'Seler', uk: 'Селера' } },
+  { key: 'mustard', name: { pl: 'Gorczyca i produkty pochodne', uk: 'Гірчиця та продукти з неї' }, short: { pl: 'Gorczyca', uk: 'Гірчиця' } },
+  { key: 'sesame', name: { pl: 'Nasiona sezamu i produkty pochodne', uk: 'Насіння кунжуту та продукти з нього' }, short: { pl: 'Nasiona sezamu', uk: 'Насіння кунжуту' } },
+  { key: 'sulphites', name: { pl: 'Dwutlenek siarki i siarczyny (E220-E228)', uk: 'Діоксид сірки та сульфіти (E220-E228)' }, short: { pl: 'Dwutlenek siarki', uk: 'Діоксид сірки' } },
+  { key: 'lupin', name: { pl: 'Łubin i produkty pochodne', uk: 'Люпин та продукти з нього' }, short: { pl: 'Łubin', uk: 'Люпин' } },
+  { key: 'molluscs', name: { pl: 'Mięczaki i produkty pochodne', uk: 'Молюски та продукти з них' }, short: { pl: 'Mięczaki', uk: 'Молюски' } },
 ];
 
 export interface Product {
