@@ -37,6 +37,14 @@ export function ProductModal() {
   const [modalQuantity, setModalQuantity] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isBakedSelected, setIsBakedSelected] = useState(false);
+  const [isTempuraSelected, setIsTempuraSelected] = useState(false);
+
+  // Скидання вибору модифікаторів при зміні страви
+  useEffect(() => {
+    setIsBakedSelected(false);
+    setIsTempuraSelected(false);
+  }, [selectedProduct?.id]);
 
   // Тач-координати для свайпів
   const cardTouchStartX = useRef<number | null>(null);
@@ -145,9 +153,17 @@ export function ProductModal() {
 
   if (!selectedProduct) return null;
 
+  // Розрахунок вартості з урахуванням обраних модифікаторів
+  const optionExtraPrice = (isBakedSelected ? 1 : 0) + (isTempuraSelected ? 2 : 0);
+  const modalUnitPrice = getEffectivePrice(selectedProduct) + optionExtraPrice;
+  const modalTotalPrice = modalUnitPrice * modalQuantity;
+
   // Додавання до кошика (не закриваємо модалку, залишаємо користувача в картці)
   const handleAddToCart = () => {
-    addItem(selectedProduct, modalQuantity);
+    addItem(selectedProduct, modalQuantity, {
+      baked: isBakedSelected,
+      tempura: isTempuraSelected,
+    });
     setIsAdded(true);
     setTimeout(() => {
       setIsAdded(false);
@@ -452,6 +468,74 @@ export function ProductModal() {
                     </div>
                   </div>
                 )}
+
+                {/* Блок вибору додаткових модифікаторів: печена риба (+1 zł) / рол у темпурі (+2 zł) */}
+                {(selectedProduct.canBeBaked || selectedProduct.canBeTempura) && (
+                  <div className="pt-3 border-t border-white/10 space-y-2">
+                    <span className="text-[10.5px] font-bold text-zinc-400 uppercase tracking-wider block">
+                      {locale === 'pl' ? 'Opcje do wyboru:' : 'Додаткові опції:'}
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {selectedProduct.canBeBaked && (
+                        <button
+                          type="button"
+                          onClick={() => setIsBakedSelected((prev) => !prev)}
+                          style={{
+                            clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                          }}
+                          className={cn(
+                            'flex items-center justify-between p-2.5 rounded-none border transition-all cursor-pointer text-left select-none',
+                            isBakedSelected
+                              ? 'bg-amber-500/15 border-amber-500/60 text-white shadow-sm shadow-amber-500/20'
+                              : 'bg-white/5 border-white/10 text-zinc-300 hover:border-white/20 hover:bg-white/10'
+                          )}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className={cn(
+                              'w-4 h-4 rounded-xs border flex items-center justify-center transition-colors',
+                              isBakedSelected ? 'bg-amber-500 border-amber-400 text-black' : 'border-white/30 bg-transparent'
+                            )}>
+                              {isBakedSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            </span>
+                            <span className="text-xs font-bold">
+                              {locale === 'pl' ? 'Pieczona ryba' : 'Печена риба'}
+                            </span>
+                          </div>
+                          <span className="text-xs font-black text-amber-400">+1 zł</span>
+                        </button>
+                      )}
+
+                      {selectedProduct.canBeTempura && (
+                        <button
+                          type="button"
+                          onClick={() => setIsTempuraSelected((prev) => !prev)}
+                          style={{
+                            clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                          }}
+                          className={cn(
+                            'flex items-center justify-between p-2.5 rounded-none border transition-all cursor-pointer text-left select-none',
+                            isTempuraSelected
+                              ? 'bg-[#e50914]/15 border-[#e50914]/60 text-white shadow-sm shadow-red-500/20'
+                              : 'bg-white/5 border-white/10 text-zinc-300 hover:border-white/20 hover:bg-white/10'
+                          )}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className={cn(
+                              'w-4 h-4 rounded-xs border flex items-center justify-center transition-colors',
+                              isTempuraSelected ? 'bg-[#e50914] border-red-400 text-white' : 'border-white/30 bg-transparent'
+                            )}>
+                              {isTempuraSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            </span>
+                            <span className="text-xs font-bold">
+                              {locale === 'pl' ? 'W tempurze' : 'У темпурі'}
+                            </span>
+                          </div>
+                          <span className="text-xs font-black text-[#ff4d58]">+2 zł</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* На десктопі: ціна, грамовка/штуки та кнопка замовлення закріплені внизу правої колонки */}
@@ -460,16 +544,16 @@ export function ProductModal() {
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-baseline gap-2">
                     <span className="text-xl sm:text-2xl font-black text-[#e50914] tracking-tight">
-                      {formatPrice(getEffectivePrice(selectedProduct) * modalQuantity, locale)}
+                      {formatPrice(modalTotalPrice, locale)}
                     </span>
                     {(selectedProduct.discountPercent ?? 0) > 0 && (
                       <span className="text-xs sm:text-sm text-zinc-500 line-through">
-                        {formatPrice(selectedProduct.price * modalQuantity, locale)}
+                        {formatPrice((selectedProduct.price + optionExtraPrice) * modalQuantity, locale)}
                       </span>
                     )}
                     {modalQuantity > 1 && (
                       <span className="text-[11px] text-zinc-500 font-medium font-mono">
-                        ({formatPrice(getEffectivePrice(selectedProduct), locale)} / {locale === 'pl' ? 'szt.' : 'шт.'})
+                        ({formatPrice(modalUnitPrice, locale)} / {locale === 'pl' ? 'szt.' : 'шт.'})
                       </span>
                     )}
                   </div>
@@ -559,16 +643,16 @@ export function ProductModal() {
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-baseline gap-2">
                 <span className="text-xl font-black text-[#e50914] tracking-tight">
-                  {formatPrice(getEffectivePrice(selectedProduct) * modalQuantity, locale)}
+                  {formatPrice(modalTotalPrice, locale)}
                 </span>
                 {(selectedProduct.discountPercent ?? 0) > 0 && (
                   <span className="text-xs text-zinc-500 line-through">
-                    {formatPrice(selectedProduct.price * modalQuantity, locale)}
+                    {formatPrice((selectedProduct.price + optionExtraPrice) * modalQuantity, locale)}
                   </span>
                 )}
                 {modalQuantity > 1 && (
                   <span className="text-[11px] text-zinc-500 font-medium font-mono">
-                    ({formatPrice(getEffectivePrice(selectedProduct), locale)} / {locale === 'pl' ? 'szt.' : 'шт.'})
+                    ({formatPrice(modalUnitPrice, locale)} / {locale === 'pl' ? 'szt.' : 'шт.'})
                   </span>
                 )}
               </div>

@@ -282,6 +282,8 @@ export const products: Product[] = [
       carbs: 24.5,
     },
     isAvailable: true,
+    canBeBaked: true,
+    canBeTempura: true,
   },
   {
     id: 'maki-tunczyk',

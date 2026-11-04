@@ -1,17 +1,21 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { CartItem, Product, Category, DeliveryZoneId } from '@/types';
+import { CartItem, Product, Category, DeliveryZoneId, SelectedProductOptions } from '@/types';
 import { brandTheme } from '@/config/theme';
-import { getEffectivePrice } from '@/lib/utils';
+import { getEffectivePrice, getItemUnitPrice } from '@/lib/utils';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { products as defaultProducts } from '@/lib/mockData';
+
+export function isSameProductOptions(a?: SelectedProductOptions, b?: SelectedProductOptions): boolean {
+  return Boolean(a?.baked) === Boolean(b?.baked) && Boolean(a?.tempura) === Boolean(b?.tempura);
+}
 
 function syncGiftItem(items: CartItem[], menuProducts: Product[]): CartItem[] {
   try {
     const settings = useSettingsStore.getState();
     const rawItems = items.filter((i) => !i.isGift);
     const subtotal = rawItems.reduce(
-      (sum, item) => sum + getEffectivePrice(item.product) * item.quantity,
+      (sum, item) => sum + getItemUnitPrice(item.product, item.selectedOptions) * item.quantity,
       0
     );
 
@@ -65,9 +69,9 @@ interface CartState {
   setMenuCategories: (categories: Category[]) => void;
 
   // Дії кошика
-  addItem: (product: Product, quantity?: number) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  addItem: (product: Product, quantity?: number, selectedOptions?: SelectedProductOptions) => void;
+  removeItem: (productId: string, selectedOptions?: SelectedProductOptions) => void;
+  updateQuantity: (productId: string, quantity: number, selectedOptions?: SelectedProductOptions) => void;
   clearCart: () => void;
   
   // Керування панелями та модалками
@@ -126,11 +130,11 @@ export const useCartStore = create<CartState>()(
       setIsCompactView: (compact: boolean) => set({ isCompactView: compact }),
       toggleCompactView: () => set((state) => ({ isCompactView: !state.isCompactView })),
 
-      addItem: (product: Product, quantity = 1) => {
+      addItem: (product: Product, quantity = 1, selectedOptions?: SelectedProductOptions) => {
         set((state) => {
           const rawItems = state.items.filter((i) => !i.isGift);
           const existingIndex = rawItems.findIndex(
-            (item) => item.product.id === product.id
+            (item) => item.product.id === product.id && isSameProductOptions(item.selectedOptions, selectedOptions)
           );
 
           let updated: CartItem[];
@@ -138,38 +142,46 @@ export const useCartStore = create<CartState>()(
             updated = [...rawItems];
             updated[existingIndex].quantity += quantity;
           } else {
-            updated = [...rawItems, { product, quantity }];
+            updated = [...rawItems, { product, quantity, selectedOptions }];
           }
 
           return { items: syncGiftItem(updated, state.menuProducts) };
         });
       },
 
-      removeItem: (productId: string) => {
+      removeItem: (productId: string, selectedOptions?: SelectedProductOptions) => {
         set((state) => {
           const rawItems = state.items.filter((i) => !i.isGift);
-          const updated = rawItems.filter((item) => item.product.id !== productId);
+          const updated = rawItems.filter(
+            (item) => !(item.product.id === productId && (selectedOptions === undefined || isSameProductOptions(item.selectedOptions, selectedOptions)))
+          );
           return { items: syncGiftItem(updated, state.menuProducts) };
         });
       },
 
-      updateQuantity: (productId: string, quantity: number) => {
+      updateQuantity: (productId: string, quantity: number, selectedOptions?: SelectedProductOptions) => {
         set((state) => {
           const rawItems = state.items.filter((i) => !i.isGift);
           let updated: CartItem[];
           if (quantity <= 0) {
-            updated = rawItems.filter((item) => item.product.id !== productId);
+            updated = rawItems.filter(
+              (item) => !(item.product.id === productId && (selectedOptions === undefined || isSameProductOptions(item.selectedOptions, selectedOptions)))
+            );
           } else {
-            const exists = rawItems.some((item) => item.product.id === productId);
+            const exists = rawItems.some(
+              (item) => item.product.id === productId && (selectedOptions === undefined || isSameProductOptions(item.selectedOptions, selectedOptions))
+            );
             if (exists) {
               updated = rawItems.map((item) =>
-                item.product.id === productId ? { ...item, quantity } : item
+                item.product.id === productId && (selectedOptions === undefined || isSameProductOptions(item.selectedOptions, selectedOptions))
+                  ? { ...item, quantity }
+                  : item
               );
             } else {
               const allDishes = state.menuProducts?.length ? state.menuProducts : defaultProducts;
               const prod = allDishes.find((p) => p.id === productId) || defaultProducts.find((p) => p.id === productId);
               if (prod) {
-                updated = [...rawItems, { product: prod, quantity }];
+                updated = [...rawItems, { product: prod, quantity, selectedOptions }];
               } else {
                 updated = rawItems;
               }
@@ -212,7 +224,7 @@ export const useCartStore = create<CartState>()(
         const { items } = get();
         return items.reduce((sum, item) => {
           if (item.isGift) return sum;
-          return sum + getEffectivePrice(item.product) * item.quantity;
+          return sum + getItemUnitPrice(item.product, item.selectedOptions) * item.quantity;
         }, 0);
       },
 

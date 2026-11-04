@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Product } from '@/types';
+import { Product, SelectedProductOptions } from '@/types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -16,5 +16,12 @@ export function getEffectivePrice(product: Product): number {
     return Math.round(product.price * (1 - product.discountPercent / 100));
   }
   return product.price;
+}
+
+export function getItemUnitPrice(product: Product, options?: SelectedProductOptions): number {
+  let price = getEffectivePrice(product);
+  if (options?.baked) price += 1;
+  if (options?.tempura) price += 2;
+  return price;
 }
 

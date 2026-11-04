@@ -57,6 +57,16 @@ export async function fetchMenuData(): Promise<MenuData> {
       ingredients: prod.ingredients || { pl: [], uk: [] },
       nutrition: prod.nutrition || { calories: 0, proteins: 0, fats: 0, carbs: 0 },
       isAvailable: Boolean(prod.is_available),
+      canBeBaked: prod.can_be_baked !== undefined
+        ? Boolean(prod.can_be_baked)
+        : (prod.nutrition?.canBeBaked !== undefined
+            ? Boolean(prod.nutrition?.canBeBaked)
+            : prod.id === 'maki-losos'),
+      canBeTempura: prod.can_be_tempura !== undefined
+        ? Boolean(prod.can_be_tempura)
+        : (prod.nutrition?.canBeTempura !== undefined
+            ? Boolean(prod.nutrition?.canBeTempura)
+            : (prod.category_id === 'mini-maki' && prod.id !== 'maki-ogorek')),
     }));
 
     // Впорядковуємо страви послідовно за категоріями меню (Міні-макі -> Футомакі -> Роли тощо)
@@ -283,11 +293,13 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
     if (updates.image !== undefined) payload.image = updates.image;
     if (updates.badge !== undefined) payload.badge = updates.badge || null;
     if (updates.ingredients !== undefined) payload.ingredients = updates.ingredients;
-    if (updates.nutrition !== undefined || updates.sku !== undefined || updates.discountPercent !== undefined) {
+    if (updates.nutrition !== undefined || updates.sku !== undefined || updates.discountPercent !== undefined || updates.canBeBaked !== undefined || updates.canBeTempura !== undefined) {
       payload.nutrition = {
         ...(updates.nutrition || {}),
         ...(updates.sku !== undefined ? { sku: updates.sku } : {}),
         ...(updates.discountPercent !== undefined ? { discountPercent: updates.discountPercent } : {}),
+        ...(updates.canBeBaked !== undefined ? { canBeBaked: updates.canBeBaked } : {}),
+        ...(updates.canBeTempura !== undefined ? { canBeTempura: updates.canBeTempura } : {}),
       };
     }
     if (updates.isAvailable !== undefined) payload.is_available = updates.isAvailable;
@@ -331,6 +343,8 @@ export async function createProduct(product: Product): Promise<{ success: boolea
             ...(product.nutrition || { calories: 0, proteins: 0, fats: 0, carbs: 0 }),
             ...(product.sku ? { sku: product.sku } : {}),
             ...(product.discountPercent !== undefined ? { discountPercent: product.discountPercent } : {}),
+            ...(product.canBeBaked !== undefined ? { canBeBaked: product.canBeBaked } : {}),
+            ...(product.canBeTempura !== undefined ? { canBeTempura: product.canBeTempura } : {}),
           },
           is_available: product.isAvailable,
         },

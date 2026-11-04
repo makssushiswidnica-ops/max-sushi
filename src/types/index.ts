@@ -38,6 +38,8 @@ export interface Product {
   ingredients: LocalizedArray;
   nutrition: Nutrition;
   isAvailable: boolean;
+  canBeBaked?: boolean;   // Дозволена опція "Печена риба" (+1 zł)
+  canBeTempura?: boolean; // Дозволена опція "У темпурі" (+2 zł)
 }
 
 export interface Category {
@@ -48,10 +50,16 @@ export interface Category {
   sort_order?: number;
 }
 
+export interface SelectedProductOptions {
+  baked?: boolean;
+  tempura?: boolean;
+}
+
 export interface CartItem {
   product: Product;
   quantity: number;
   isGift?: boolean;
+  selectedOptions?: SelectedProductOptions;
 }
 
 export type DeliveryZoneId = 'city' | 'suburb' | 'suburb_5km' | 'suburb_10km';

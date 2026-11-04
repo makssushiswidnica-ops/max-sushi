@@ -5,7 +5,7 @@ import { Minus, Plus, Trash2, UtensilsCrossed, Gift } from 'lucide-react';
 import { CartItem as CartItemType } from '@/types';
 import { useCartStore } from '@/store/useCartStore';
 import { useI18n } from '@/lib/i18nContext';
-import { formatPrice, getEffectivePrice } from '@/lib/utils';
+import { formatPrice, getItemUnitPrice } from '@/lib/utils';
 
 interface CartItemProps {
   item: CartItemType;
@@ -16,7 +16,7 @@ export function CartItem({ item }: CartItemProps) {
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const removeItem = useCartStore((s) => s.removeItem);
 
-  const effectiveUnit = getEffectivePrice(item.product);
+  const effectiveUnit = getItemUnitPrice(item.product, item.selectedOptions);
   const isGift = Boolean(item.isGift);
 
   return (
@@ -71,6 +71,23 @@ export function CartItem({ item }: CartItemProps) {
             </>
           )}
         </div>
+
+        {/* Бейджі модифікаторів (печена риба / в темпурі) */}
+        {(item.selectedOptions?.baked || item.selectedOptions?.tempura) && (
+          <div className="flex flex-wrap gap-1 mt-1">
+            {item.selectedOptions?.baked && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                {locale === 'pl' ? '🔥 Pieczona ryba (+1 zł)' : '🔥 Печена риба (+1 zł)'}
+              </span>
+            )}
+            {item.selectedOptions?.tempura && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-500/15 text-[#ff4d58] border border-red-500/30">
+                {locale === 'pl' ? '⚡ W tempurze (+2 zł)' : '⚡ У темпурі (+2 zł)'}
+              </span>
+            )}
+          </div>
+        )}
+
         <div className="mt-1 flex items-baseline gap-2">
           {isGift ? (
             <div className="flex items-baseline gap-1.5">
@@ -98,7 +115,7 @@ export function CartItem({ item }: CartItemProps) {
       <div className="flex flex-col items-end gap-2 shrink-0">
         {!isGift && (
           <button
-            onClick={() => removeItem(item.product.id)}
+            onClick={() => removeItem(item.product.id, item.selectedOptions)}
             aria-label="Видалити страву"
             className="text-zinc-500 hover:text-red-400 p-1 transition-colors cursor-pointer"
           >
@@ -118,7 +135,7 @@ export function CartItem({ item }: CartItemProps) {
             className="flex items-center gap-1.5 bg-[#1b1b24] border border-white/10 p-1"
           >
             <button
-              onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+              onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedOptions)}
               aria-label="Зменшити кількість"
               className="flex items-center justify-center w-6 h-6 bg-white/5 hover:bg-white/15 text-zinc-300 hover:text-white transition-colors cursor-pointer"
             >
@@ -128,7 +145,7 @@ export function CartItem({ item }: CartItemProps) {
               {item.quantity}
             </span>
             <button
-              onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+              onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedOptions)}
               aria-label="Збільшити кількість"
               className="flex items-center justify-center w-6 h-6 bg-[#e50914] text-white hover:bg-[#f4222d] transition-colors cursor-pointer"
             >

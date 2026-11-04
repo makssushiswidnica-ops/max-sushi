@@ -409,7 +409,7 @@ export function CustomerDrawer() {
     if (!order.items || order.items.length === 0) return;
     clearCart();
     order.items.forEach((item) => {
-      addItem(item.product, item.quantity);
+      addItem(item.product, item.quantity, item.selectedOptions);
     });
     setOpen(false);
     setCartOpen(true);
@@ -1041,6 +1041,16 @@ export function CustomerDrawer() {
                                             <span className="truncate text-zinc-200">
                                               <span className="font-bold text-amber-400 mr-1.5">{item.quantity}×</span>
                                               {name}
+                                              {item.selectedOptions?.baked && (
+                                                <span className="text-[10px] text-amber-300 ml-1.5 font-semibold">
+                                                  ({locale === 'pl' ? 'pieczona' : 'печена'})
+                                                </span>
+                                              )}
+                                              {item.selectedOptions?.tempura && (
+                                                <span className="text-[10px] text-[#ff4d58] ml-1.5 font-semibold">
+                                                  ({locale === 'pl' ? 'tempura' : 'темпура'})
+                                                </span>
+                                              )}
                                             </span>
                                             <span className="font-medium text-zinc-400 shrink-0">
                                               {formatPrice((item.product?.price || 0) * item.quantity, locale)}
