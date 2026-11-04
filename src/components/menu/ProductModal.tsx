@@ -460,13 +460,6 @@ export function ProductModal() {
                   )}
                 </div>
 
-                {/* Повний опис позиції без скорочень */}
-                {selectedProduct.description && (
-                  <p className="text-xs sm:text-sm text-zinc-300 font-normal leading-relaxed">
-                    {selectedProduct.description[locale]}
-                  </p>
-                )}
-
                 {/* Блок інгредієнтів у стовпчик капсом (без обрізання тексту) */}
                 {selectedProduct.ingredients?.[locale]?.length > 0 && (
                   <div className="pt-2.5 border-t border-white/5">

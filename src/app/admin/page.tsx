@@ -1777,8 +1777,8 @@ export default function AdminPage() {
 
   // Швидкий автопереклад з польської на українську
   const handleAutoTranslate = async () => {
-    if (!formNamePl.trim() && !formDescPl.trim() && !formIngredientsPl.trim()) {
-      setErrorMessage('Спочатку заповніть назву, опис або інгредієнти польською мовою.');
+    if (!formNamePl.trim() && !formIngredientsPl.trim()) {
+      setErrorMessage('Спочатку заповніть назву або інгредієнти польською мовою.');
       return;
     }
     setIsTranslating(true);
@@ -5755,19 +5755,6 @@ export default function AdminPage() {
 
                     <div>
                       <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5">
-                        Опис
-                      </label>
-                      <textarea
-                        rows={2}
-                        value={formDescPl}
-                        onChange={(e) => setFormDescPl(e.target.value)}
-                        placeholder="np. Wyśmienity łosoś z serkiem, ogórkiem i awokado..."
-                        className="w-full bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg p-2.5 text-xs text-white focus:outline-none resize-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5">
                         Інгредієнти (через кому)
                       </label>
                       <input
@@ -5810,19 +5797,6 @@ export default function AdminPage() {
                           className="w-full bg-[#1b1b2a] border border-amber-400/40 focus:border-amber-400 rounded-lg px-3 py-2 text-sm text-amber-300 font-mono font-bold focus:outline-none"
                         />
                       </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5">
-                        Опис
-                      </label>
-                      <textarea
-                        rows={2}
-                        value={formDescUk}
-                        onChange={(e) => setFormDescUk(e.target.value)}
-                        placeholder="напр. Вишуканий лосось з крем-сиром, огірком та авокадо..."
-                        className="w-full bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg p-2.5 text-xs text-white focus:outline-none resize-none"
-                      />
                     </div>
 
                     <div>
