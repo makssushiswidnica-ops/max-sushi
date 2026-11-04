@@ -5944,8 +5944,8 @@ export default function AdminPage() {
                   <span className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
                     Додаткові опції:
                   </span>
-                  <div className="flex items-center gap-4 flex-wrap">
-                    <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-4 w-full sm:w-auto">
+                    <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
                       <label className="flex items-center gap-2 cursor-pointer select-none group">
                         <input
                           type="checkbox"
@@ -5957,7 +5957,7 @@ export default function AdminPage() {
                           Печена риба
                         </span>
                       </label>
-                      <div className="flex items-center gap-1 bg-[#12121a] px-2 py-1 rounded border border-white/10">
+                      <div className="flex items-center gap-1 bg-[#12121a] px-2 py-1 rounded border border-white/10 ml-auto sm:ml-0">
                         <span className="text-zinc-500 text-xs font-bold">+</span>
                         <input
                           type="number"
@@ -5972,7 +5972,7 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
                       <label className="flex items-center gap-2 cursor-pointer select-none group">
                         <input
                           type="checkbox"
@@ -5984,7 +5984,7 @@ export default function AdminPage() {
                           У темпурі
                         </span>
                       </label>
-                      <div className="flex items-center gap-1 bg-[#12121a] px-2 py-1 rounded border border-white/10">
+                      <div className="flex items-center gap-1 bg-[#12121a] px-2 py-1 rounded border border-white/10 ml-auto sm:ml-0">
                         <span className="text-zinc-500 text-xs font-bold">+</span>
                         <input
                           type="number"

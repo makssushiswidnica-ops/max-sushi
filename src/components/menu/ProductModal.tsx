@@ -454,9 +454,26 @@ export function ProductModal() {
                   </p>
                 )}
 
-                {/* Блок вибору додаткових модифікаторів: печена риба / рол у темпурі (помітно одразу під описом) */}
+                {/* Блок інгредієнтів у стовпчик капсом (без обрізання тексту) */}
+                {selectedProduct.ingredients?.[locale]?.length > 0 && (
+                  <div className="pt-2.5 border-t border-white/5">
+                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">
+                      {t.product.ingredients}:
+                    </span>
+                    <div className={`grid grid-cols-1 ${selectedProduct.ingredients[locale].length > 5 ? 'sm:grid-cols-2' : ''} gap-x-4 gap-y-1.5 text-xs text-zinc-300 font-semibold uppercase tracking-wider`}>
+                      {selectedProduct.ingredients[locale].map((ingredient, idx) => (
+                        <span key={idx} className="flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#e50914] shrink-0 mt-1" />
+                          <span className="leading-snug break-words">{ingredient}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Блок вибору додаткових модифікаторів: печена риба / рол у темпурі */}
                 {(selectedProduct.canBeBaked || selectedProduct.canBeTempura) && (
-                  <div className="pt-2.5 border-t border-white/10 space-y-2">
+                  <div className="pt-3 border-t border-white/10 space-y-2">
                     <span className="text-[10.5px] font-bold text-zinc-400 uppercase tracking-wider block">
                       {locale === 'pl' ? 'Opcje do wyboru:' : 'Додаткові опції:'}
                     </span>
@@ -518,23 +535,6 @@ export function ProductModal() {
                           <span className="text-xs font-black text-[#ff4d58] shrink-0 ml-1">+{tempuraPrice} zł</span>
                         </button>
                       )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Блок інгредієнтів у стовпчик капсом (без обрізання тексту) */}
-                {selectedProduct.ingredients?.[locale]?.length > 0 && (
-                  <div className="pt-2.5 border-t border-white/5">
-                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">
-                      {t.product.ingredients}:
-                    </span>
-                    <div className={`grid grid-cols-1 ${selectedProduct.ingredients[locale].length > 5 ? 'sm:grid-cols-2' : ''} gap-x-4 gap-y-1.5 text-xs text-zinc-300 font-semibold uppercase tracking-wider`}>
-                      {selectedProduct.ingredients[locale].map((ingredient, idx) => (
-                        <span key={idx} className="flex items-start gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#e50914] shrink-0 mt-1" />
-                          <span className="leading-snug break-words">{ingredient}</span>
-                        </span>
-                      ))}
                     </div>
                   </div>
                 )}
