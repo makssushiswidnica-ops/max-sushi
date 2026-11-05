@@ -342,7 +342,7 @@ export function CheckoutModal() {
   const isPickup = deliveryMethod === 'pickup';
   const subtotal = useCartStore((s) => s.getSubtotal)();
   const hasDiscountedItem = items.some(
-    (item) => !item.isGift && ((item.product.discountPercent || 0) > 0 || ((item.product.oldPrice || 0) > (item.product.price || 0)))
+    (item) => !item.isGift && (item.product.discountPercent || 0) > 0
   );
 
   // Динамічний прорахунок кілометражу за місто через Nominatim + OSRM
