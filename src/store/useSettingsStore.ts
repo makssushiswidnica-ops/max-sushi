@@ -4,8 +4,9 @@ import { StoreSettings, DeliveryZoneId } from '@/types';
 
 export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   cityFreeThreshold: 150, // Поріг безкоштовної доставки по Свідниці (150 zł)
-  cityStandardFee: 12,    // Стандартна ціна по Свідниці якщо менше 150 zł
-  suburb10kmFee: 25,      // За місто до 10 км (завжди платна, 25 zł)
+  cityStandardFee: 5,     // Стандартна ціна по Свідниці якщо менше 150 zł (5 zł)
+  suburb10kmFee: 9,       // За місто базова ставка (від 9 zł)
+  isOrdersPaused: false,  // Прийом замовлень онлайн (активний / зупинено)
   giftPromo: {
     enabled: true,
     minAmount: 150,       // Подарунок від 150 zł

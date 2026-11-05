@@ -62,13 +62,13 @@ export function getRawPhoneDigits(val: string): string {
 
 /**
  * Маска для назви населеного пункту (miejscowość):
- * - Дозволено: літери (польські, латиниця, кирилиця), пробіли, дефіси.
- * - Заборонено: цифри, спецсимволи, емодзі.
+ * - Дозволено: ТІЛЬКИ латиниця та польські літери (ąćęłńóśźżĄĆĘŁŃÓŚŹŻ), пробіли, дефіси.
+ * - СУВОРО ЗАБОРОНЕНО: кирилиця, цифри, спецсимволи, емодзі.
  * - Максимальна довжина: 40 символів.
  */
 export function maskCity(val: string): string {
   if (!val) return '';
-  const cleaned = val.replace(/[^\p{L}\s\-]/gu, '');
+  const cleaned = val.replace(/[^a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ\s\-]/g, '');
   const trimmedStart = cleaned.replace(/^[\s\-]+/, '');
   const singleSpaced = trimmedStart.replace(/\s{2,}/g, ' ');
   return singleSpaced.slice(0, 40);
@@ -76,13 +76,13 @@ export function maskCity(val: string): string {
 
 /**
  * Маска для назви вулиці:
- * - Дозволено: літери, цифри (напр. 3 Maja), пробіли, крапки (напр. gen., św.), дефіси.
- * - Заборонено: спецсимволи @, &, (), *, emojis тощо.
+ * - Дозволено: ТІЛЬКИ латиниця та польські літери (ąćęłńóśźżĄĆĘŁŃÓŚŹŻ), пробіли, крапки (al., gen., św.), дефіси.
+ * - СУВОРО ЗАБОРОНЕНО: кирилиця, цифри, спецсимволи, емодзі.
  * - Максимальна довжина: 50 символів.
  */
 export function maskStreet(val: string): string {
   if (!val) return '';
-  const cleaned = val.replace(/[^\p{L}\d\s.\-]/gu, '');
+  const cleaned = val.replace(/[^a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ\s.\-]/g, '');
   const trimmedStart = cleaned.replace(/^[\s.\-]+/, '');
   const singleSpaced = trimmedStart.replace(/\s{2,}/g, ' ');
   return singleSpaced.slice(0, 50);

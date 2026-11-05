@@ -111,6 +111,7 @@ export interface StoreSettings {
   cityStandardFee: number;
   suburb10kmFee: number;
   suburb5kmFee?: number;
+  isOrdersPaused?: boolean;
   giftPromo: {
     enabled: boolean;
     minAmount: number;

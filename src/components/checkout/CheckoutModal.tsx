@@ -20,6 +20,8 @@ import {
   Check,
   AlertCircle,
   Zap,
+  Navigation,
+  Loader2,
 } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
@@ -31,18 +33,233 @@ import { brandTheme } from '@/config/theme';
 import { formatPrice, cn } from '@/lib/utils';
 import { DeliveryMethod, PaymentMethod, Order, OrderAddress, DeliveryZoneId } from '@/types';
 import { useSettingsStore } from '@/store/useSettingsStore';
-import { 
-  maskName, 
-  maskPhone, 
-  getRawPhoneDigits, 
+import {
+  maskName,
+  maskPhone,
+  getRawPhoneDigits,
   maskCity,
-  maskStreet, 
-  maskHouse, 
-  maskApartment, 
-  maskFloor, 
-  maskEntryCode, 
-  maskChangeFrom 
+  maskStreet,
+  maskHouse,
+  maskApartment,
+  maskFloor,
+  maskEntryCode,
+  maskChangeFrom
 } from '@/lib/inputMasks';
+
+// Населені пункти Свідницького повіту для розумного автокомпліту та підказок
+const NEARBY_TOWNS = [
+  'Pszenno',
+  'Witoszów Dolny',
+  'Witoszów Górny',
+  'Bystrzyca Dolna',
+  'Bystrzyca Górna',
+  'Słotwina',
+  'Komorów',
+  'Mokrzeszów',
+  'Boleścin',
+  'Grodziszcze',
+  'Panków',
+  'Zawiszów',
+  'Jagodnik',
+  'Miłochów',
+  'Niegoszów',
+  'Lutomia Dolna',
+  'Lutomia Górna',
+  'Burkatów',
+  'Makowice',
+  'Opoczka',
+  'Jakubów',
+  'Wilków',
+  'Krzczonów',
+  'Gogołów',
+  'Wiśniowa',
+  'Sulisławice',
+  'Marcinowice',
+  'Jaworzyna Śląska',
+  'Żarów',
+  'Świebodzice',
+  'Strzegom',
+  'Dzierżoniów',
+];
+
+// Популярні вулиці Свідниці та околиць для розумного автокомпліту
+const POPULAR_STREETS = [
+  '1 Maja',
+  '3 Maja',
+  'Akacjowa',
+  'Armii Krajowej',
+  'Batalionów Chłopskich',
+  'Biała',
+  'Boczna',
+  'Bohaterów Getta',
+  'Bolesława Chrobrego',
+  'Bolesława Krzywoustego',
+  'Bratobójcza',
+  'Brzozowa',
+  'Bystrzycka',
+  'Ceglana',
+  'Chopina',
+  'Cicha',
+  'Czereśniowa',
+  'Daleka',
+  'Dębowa',
+  'Długa',
+  'Dmowskiego',
+  'Dworcowa',
+  'Esperantystów',
+  'Fabryczna',
+  'Fieldorfa',
+  'Franciszkańska',
+  'Galla Anonima',
+  'Garncarska',
+  'Gdyńska',
+  'Głowackiego',
+  'Główna',
+  'Grodzka',
+  'Hetmańska',
+  'Husarska',
+  'Inwalidów Wojennych',
+  'Jagiellońska',
+  'Jagodowa',
+  'Jarzębinowa',
+  'Jodłowa',
+  'Kasztanowa',
+  'Kazimierza Odnowiciela',
+  'Kazimierza Wielkiego',
+  'Kilińskiego',
+  'Klonowa',
+  'Kolejowa',
+  'Kołłątaja',
+  'Komunalna',
+  'Komunardów',
+  'Konopnickiej',
+  'Kopernika',
+  'Kościelna',
+  'Kościuszki',
+  'Kotlarska',
+  'Kozara-Słobódzkiego',
+  'Kraszowicka',
+  'Krótka',
+  'Kwiatowa',
+  'Lelewela',
+  'Leśna',
+  'Lipowa',
+  'Lwowska',
+  'Łączna',
+  'Łukasińskiego',
+  'Marcinkowskiego',
+  'Marii Konopnickiej',
+  'Marii Kunic',
+  'Mennicka',
+  'Mieszka I',
+  'Młynarska',
+  'Muzealna',
+  'Nadbrzeżna',
+  'Niecała',
+  'Niemiecka',
+  'Noworudzka',
+  'Ofiar Oświęcimskich',
+  'Okulickiego',
+  'Okrężna',
+  'Paderewskiego',
+  'Parkowa',
+  'Partyzantów',
+  'Piekarska',
+  'Piękna',
+  'Pionierów Ziemi Świdnickiej',
+  'Piotra Skargi',
+  'Plac Grunwaldzki',
+  'Plac Jana Pawła II',
+  'Plac Pokoju',
+  'Plac Wolności',
+  'Pocztowa',
+  'Podchorążych',
+  'Podmiejska',
+  'Pogodna',
+  'Polna Droga',
+  'Prądzyńskiego',
+  'Promenada',
+  'Prosta',
+  'Przemysłowa',
+  'Przyjaźni',
+  'Pułaskiego',
+  'Reja',
+  'Riedla',
+  'Rolnicza',
+  'Równa',
+  'Różana',
+  'Rycerska',
+  'Rynek',
+  'Rzeźbiarska',
+  'Sadowa',
+  'Saperów',
+  'Serbska',
+  'Sienkiewicza',
+  'Sikorskiego',
+  'Skłodowskiej-Curie',
+  'Składowa',
+  'Słoneczna',
+  'Słowackiego',
+  'Słowiańska',
+  'Sobieskiego',
+  'Solna',
+  'Sosnowa',
+  'Sowiogórska',
+  'Spacerowa',
+  'Sportowa',
+  'Spółdzielcza',
+  'Srebrna',
+  'Stalowa',
+  'Stary Rynek',
+  'Staszica',
+  'Strzelińska',
+  'Strzegomska',
+  'Sukiennicka',
+  'Szarych Szeregów',
+  'Szpitalna',
+  'Szymanowskiego',
+  'Ślężana',
+  'Środkowa',
+  'Świerkowa',
+  'Świętokrzyska',
+  'Teatralna',
+  'Tołstoja',
+  'Traugutta',
+  'Ułańska',
+  'Wałbrzyska',
+  'Wałowa',
+  'Warszawska',
+  'Waryńskiego',
+  'Wąska',
+  'Wesoła',
+  'Westerplatte',
+  'Wewnętrzna',
+  'Widokowa',
+  'Wiejska',
+  'Wierzbowa',
+  'Wilcza',
+  'Wiosenna',
+  'Wiśniowa',
+  'Wodna',
+  'Wojska Polskiego',
+  'Wrocławska',
+  'Wróblewskiego',
+  'Wschodnia',
+  'Wybickiego',
+  'Wyspiańskiego',
+  'Wyszyńskiego',
+  'Zacisze',
+  'Zagłoby',
+  'Zamenhofa',
+  'Zamkowa',
+  'Zawiszowska',
+  'Zielona',
+  'Zimowa',
+  'Zwierzyniecka',
+  'Zwycięstwa',
+  'Żeromskiego',
+  'Żwirki i Wigury',
+];
 
 // Схема валідації Zod з масками, підтримкою мов та захистом від некоректних символів
 const createCheckoutSchema = (t: ReturnType<typeof useI18n>['t'], locale: string) =>
@@ -124,8 +341,28 @@ export function CheckoutModal() {
   const storeSettings = useSettingsStore();
   const isPickup = deliveryMethod === 'pickup';
   const subtotal = useCartStore((s) => s.getSubtotal)();
-  const deliveryFee = useCartStore((s) => s.getDeliveryFee)(isPickup, selectedZone);
-  const total = useCartStore((s) => s.getTotal)(isPickup, selectedZone);
+
+  // Динамічний прорахунок кілометражу за місто через Nominatim + OSRM
+  const [distanceData, setDistanceData] = useState<{
+    distanceKm: number;
+    deliveryPrice: number;
+    isOutTown: boolean;
+    precisionLevel?: 'city' | 'street' | 'house';
+    cityName?: string;
+    streetName?: string;
+    houseNumber?: string;
+    formattedAddress?: string;
+    isFallback?: boolean;
+    message?: string;
+  } | null>(null);
+  const [isCalculatingDistance, setIsCalculatingDistance] = useState(false);
+
+  const customFee = (!isPickup && selectedZone === 'suburb')
+    ? (distanceData?.deliveryPrice ?? storeSettings.suburb10kmFee)
+    : undefined;
+
+  const deliveryFee = useCartStore((s) => s.getDeliveryFee)(isPickup, selectedZone, customFee);
+  const total = useCartStore((s) => s.getTotal)(isPickup, selectedZone, customFee);
 
   // Розрахунок обмежень для вибору часу:
   // - Понеділок: вихідний день (ресторан зачинено весь день).
@@ -229,6 +466,83 @@ export function CheckoutModal() {
   const selectedPayment = watch('paymentMethod');
   const selectedTiming = watch('timingType') || 'asap';
   const selectedScheduledTime = watch('scheduledTime') || '';
+  const watchCity = watch('city');
+  const watchStreet = watch('street');
+  const watchHouse = watch('house');
+
+  const calculateDistanceFee = React.useCallback(async (cityVal?: string, streetVal?: string, houseVal?: string) => {
+    const currentCity = cityVal ?? watch('city');
+    const currentStreet = streetVal ?? watch('street');
+    const currentHouse = houseVal ?? watch('house');
+
+    if (!currentCity || currentCity.trim().length < 2) {
+      setDistanceData(null);
+      return;
+    }
+
+    setIsCalculatingDistance(true);
+    try {
+      const res = await fetch('/api/delivery/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          city: currentCity.trim(),
+          street: (currentStreet || '').trim(),
+          house: (currentHouse || '').trim(),
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDistanceData(data);
+      }
+    } catch (err) {
+      console.warn('Failed to calculate distance:', err);
+    } finally {
+      setIsCalculatingDistance(false);
+    }
+  }, [watch]);
+
+  // Підказки та автокомпліт населених пунктів Свідницького повіту
+  const [isCitySuggestionsOpen, setIsCitySuggestionsOpen] = useState(false);
+
+  const filteredTowns = React.useMemo(() => {
+    const query = (watchCity || '').trim().toLowerCase();
+    if (!query) return [];
+    return NEARBY_TOWNS.filter((town) =>
+      town.toLowerCase().includes(query) && town.toLowerCase() !== query
+    ).slice(0, 6);
+  }, [watchCity]);
+
+  const selectCitySuggestion = (town: string) => {
+    setValue('city', town, { shouldValidate: true });
+    setIsCitySuggestionsOpen(false);
+    calculateDistanceFee(town, watchStreet, watchHouse);
+  };
+
+  // Підказки та автокомпліт вулиць
+  const [isStreetSuggestionsOpen, setIsStreetSuggestionsOpen] = useState(false);
+
+  const filteredStreets = React.useMemo(() => {
+    const query = (watchStreet || '').trim().toLowerCase();
+    if (!query) return [];
+    return POPULAR_STREETS.filter((st) =>
+      st.toLowerCase().includes(query) && st.toLowerCase() !== query
+    ).slice(0, 6);
+  }, [watchStreet]);
+
+  const selectStreetSuggestion = (st: string) => {
+    setValue('street', st, { shouldValidate: true });
+    setIsStreetSuggestionsOpen(false);
+    if (selectedZone === 'suburb') {
+      calculateDistanceFee(watchCity, st, watchHouse);
+    }
+  };
+
+  React.useEffect(() => {
+    if (selectedZone !== 'suburb' || deliveryMethod === 'pickup') {
+      setDistanceData(null);
+    }
+  }, [selectedZone, deliveryMethod]);
 
   // Автоматичне перемикання на "Завтра", якщо час прийому замовлень на сьогодні вичерпано
   React.useEffect(() => {
@@ -240,6 +554,17 @@ export function CheckoutModal() {
       }
     }
   }, [bounds.isTodayCutoffPassed, isPickup]);
+
+  // Обробник швидкого перемикання на замовлення на завтра при перевантаженій кухні
+  React.useEffect(() => {
+    const handleSetTomorrow = () => {
+      setScheduledDate('tomorrow');
+      setValue('timingType', 'scheduled');
+      setValue('scheduledTime', bounds.tomorrowMinTimeString);
+    };
+    window.addEventListener('set-checkout-order-tomorrow', handleSetTomorrow);
+    return () => window.removeEventListener('set-checkout-order-tomorrow', handleSetTomorrow);
+  }, [bounds.tomorrowMinTimeString, setValue]);
 
   // Корекція часу, якщо обрано значення менше ніж мінімально дозволений час для обраного дня
   React.useEffect(() => {
@@ -285,6 +610,11 @@ export function CheckoutModal() {
   }, [isCheckoutOpen, customer, setValue]);
 
   const onSubmit = async (values: CheckoutFormValues) => {
+    // Якщо прийом замовлень призупинено в адмінці через перевантаження кухні — дозволено ТІЛЬКИ на завтра
+    if (storeSettings.isOrdersPaused && (scheduledDate !== 'tomorrow' || values.timingType !== 'scheduled')) {
+      return;
+    }
+
     // Якщо прийом замовлень на сьогодні завершено, забороняємо замовлення ASAP
     if (bounds.isTodayCutoffPassed && values.timingType === 'asap') {
       return;
@@ -296,10 +626,10 @@ export function CheckoutModal() {
 
       const finalScheduledTime = values.timingType === 'scheduled'
         ? (scheduledDate === 'tomorrow'
-            ? (locale === 'pl'
-                ? `Jutro, ${values.scheduledTime || bounds.tomorrowMinTimeString}`
-                : `Завтра, ${values.scheduledTime || bounds.tomorrowMinTimeString}`)
-            : (values.scheduledTime || bounds.todayMinTimeString))
+          ? (locale === 'pl'
+            ? `Jutro, ${values.scheduledTime || bounds.tomorrowMinTimeString}`
+            : `Завтра, ${values.scheduledTime || bounds.tomorrowMinTimeString}`)
+          : (values.scheduledTime || bounds.todayMinTimeString))
         : undefined;
 
       const orderData: Order = {
@@ -310,14 +640,14 @@ export function CheckoutModal() {
         address:
           values.deliveryMethod === 'delivery'
             ? {
-                zone: selectedZone,
-                city: selectedZone === 'suburb' ? maskCity(values.city || '') : 'Świdnica',
-                street: maskStreet(values.street || ''),
-                house: maskHouse(values.house || ''),
-                apartment: values.apartment ? maskApartment(values.apartment) : undefined,
-                floor: values.floor ? maskFloor(values.floor) : undefined,
-                entryCode: values.entryCode ? maskEntryCode(values.entryCode) : undefined,
-              }
+              zone: selectedZone,
+              city: selectedZone === 'suburb' ? maskCity(values.city || '') : 'Świdnica',
+              street: maskStreet(values.street || ''),
+              house: maskHouse(values.house || ''),
+              apartment: values.apartment ? maskApartment(values.apartment) : undefined,
+              floor: values.floor ? maskFloor(values.floor) : undefined,
+              entryCode: values.entryCode ? maskEntryCode(values.entryCode) : undefined,
+            }
             : undefined,
         paymentMethod: values.paymentMethod,
         changeFrom: values.changeFrom ? maskChangeFrom(values.changeFrom) : undefined,
@@ -461,19 +791,19 @@ export function CheckoutModal() {
               <span className="text-xs text-zinc-400">
                 {createdOrder.timingType === 'scheduled' && createdOrder.scheduledTime
                   ? (createdOrder.deliveryMethod === 'pickup'
-                      ? (locale === 'pl' ? 'Zaplanowany odbiór' : 'Запланований самовивіз')
-                      : (locale === 'pl' ? 'Zaplanowana dostawa' : 'Запланована доставка'))
+                    ? (locale === 'pl' ? 'Zaplanowany odbiór' : 'Запланований самовивіз')
+                    : (locale === 'pl' ? 'Zaplanowana dostawa' : 'Запланована доставка'))
                   : (createdOrder.deliveryMethod === 'pickup'
-                      ? ((t.checkout as any).estimatedPickupTime || (locale === 'pl' ? 'Czas gotowości do odbioru' : 'Час готовності замовлення'))
-                      : (t.checkout.estimatedTime || (locale === 'pl' ? 'Czas dostawy' : 'Час доставки')))}
+                    ? ((t.checkout as any).estimatedPickupTime || (locale === 'pl' ? 'Czas gotowości do odbioru' : 'Час готовності замовлення'))
+                    : (t.checkout.estimatedTime || (locale === 'pl' ? 'Czas dostawy' : 'Час доставки')))}
               </span>
               <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5" />
                 {createdOrder.timingType === 'scheduled' && createdOrder.scheduledTime
                   ? `${locale === 'pl' ? 'na godz.' : 'на'} ${createdOrder.scheduledTime}`
                   : (createdOrder.deliveryMethod === 'delivery'
-                      ? `~${prepWaitTimeMinutes + 15} ${locale === 'pl' ? 'min' : 'хв'}`
-                      : `~${prepWaitTimeMinutes} ${locale === 'pl' ? 'min' : 'хв'}`)}
+                    ? `~${prepWaitTimeMinutes + 15} ${locale === 'pl' ? 'min' : 'хв'}`
+                    : `~${prepWaitTimeMinutes} ${locale === 'pl' ? 'min' : 'хв'}`)}
               </span>
             </div>
 
@@ -496,6 +826,46 @@ export function CheckoutModal() {
       ) : (
         /* Форма замовлення */
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5 sm:space-y-4 max-w-full">
+          {/* Попередження, якщо прийом замовлень призупинено з адмінки */}
+          {storeSettings.isOrdersPaused && (
+            <div className="p-3 sm:p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start justify-between gap-3 text-xs animate-in fade-in duration-200">
+              <div className="flex items-start gap-2.5 text-amber-200">
+                <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <div className="font-bold text-white text-xs sm:text-sm">
+                    {locale === 'pl' ? 'Zamówienia na dzisiaj wstrzymane' : 'Замовлення на сьогодні призупинено'}
+                  </div>
+                  <p className="text-[11px] text-zinc-300 leading-snug">
+                    {scheduledDate === 'tomorrow' && selectedTiming === 'scheduled'
+                      ? (locale === 'pl'
+                          ? 'Dziękujemy! Przygotujemy Twoje zamówienie jutro na wskazaną godzinę.'
+                          : 'Дякуємо! Ми приготуємо ваше замовлення завтра точно на вказаний час.')
+                      : (locale === 'pl'
+                          ? 'Kuchnia jest dziś przeciążona. Złóż zamówienie na jutro na dogodną godzinę або zadzwoń do lokalu:'
+                          : 'Кухня на сьогодні перевантажена. Оформіть замовлення на завтра на зручний час або зателефонуйте:')}{' '}
+                    <a href={`tel:${brandTheme.contacts.phoneRaw}`} className="text-amber-400 font-bold hover:underline">
+                      {brandTheme.contacts.phone}
+                    </a>
+                  </p>
+                </div>
+              </div>
+
+              {(scheduledDate !== 'tomorrow' || selectedTiming !== 'scheduled') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScheduledDate('tomorrow');
+                    setValue('timingType', 'scheduled');
+                    setValue('scheduledTime', bounds.tomorrowMinTimeString);
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-black text-xs shrink-0 transition-all cursor-pointer shadow-sm select-none active:scale-95 whitespace-nowrap"
+                >
+                  {locale === 'pl' ? 'Przełącz na jutro' : 'Обрати на завтра'}
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Вибір: Доставка чи Самовивіз у формі клинка */}
           <div>
             <div className="grid grid-cols-2 gap-2 sm:gap-3">
@@ -508,11 +878,10 @@ export function CheckoutModal() {
                 style={{
                   clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
                 }}
-                className={`flex items-center justify-center gap-2 p-2.5 sm:p-3 border text-center transition-all cursor-pointer select-none ${
-                  deliveryMethod === 'delivery'
+                className={`flex items-center justify-center gap-2 p-2.5 sm:p-3 border text-center transition-all cursor-pointer select-none ${deliveryMethod === 'delivery'
                     ? 'bg-[#e50914]/15 border-[#e50914] text-white shadow-xs'
                     : 'bg-[#181822] border-white/5 text-zinc-400 hover:text-white'
-                }`}
+                  }`}
               >
                 <Truck className={`w-4 h-4 shrink-0 ${deliveryMethod === 'delivery' ? 'text-[#e50914]' : ''}`} />
                 <div className="text-left">
@@ -530,11 +899,10 @@ export function CheckoutModal() {
                 style={{
                   clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
                 }}
-                className={`flex items-center justify-center gap-2 p-2.5 sm:p-3 border text-center transition-all cursor-pointer select-none ${
-                  deliveryMethod === 'pickup'
+                className={`flex items-center justify-center gap-2 p-2.5 sm:p-3 border text-center transition-all cursor-pointer select-none ${deliveryMethod === 'pickup'
                     ? 'bg-[#e50914]/15 border-[#e50914] text-white shadow-xs'
                     : 'bg-[#181822] border-white/5 text-zinc-400 hover:text-white'
-                }`}
+                  }`}
               >
                 <Store className={`w-4 h-4 shrink-0 ${deliveryMethod === 'pickup' ? 'text-[#e50914]' : ''}`} />
                 <div className="text-left">
@@ -643,15 +1011,89 @@ export function CheckoutModal() {
                       {selectedZone === 'suburb' && <span className="w-2 h-2 rounded-full bg-[#e50914] shadow-sm shadow-[#e50914]" />}
                     </div>
                     <div className="text-[10px] sm:text-[11px] text-zinc-400 mt-0.5 leading-tight">
-                      {storeSettings.suburb10kmFee} zł ({locale === 'pl' ? 'do 10 km' : 'до 10 км'})
+                      {distanceData?.deliveryPrice
+                        ? `${distanceData.deliveryPrice} zł (~${distanceData.distanceKm} km)`
+                        : `${storeSettings.suburb10kmFee} zł (+1 zł/km)`}
                     </div>
                   </button>
                 </div>
               </div>
 
-              {/* Поле для вводу населеного пункту, якщо це не Свідниця */}
+              {/* Інформаційна плашка прорахунку доставки за місто */}
               {selectedZone === 'suburb' && (
-                <div className="animate-in fade-in duration-200">
+                <div className="p-2.5 sm:p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs space-y-1.5 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between text-white font-bold">
+                    <div className="flex items-center gap-1.5 text-amber-400">
+                      {isCalculatingDistance ? (
+                        <Loader2 className="w-4 h-4 text-amber-400 animate-spin shrink-0" />
+                      ) : (
+                        <Navigation className="w-4 h-4 text-amber-400 shrink-0" />
+                      )}
+                      <span className="text-xs sm:text-sm font-black">
+                        {isCalculatingDistance
+                          ? (locale === 'pl' ? 'Obliczanie trasy OSRM...' : 'Розрахунок маршруту по карті...')
+                          : distanceData
+                            ? (distanceData.precisionLevel === 'city'
+                                ? (locale === 'pl'
+                                    ? `Centrum ${distanceData.cityName || 'miejscowości'}: ~${distanceData.distanceKm} km`
+                                    : `До центру ${distanceData.cityName || 'міста'}: ~${distanceData.distanceKm} км`)
+                                : distanceData.precisionLevel === 'street'
+                                ? (locale === 'pl'
+                                    ? `Początek ul. ${distanceData.streetName || ''}: ~${distanceData.distanceKm} km`
+                                    : `Початок вул. ${distanceData.streetName || ''}: ~${distanceData.distanceKm} км`)
+                                : (locale === 'pl'
+                                    ? `Dokładny adres (${distanceData.houseNumber || ''}): ~${distanceData.distanceKm} km`
+                                    : `Точна адреса (буд. ${distanceData.houseNumber || ''}): ~${distanceData.distanceKm} км`))
+                            : (locale === 'pl' ? 'Dostawa za miasto' : 'Доставка за місто')}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-[10px] text-zinc-400 uppercase font-semibold">
+                          {locale === 'pl' ? 'Koszt:' : 'Вартість:'}
+                        </span>
+                        <span className="text-amber-300 font-black text-sm sm:text-base">
+                          {distanceData ? `${distanceData.deliveryPrice} zł` : `od ${storeSettings.suburb10kmFee} zł`}
+                        </span>
+                      </div>
+
+                      {watchCity && watchCity.trim().length >= 2 && (
+                        <button
+                          type="button"
+                          onClick={() => calculateDistanceFee()}
+                          disabled={isCalculatingDistance}
+                          className="px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[10px] font-bold border border-amber-500/40 transition-all cursor-pointer"
+                        >
+                          {locale === 'pl' ? 'Przelicz' : 'Розрахувати'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-zinc-300 leading-snug">
+                    {distanceData
+                      ? (distanceData.precisionLevel === 'city'
+                          ? (locale === 'pl'
+                              ? `Wyliczono do centrum (${distanceData.cityName}). Wpisz ulicę oraz numer domu, aby doprecyzować trasę.`
+                              : `Розраховано до центру (${distanceData.cityName}). Вкажіть вулицю та номер будинку для точного розрахунку.`)
+                          : distanceData.precisionLevel === 'street'
+                          ? (locale === 'pl'
+                              ? `Wyliczono do początku ulicy. Wpisz numer domu dla ostatecznej wyceny.`
+                              : `Розраховано до початку вулиці. Вкажіть номер будинку для фінальної ціни.`)
+                          : (locale === 'pl'
+                              ? `Dokładna trasa pod wskazany dom (9 zł baza + ${Math.max(0, Math.ceil(distanceData.distanceKm - 4.5))} zł za dodatkowe km).`
+                              : `Точний маршрут за адресою (9 zł база + ${Math.max(0, Math.ceil(distanceData.distanceKm - 4.5))} zł за км понад 4.5 км).`))
+                      : (locale === 'pl'
+                          ? 'Wpisz miejscowość poniżej — system natychmiast wyliczy dystans i cenę do centrum (od 9 zł + 1 zł/km).'
+                          : 'Вкажіть населений пункт нижче — система одразу прорахує відстань і ціну до центру (від 9 zł + 1 zł/км).')}
+                  </p>
+                </div>
+              )}
+
+              {/* Поле для вводу населеного пункту з автокомплітом та швидким вибором */}
+              {selectedZone === 'suburb' && (
+                <div className="animate-in fade-in duration-200 relative">
                   <Input
                     label={locale === 'pl' ? 'Miejscowość (do 10 km poza Świdnicą) *' : 'Населений пункт (до 10 км за містом) *'}
                     id="order-city"
@@ -659,19 +1101,52 @@ export function CheckoutModal() {
                     error={errors.city?.message}
                     className="h-8.5 sm:h-9 text-xs"
                     maxLength={40}
+                    autoComplete="off"
                     {...register('city', {
                       onChange: (e) => {
                         const cleaned = maskCity(e.target.value);
                         e.target.value = cleaned;
                         setValue('city', cleaned, { shouldValidate: true });
+                        setIsCitySuggestionsOpen(true);
+                      },
+                      onBlur: () => {
+                        setTimeout(() => setIsCitySuggestionsOpen(false), 250);
+                        calculateDistanceFee();
                       },
                     })}
+                    onFocus={() => setIsCitySuggestionsOpen(true)}
                   />
+
+                  {/* Випадаючий список підказок при введенні літер */}
+                  {isCitySuggestionsOpen && filteredTowns.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-[#181824] border border-amber-500/40 rounded-xl shadow-2xl z-30 overflow-hidden divide-y divide-white/5 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="px-3 py-1.5 bg-black/50 text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <MapPin className="w-3 h-3 text-amber-400" />
+                        <span>{locale === 'pl' ? 'Wybierz miejscowość:' : 'Оберіть населений пункт:'}</span>
+                      </div>
+                      <div className="max-h-48 overflow-y-auto">
+                        {filteredTowns.map((town) => (
+                          <button
+                            key={town}
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              selectCitySuggestion(town);
+                            }}
+                            className="w-full text-left px-3 py-2 text-xs text-white hover:bg-amber-500/20 hover:text-amber-300 flex items-center justify-between transition-colors cursor-pointer"
+                          >
+                            <span className="font-semibold">{town}</span>
+                            <span className="text-[10px] text-zinc-400 font-mono">Powiat świdnicki</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <div className="sm:col-span-2">
+                <div className="sm:col-span-2 relative">
                   <Input
                     label={t.checkout.street}
                     id="order-street"
@@ -679,14 +1154,51 @@ export function CheckoutModal() {
                     error={errors.street?.message}
                     className="h-8.5 sm:h-9 text-xs"
                     maxLength={50}
+                    autoComplete="off"
                     {...register('street', {
                       onChange: (e) => {
                         const cleaned = maskStreet(e.target.value);
                         e.target.value = cleaned;
                         setValue('street', cleaned, { shouldValidate: true });
+                        setIsStreetSuggestionsOpen(true);
+                      },
+                      onBlur: () => {
+                        setTimeout(() => setIsStreetSuggestionsOpen(false), 250);
+                        if (selectedZone === 'suburb') {
+                          calculateDistanceFee();
+                        }
                       },
                     })}
+                    onFocus={() => setIsStreetSuggestionsOpen(true)}
                   />
+
+                  {/* Випадаючий список підказок вулиць при введенні літер */}
+                  {isStreetSuggestionsOpen && filteredStreets.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-[#181824] border border-amber-500/40 rounded-xl shadow-2xl z-30 overflow-hidden divide-y divide-white/5 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="px-3 py-1.5 bg-black/50 text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <MapPin className="w-3 h-3 text-amber-400" />
+                        <span>{locale === 'pl' ? 'Wybierz ulicę:' : 'Оберіть вулицю:'}</span>
+                      </div>
+                      <div className="max-h-48 overflow-y-auto">
+                        {filteredStreets.map((st) => (
+                          <button
+                            key={st}
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              selectStreetSuggestion(st);
+                            }}
+                            className="w-full text-left px-3 py-2 text-xs text-white hover:bg-amber-500/20 hover:text-amber-300 flex items-center justify-between transition-colors cursor-pointer"
+                          >
+                            <span className="font-semibold">{st}</span>
+                            <span className="text-[10px] text-zinc-400 font-mono">
+                              {watchCity || 'Świdnica'}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <Input
@@ -701,6 +1213,11 @@ export function CheckoutModal() {
                         const cleaned = maskHouse(e.target.value);
                         e.target.value = cleaned;
                         setValue('house', cleaned, { shouldValidate: true });
+                      },
+                      onBlur: () => {
+                        if (selectedZone === 'suburb') {
+                          calculateDistanceFee();
+                        }
                       },
                     })}
                   />
@@ -780,11 +1297,10 @@ export function CheckoutModal() {
                 style={{
                   clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
                 }}
-                className={`flex items-center justify-start gap-2.5 px-3 py-2.5 sm:p-3 border cursor-pointer transition-all select-none ${
-                  selectedPayment === 'blik_online' || selectedPayment === 'card_courier'
+                className={`flex items-center justify-start gap-2.5 px-3 py-2.5 sm:p-3 border cursor-pointer transition-all select-none ${selectedPayment === 'blik_online' || selectedPayment === 'card_courier'
                     ? 'bg-[#e50914]/15 border-[#e50914] text-white shadow-xs'
                     : 'bg-[#171720] border-white/5 text-zinc-400 hover:text-white'
-                }`}
+                  }`}
               >
                 <input
                   type="radio"
@@ -801,11 +1317,10 @@ export function CheckoutModal() {
                 style={{
                   clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
                 }}
-                className={`flex items-center justify-start gap-2.5 px-3 py-2.5 sm:p-3 border cursor-pointer transition-all select-none ${
-                  selectedPayment === 'cash'
+                className={`flex items-center justify-start gap-2.5 px-3 py-2.5 sm:p-3 border cursor-pointer transition-all select-none ${selectedPayment === 'cash'
                     ? 'bg-[#e50914]/15 border-[#e50914] text-white shadow-xs'
                     : 'bg-[#171720] border-white/5 text-zinc-400 hover:text-white'
-                }`}
+                  }`}
               >
                 <input
                   type="radio"
@@ -869,8 +1384,8 @@ export function CheckoutModal() {
                   bounds.isTodayCutoffPassed
                     ? 'opacity-40 cursor-not-allowed bg-zinc-900/40 border-white/5'
                     : selectedTiming === 'asap'
-                    ? 'bg-[#e50914]/15 border-[#e50914] text-white shadow-xs cursor-pointer'
-                    : 'bg-[#171720] border-white/5 text-zinc-400 hover:text-white cursor-pointer'
+                      ? 'bg-[#e50914]/15 border-[#e50914] text-white shadow-xs cursor-pointer'
+                      : 'bg-[#171720] border-white/5 text-zinc-400 hover:text-white cursor-pointer'
                 )}
               >
                 <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm text-white">
@@ -881,10 +1396,10 @@ export function CheckoutModal() {
                   {bounds.isTodayClosed
                     ? (locale === 'pl' ? 'Dziś nieczynne' : 'Сьогодні вихідний')
                     : bounds.isTodayCutoffPassed
-                    ? (locale === 'pl' ? 'Niedostępne dzisiaj' : 'Недоступно сьогодні')
-                    : isPickup
-                    ? `~${prepWaitTimeMinutes} ${locale === 'pl' ? 'min' : 'хв'}`
-                    : `~${prepWaitTimeMinutes + 15} ${locale === 'pl' ? 'min' : 'хв'}`}
+                      ? (locale === 'pl' ? 'Niedostępne dzisiaj' : 'Недоступно сьогодні')
+                      : isPickup
+                        ? `~${prepWaitTimeMinutes} ${locale === 'pl' ? 'min' : 'хв'}`
+                        : `~${prepWaitTimeMinutes + 15} ${locale === 'pl' ? 'min' : 'хв'}`}
                 </span>
               </button>
 
@@ -978,8 +1493,8 @@ export function CheckoutModal() {
                         (bounds.isTodayClosed || bounds.isTodayCutoffPassed)
                           ? 'opacity-40 text-zinc-500 cursor-not-allowed line-through'
                           : scheduledDate === 'today'
-                          ? 'bg-[#e50914] text-white shadow-xs cursor-pointer'
-                          : 'text-zinc-400 hover:text-white cursor-pointer'
+                            ? 'bg-[#e50914] text-white shadow-xs cursor-pointer'
+                            : 'text-zinc-400 hover:text-white cursor-pointer'
                       )}
                     >
                       {locale === 'pl'
@@ -1011,11 +1526,11 @@ export function CheckoutModal() {
                     <span>
                       {scheduledDate === 'tomorrow'
                         ? (isPickup
-                            ? (locale === 'pl' ? 'Godzina odbioru jutro:' : 'Час самовивозу на завтра:')
-                            : (locale === 'pl' ? 'Godzina dostawy jutro:' : 'Час доставки на завтра:'))
+                          ? (locale === 'pl' ? 'Godzina odbioru jutro:' : 'Час самовивозу на завтра:')
+                          : (locale === 'pl' ? 'Godzina dostawy jutro:' : 'Час доставки на завтра:'))
                         : (isPickup
-                            ? (locale === 'pl' ? 'Podaj godzinę odbioru:' : 'Вкажіть час самовивозу:')
-                            : (locale === 'pl' ? 'Podaj godzinę dostawy:' : 'Вкажіть час доставки:'))}
+                          ? (locale === 'pl' ? 'Podaj godzinę odbioru:' : 'Вкажіть час самовивозу:')
+                          : (locale === 'pl' ? 'Podaj godzinę dostawy:' : 'Вкажіть час доставки:'))}
                     </span>
                   </label>
                   {(() => {
@@ -1035,7 +1550,7 @@ export function CheckoutModal() {
                               input.focus();
                               try {
                                 (input as any).showPicker?.();
-                              } catch {}
+                              } catch { }
                             }
                           }}
                           className="w-full sm:w-36 relative cursor-pointer"
@@ -1053,7 +1568,7 @@ export function CheckoutModal() {
                             onClick={(e) => {
                               try {
                                 (e.currentTarget as any).showPicker?.();
-                              } catch {}
+                              } catch { }
                             }}
                             style={{
                               clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
@@ -1089,11 +1604,11 @@ export function CheckoutModal() {
                         <span className="text-[10px] text-zinc-500 font-mono">
                           {scheduledDate === 'tomorrow'
                             ? (locale === 'pl'
-                                ? `Jutro od ${minTime} do ${maxTime}`
-                                : `Завтра з ${minTime} до ${maxTime}`)
+                              ? `Jutro od ${minTime} do ${maxTime}`
+                              : `Завтра з ${minTime} до ${maxTime}`)
                             : (locale === 'pl'
-                                ? `Najwcześniej: ${minTime}`
-                                : `Найраніше: ${minTime}`)}
+                              ? `Najwcześniej: ${minTime}`
+                              : `Найраніше: ${minTime}`)}
                         </span>
                       </div>
                     );
@@ -1107,11 +1622,11 @@ export function CheckoutModal() {
                 <p className="text-[10px] text-zinc-400">
                   {scheduledDate === 'tomorrow'
                     ? (isPickup
-                        ? (locale === 'pl' ? 'Przygotujemy zamówienie na jutro na wskazaną godzinę.' : 'Ми приготуємо ваші роли завтра точно на вказаний час.')
-                        : (locale === 'pl' ? 'Kurier dowiezie zamówienie jutro na wskazaną godzinę.' : 'Курʼєр доставить замовлення завтра на обраний час.'))
+                      ? (locale === 'pl' ? 'Przygotujemy zamówienie na jutro na wskazaną godzinę.' : 'Ми приготуємо ваші роли завтра точно на вказаний час.')
+                      : (locale === 'pl' ? 'Kurier dowiezie zamówienie jutro na wskazaną godzinę.' : 'Курʼєр доставить замовлення завтра на обраний час.'))
                     : (isPickup
-                        ? (locale === 'pl' ? `Przygotujemy Twoje rolki точно na tę godzinę (minimum ${prepWaitTimeMinutes} min).` : `Ми приготуємо ваші роли точно на вказаний час (не менше ${prepWaitTimeMinutes} хв).`)
-                        : (locale === 'pl' ? `Kurier dowiezie zamówienie na wskazaną godzinę (minimum ${prepWaitTimeMinutes + 15} min).` : `Курʼєр доставить замовлення на обраний час (не менше ${prepWaitTimeMinutes + 15} хв).`))}
+                      ? (locale === 'pl' ? `Przygotujemy Twoje rolki точно na tę godzinę (minimum ${prepWaitTimeMinutes} min).` : `Ми приготуємо ваші роли точно на вказаний час (не менше ${prepWaitTimeMinutes} хв).`)
+                      : (locale === 'pl' ? `Kurier dowiezie zamówienie na wskazaną godzinę (minimum ${prepWaitTimeMinutes + 15} min).` : `Курʼєр доставить замовлення на обраний час (не менше ${prepWaitTimeMinutes + 15} хв).`))}
                 </p>
               </div>
             )}
@@ -1133,31 +1648,55 @@ export function CheckoutModal() {
 
           {/* Підсумок замовлення та кнопка відправки у формі клинка */}
           <div className="pt-2 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-baseline gap-2">
-              <span className="text-xs text-zinc-400 font-medium">{t.cart.total}:</span>
-              <span className="text-lg sm:text-xl font-black text-[#e50914]">{formatPrice(total, locale)}</span>
-              {isPickup && (
-                <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                  {t.checkout.pickupDiscount}
-                </span>
+            <div className="space-y-0.5">
+              <div className="flex items-baseline gap-2">
+                <span className="text-xs text-zinc-400 font-medium">{t.cart.total}:</span>
+                <span className="text-lg sm:text-xl font-black text-[#e50914]">{formatPrice(total, locale)}</span>
+                {isPickup && (
+                  <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                    {t.checkout.pickupDiscount}
+                  </span>
+                )}
+              </div>
+
+              {!isPickup && (
+                <div className="text-[11px] text-zinc-400 flex items-center gap-1.5">
+                  <span>{locale === 'pl' ? 'W tym dostawa:' : 'У тому числі доставка:'}</span>
+                  <span className={cn('font-bold', deliveryFee === 0 ? 'text-emerald-400' : 'text-amber-300')}>
+                    {deliveryFee === 0
+                      ? (locale === 'pl' ? 'Gratis (Świdnica)' : 'Безкоштовно (Свідниця)')
+                      : `${deliveryFee} zł ${selectedZone === 'suburb' ? (distanceData?.distanceKm ? `(~${distanceData.distanceKm} km)` : '(za miastem)') : '(Świdnica)'}`}
+                  </span>
+                </div>
               )}
             </div>
 
-            <button
-              type="submit"
-              disabled={isSubmitting || items.length === 0 || (bounds.isTodayCutoffPassed && selectedTiming === 'asap')}
-              id="submit-order-button"
-              style={{
-                clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
-              }}
-              className="flex-1 sm:max-w-xs flex items-center justify-center gap-2 py-2.5 sm:py-3 px-4 bg-gradient-to-r from-[#e50914] via-[#f4222d] to-[#b80710] hover:brightness-110 text-white font-black text-sm shadow-md shadow-[#e50914]/30 hover:shadow-[#e50914]/50 active:scale-[0.98] disabled:opacity-50 transition-all cursor-pointer select-none"
-            >
-              {isSubmitting ? (
-                <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <span>{t.checkout.submitOrder}</span>
-              )}
-            </button>
+            {(() => {
+              const isBlockedByPause = storeSettings.isOrdersPaused && (scheduledDate !== 'tomorrow' || selectedTiming !== 'scheduled');
+              const isDisabled = isSubmitting || items.length === 0 || isBlockedByPause || (bounds.isTodayCutoffPassed && selectedTiming === 'asap');
+
+              return (
+                <button
+                  type="submit"
+                  disabled={isDisabled}
+                  id="submit-order-button"
+                  style={{
+                    clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
+                  }}
+                  className="flex-1 sm:max-w-xs flex items-center justify-center gap-2 py-2.5 sm:py-3 px-4 bg-gradient-to-r from-[#e50914] via-[#f4222d] to-[#b80710] hover:brightness-110 text-white font-black text-sm shadow-md shadow-[#e50914]/30 hover:shadow-[#e50914]/50 active:scale-[0.98] disabled:opacity-50 transition-all cursor-pointer select-none"
+                >
+                  {isSubmitting ? (
+                    <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : isBlockedByPause ? (
+                    <span>{locale === 'pl' ? 'Tylko na jutro' : 'Тільки на завтра'}</span>
+                  ) : storeSettings.isOrdersPaused && scheduledDate === 'tomorrow' ? (
+                    <span>{locale === 'pl' ? 'Złóż zamówienie na jutro' : 'Оформити на завтра'}</span>
+                  ) : (
+                    <span>{t.checkout.submitOrder}</span>
+                  )}
+                </button>
+              );
+            })()}
           </div>
         </form>
       )}

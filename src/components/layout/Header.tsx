@@ -10,7 +10,7 @@ import { useCustomerStore, normalizePhone } from '@/store/useCustomerStore';
 import { useI18n } from '@/lib/i18nContext';
 import { brandTheme, getStoreStatus } from '@/config/theme';
 import { formatPrice, cn } from '@/lib/utils';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured, fetchStoreSettings } from '@/lib/supabase';
 
 export function Header() {
   const router = useRouter();
@@ -52,6 +52,46 @@ export function Header() {
 
   useEffect(() => {
     setMounted(true);
+
+    // Синхронізація глобальних налаштувань магазину (стоп-кран замовлень, час приготування)
+    fetchStoreSettings().then((synced) => {
+      if (synced) {
+        if (typeof synced.isOrdersPaused === 'boolean') {
+          useSettingsStore.getState().updateSettings({ isOrdersPaused: synced.isOrdersPaused });
+        }
+        if (typeof synced.prepWaitTimeMinutes === 'number') {
+          useCartStore.getState().setPrepWaitTimeMinutes(synced.prepWaitTimeMinutes);
+        }
+      }
+    });
+
+    if (isSupabaseConfigured) {
+      const channel = supabase
+        .channel('client_store_settings_channel')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'orders', filter: 'id=eq.__settings__' },
+          (payload) => {
+            const rawComment = (payload.new as any)?.comment;
+            if (rawComment) {
+              try {
+                const parsed = JSON.parse(rawComment);
+                if (typeof parsed.isOrdersPaused === 'boolean') {
+                  useSettingsStore.getState().updateSettings({ isOrdersPaused: parsed.isOrdersPaused });
+                }
+                if (typeof parsed.prepWaitTimeMinutes === 'number') {
+                  useCartStore.getState().setPrepWaitTimeMinutes(parsed.prepWaitTimeMinutes);
+                }
+              } catch { }
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, []);
 
   // Перевірка активного замовлення авторизованого клієнта
@@ -98,7 +138,7 @@ export function Header() {
       }
 
       setCustomerOrderStatus(activeStatus);
-    } catch (err) {}
+    } catch (err) { }
   };
 
   // Реактивне оновлення статусу замовлення при зміні профілю клієнта
@@ -148,7 +188,7 @@ export function Header() {
         if (email === 'makssushiswidnica@gmail.com' || email.includes('admin') || email.includes('makssushi')) {
           adminLogged = true;
         }
-      } catch (e) {}
+      } catch (e) { }
 
       if (!adminLogged && typeof window !== 'undefined') {
         adminLogged = localStorage.getItem('max-sushi-is-admin') === 'true';
@@ -364,19 +404,19 @@ export function Header() {
                   <span className="font-bold text-amber-300 group-hover:text-amber-200 transition-colors truncate">
                     {/* На телефоні: короткий напис, що гарантовано поміщається в 1 рядок */}
                     <span className="inline sm:hidden">
-                      {locale === 'pl' 
-                        ? `Rolka gratis od ${giftPromo.minAmount} zł!` 
+                      {locale === 'pl'
+                        ? `Rolka gratis od ${giftPromo.minAmount} zł!`
                         : `Рол безкоштовно від ${giftPromo.minAmount} zł!`}
                     </span>
                     {/* На планшетах та ПК: повна назва страви */}
                     <span className="hidden sm:inline">
-                      {giftProduct 
-                        ? (locale === 'pl' 
-                            ? `${giftProduct.name.pl} gratis od ${giftPromo.minAmount} zł!` 
-                            : `${giftProduct.name.uk} безкоштовно від ${giftPromo.minAmount} zł!`)
-                        : (locale === 'pl' 
-                            ? `Rolka gratis od ${giftPromo.minAmount} zł!` 
-                            : `Рол безкоштовно від ${giftPromo.minAmount} zł!`)}
+                      {giftProduct
+                        ? (locale === 'pl'
+                          ? `${giftProduct.name.pl} gratis od ${giftPromo.minAmount} zł!`
+                          : `${giftProduct.name.uk} безкоштовно від ${giftPromo.minAmount} zł!`)
+                        : (locale === 'pl'
+                          ? `Rolka gratis od ${giftPromo.minAmount} zł!`
+                          : `Рол безкоштовно від ${giftPromo.minAmount} zł!`)}
                     </span>
                   </span>
                 </button>
@@ -480,9 +520,8 @@ export function Header() {
               style={{
                 clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
               }}
-              className={`relative flex items-center gap-2 bg-[#e50914] hover:bg-[#f4222d] text-white px-3 py-1.5 sm:px-4 sm:py-2 shadow-md shadow-[#e50914]/25 hover:shadow-[#e50914]/40 active:scale-95 transition-all duration-200 cursor-pointer font-bold text-xs sm:text-sm select-none ${
-                isBumping ? 'scale-110 shadow-lg shadow-[#e50914]/50' : ''
-              }`}
+              className={`relative flex items-center gap-2 bg-[#e50914] hover:bg-[#f4222d] text-white px-3 py-1.5 sm:px-4 sm:py-2 shadow-md shadow-[#e50914]/25 hover:shadow-[#e50914]/40 active:scale-95 transition-all duration-200 cursor-pointer font-bold text-xs sm:text-sm select-none ${isBumping ? 'scale-110 shadow-lg shadow-[#e50914]/50' : ''
+                }`}
             >
               <div className="relative">
                 <ShoppingBag className="w-4 h-4 text-white" />

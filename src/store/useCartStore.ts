@@ -98,8 +98,8 @@ interface CartState {
   // Обчислення
   getTotalCount: () => number;
   getSubtotal: () => number;
-  getDeliveryFee: (isPickup?: boolean, zone?: DeliveryZoneId) => number;
-  getTotal: (isPickup?: boolean, zone?: DeliveryZoneId) => number;
+  getDeliveryFee: (isPickup?: boolean, zone?: DeliveryZoneId, customFee?: number) => number;
+  getTotal: (isPickup?: boolean, zone?: DeliveryZoneId, customFee?: number) => number;
   getRemainingForFreeDelivery: () => number;
 }
 
@@ -228,20 +228,32 @@ export const useCartStore = create<CartState>()(
         }, 0);
       },
 
-      getDeliveryFee: (isPickup = false, zone: DeliveryZoneId = 'city') => {
+      getDeliveryFee: (isPickup = false, zone: DeliveryZoneId = 'city', customFee?: number) => {
         if (isPickup) return 0;
+        if (customFee !== undefined) return customFee;
         const subtotal = get().getSubtotal();
         const settings = useSettingsStore.getState();
         return settings.getDeliveryFee(zone, subtotal, isPickup);
       },
 
-      getTotal: (isPickup = false, zone: DeliveryZoneId = 'city') => {
+      getTotal: (isPickup = false, zone: DeliveryZoneId = 'city', customFee?: number) => {
         const subtotal = get().getSubtotal();
-        const deliveryFee = get().getDeliveryFee(isPickup, zone);
+        const deliveryFee = get().getDeliveryFee(isPickup, zone, customFee);
         if (isPickup) {
-          // Знижка на самовивіз 5%
-          const discounted = Math.round(subtotal * (1 - brandTheme.delivery.pickupDiscountPercent / 100));
-          return discounted;
+          const { items } = get();
+          const pickupDiscountRate = (brandTheme.delivery.pickupDiscountPercent || 5) / 100;
+          // Знижка на самовивіз 5% застосовується ТІЛЬКИ до страв без акційної знижки (акції не плюсуються)
+          const discountedTotal = items.reduce((sum, item) => {
+            if (item.isGift) return sum;
+            const unitPrice = getItemUnitPrice(item.product, item.selectedOptions);
+            const lineTotal = unitPrice * item.quantity;
+            const hasPromoDiscount = (item.product.discountPercent || 0) > 0;
+            const effectiveLineTotal = hasPromoDiscount
+              ? lineTotal
+              : lineTotal * (1 - pickupDiscountRate);
+            return sum + effectiveLineTotal;
+          }, 0);
+          return Math.round(discountedTotal);
         }
         return subtotal + deliveryFee;
       },

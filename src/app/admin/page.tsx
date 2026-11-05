@@ -72,7 +72,7 @@ import {
 import { useCartStore } from '@/store/useCartStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { cn, formatPrice } from '@/lib/utils';
-import { supabase, isSupabaseConfigured, createOrder } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured, createOrder, saveStoreSettings, fetchStoreSettings } from '@/lib/supabase';
 import { brandTheme } from '@/config/theme';
 import { Category, Product, ProductBadge as ProductBadgeType, ALLERGENS, AllergenKey } from '@/types';
 import { DEFAULT_PRODUCT_ALLERGENS } from '@/lib/allergenData';
@@ -604,7 +604,23 @@ export default function AdminPage() {
             rlsIssue = true;
           }
         } else if (data) {
-          loaded = data.map((d: any) => {
+          // Витягуємо глобальні налаштування магазину (статус стоп-крану та час приготування)
+          const settingsRow = data.find((d: any) => d.id === '__settings__');
+          if (settingsRow && settingsRow.comment) {
+            try {
+              const parsed = JSON.parse(settingsRow.comment);
+              if (typeof parsed.isOrdersPaused === 'boolean') {
+                updateSettings({ isOrdersPaused: parsed.isOrdersPaused });
+              }
+              if (typeof parsed.prepWaitTimeMinutes === 'number') {
+                setPrepWaitTimeMinutes(parsed.prepWaitTimeMinutes);
+              }
+            } catch {}
+          }
+
+          loaded = data
+            .filter((d: any) => d.id !== '__settings__')
+            .map((d: any) => {
             const rawComment = d.comment || '';
             const matchScheduled = !d.scheduled_time && rawComment.match(/\[НА ЧАС:\s*([^\]]+)\]/i);
             const scheduledTime = d.scheduled_time || d.scheduledTime || (matchScheduled ? matchScheduled[1].trim() : undefined);
@@ -4195,13 +4211,13 @@ export default function AdminPage() {
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                 {/* Інтерактивний захищений блок встановлення часу очікування (за замовчуванням 40 хв) */}
                 <div
                   style={{
                     clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
                   }}
-                  className="flex items-center bg-[#151522] border border-amber-500/40 p-1 sm:p-1.5 gap-1.5 shadow-md shadow-black/60 select-none"
+                  className="flex items-center justify-between sm:justify-start bg-[#151522] border border-amber-500/40 p-1 sm:p-1.5 gap-1.5 shadow-md shadow-black/60 select-none"
                   title="Час приготування/доставки для клієнтів (за замовчуванням 40 хв)"
                 >
                   <div className="flex items-center gap-1 pl-1.5 pr-1 text-amber-400 font-black text-[10px] sm:text-xs uppercase tracking-wider whitespace-nowrap">
@@ -4209,86 +4225,131 @@ export default function AdminPage() {
                     <span>Час очікування:</span>
                   </div>
 
-                  {/* Кнопка швидкого зменшення (-5 хв) */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const next = Math.max(10, prepWaitTimeMinutes - 5);
-                      setPrepWaitTimeMinutes(next);
-                    }}
-                    className="w-6 h-6 sm:w-7 sm:h-7 rounded bg-[#202030] hover:bg-amber-500/20 text-zinc-300 hover:text-amber-300 font-black flex items-center justify-center transition-all cursor-pointer border border-white/10 active:scale-95"
-                    title="Зменшити на 5 хв"
-                  >
-                    <Minus className="w-3 h-3" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    {/* Кнопка швидкого зменшення (-5 хв) */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = Math.max(10, prepWaitTimeMinutes - 5);
+                        setPrepWaitTimeMinutes(next);
+                        saveStoreSettings({ prepWaitTimeMinutes: next });
+                      }}
+                      className="w-6 h-6 sm:w-7 sm:h-7 rounded bg-[#202030] hover:bg-amber-500/20 text-zinc-300 hover:text-amber-300 font-black flex items-center justify-center transition-all cursor-pointer border border-white/10 active:scale-95"
+                      title="Зменшити на 5 хв"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
 
-                  {/* Захищене поле числа (без реакції на колесико миші) */}
-                  <div className="relative flex items-center">
-                    <input
-                      type="number"
-                      min={10}
-                      max={240}
-                      step={5}
-                      value={tempWaitTime}
-                      onWheel={(e) => (e.target as HTMLElement).blur()} // блокуємо зміну колесиком миші
-                      onChange={(e) => {
-                        setTempWaitTime(e.target.value);
-                        const val = parseInt(e.target.value, 10);
-                        if (!isNaN(val) && val >= 10 && val <= 240) {
-                          setPrepWaitTimeMinutes(val);
-                        }
+                    {/* Захищене поле числа (без реакції на колесико миші) */}
+                    <div className="relative flex items-center">
+                      <input
+                        type="number"
+                        min={10}
+                        max={240}
+                        step={5}
+                        value={tempWaitTime}
+                        onWheel={(e) => (e.target as HTMLElement).blur()} // блокуємо зміну колесиком миші
+                        onChange={(e) => {
+                          setTempWaitTime(e.target.value);
+                          const val = parseInt(e.target.value, 10);
+                          if (!isNaN(val) && val >= 10 && val <= 240) {
+                            setPrepWaitTimeMinutes(val);
+                            saveStoreSettings({ prepWaitTimeMinutes: val });
+                          }
+                        }}
+                        onBlur={() => {
+                          const val = parseInt(tempWaitTime, 10);
+                          if (isNaN(val) || val < 10) {
+                            setTempWaitTime('10');
+                            setPrepWaitTimeMinutes(10);
+                            saveStoreSettings({ prepWaitTimeMinutes: 10 });
+                          } else if (val > 240) {
+                            setTempWaitTime('240');
+                            setPrepWaitTimeMinutes(240);
+                            saveStoreSettings({ prepWaitTimeMinutes: 240 });
+                          } else {
+                            setPrepWaitTimeMinutes(val);
+                            saveStoreSettings({ prepWaitTimeMinutes: val });
+                          }
+                        }}
+                        className="w-12 sm:w-14 text-center font-mono font-black text-xs sm:text-sm bg-black/60 text-white border border-amber-500/50 rounded py-0.5 sm:py-1 focus:outline-none focus:border-amber-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <span className="text-[10px] sm:text-xs text-amber-300 font-bold ml-1 mr-0.5">хв</span>
+                    </div>
+
+                    {/* Кнопка швидкого збільшення (+5 хв) */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = Math.min(240, prepWaitTimeMinutes + 5);
+                        setPrepWaitTimeMinutes(next);
+                        saveStoreSettings({ prepWaitTimeMinutes: next });
                       }}
-                      onBlur={() => {
-                        const val = parseInt(tempWaitTime, 10);
-                        if (isNaN(val) || val < 10) {
-                          setTempWaitTime('10');
-                          setPrepWaitTimeMinutes(10);
-                        } else if (val > 240) {
-                          setTempWaitTime('240');
-                          setPrepWaitTimeMinutes(240);
-                        } else {
-                          setPrepWaitTimeMinutes(val);
-                        }
-                      }}
-                      className="w-12 sm:w-14 text-center font-mono font-black text-xs sm:text-sm bg-black/60 text-white border border-amber-500/50 rounded py-0.5 sm:py-1 focus:outline-none focus:border-amber-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                    <span className="text-[10px] sm:text-xs text-amber-300 font-bold ml-1 mr-0.5">хв</span>
+                      className="w-6 h-6 sm:w-7 sm:h-7 rounded bg-[#202030] hover:bg-amber-500/20 text-zinc-300 hover:text-amber-300 font-black flex items-center justify-center transition-all cursor-pointer border border-white/10 active:scale-95"
+                      title="Збільшити на 5 хв"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
                   </div>
-
-                  {/* Кнопка швидкого збільшення (+5 хв) */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const next = Math.min(240, prepWaitTimeMinutes + 5);
-                      setPrepWaitTimeMinutes(next);
-                    }}
-                    className="w-6 h-6 sm:w-7 sm:h-7 rounded bg-[#202030] hover:bg-amber-500/20 text-zinc-300 hover:text-amber-300 font-black flex items-center justify-center transition-all cursor-pointer border border-white/10 active:scale-95"
-                    title="Збільшити на 5 хв"
-                  >
-                    <Plus className="w-3 h-3" />
-                  </button>
                 </div>
 
-                {/* Кнопка перегляду скасованих замовлень (якщо є) */}
-                {cancelledOrdersCount > 0 && (
+                {/* Рядок додаткових кнопок дій (на мобілці розміщуються під часом очікування, на ПК — в один рядок) */}
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  {/* Кнопка призупинення / відновлення прийому замовлень (кухня перевантажена) */}
                   <button
                     type="button"
-                    onClick={() => setOrderStatusFilter(orderStatusFilter === 'cancelled' ? 'pending' : 'cancelled')}
+                    onClick={async () => {
+                      const next = !storeSettings.isOrdersPaused;
+                      updateSettings({ isOrdersPaused: next });
+                      await saveStoreSettings({ isOrdersPaused: next });
+                    }}
                     style={{
                       clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
                     }}
                     className={cn(
-                      'inline-flex items-center gap-1.5 px-3 py-1.5 border font-bold text-[11px] sm:text-xs uppercase tracking-wider transition-all cursor-pointer',
-                      orderStatusFilter === 'cancelled'
-                        ? 'bg-rose-500/20 border-rose-500 text-rose-300 shadow-sm'
-                        : 'bg-[#171724] hover:bg-[#202030] border-white/10 text-zinc-400 hover:text-zinc-200'
+                      'flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all cursor-pointer border shadow-md select-none active:scale-95 whitespace-nowrap',
+                      storeSettings.isOrdersPaused
+                        ? 'bg-red-600 hover:bg-red-500 text-white border-red-400 shadow-red-950/60 animate-pulse'
+                        : 'bg-[#151522] hover:bg-[#1e1e30] text-emerald-400 border-emerald-500/40 hover:border-emerald-500/70'
                     )}
-                    title="Переглянути скасовані замовлення"
+                    title={
+                      storeSettings.isOrdersPaused
+                        ? 'Прийом замовлень зупинено! Натисніть, щоб відновити'
+                        : 'Кухня зашивається? Натисніть, щоб тимчасово призупинити онлайн-замовлення'
+                    }
                   >
-                    <Ban className="w-3.5 h-3.5 text-rose-400" />
-                    <span>Скасовані ({cancelledOrdersCount})</span>
+                    <span
+                      className={cn(
+                        'w-2 h-2 rounded-full shrink-0',
+                        storeSettings.isOrdersPaused ? 'bg-white' : 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]'
+                      )}
+                    />
+                    <span>
+                      {storeSettings.isOrdersPaused ? 'Замовлення: ЗУПИНЕНО' : 'Прийом замовлень: Активний'}
+                    </span>
                   </button>
-                )}
+
+                  {/* Кнопка перегляду скасованих замовлень (якщо є) */}
+                  {cancelledOrdersCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setOrderStatusFilter(orderStatusFilter === 'cancelled' ? 'pending' : 'cancelled')}
+                      style={{
+                        clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                      }}
+                      className={cn(
+                        'inline-flex items-center gap-1.5 px-3 py-1.5 border font-bold text-[11px] sm:text-xs uppercase tracking-wider transition-all cursor-pointer shrink-0',
+                        orderStatusFilter === 'cancelled'
+                          ? 'bg-rose-500/20 border-rose-500 text-rose-300 shadow-sm'
+                          : 'bg-[#171724] hover:bg-[#202030] border-white/10 text-zinc-400 hover:text-zinc-200'
+                      )}
+                      title="Переглянути скасовані замовлення"
+                    >
+                      <Ban className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Скасовані ({cancelledOrdersCount})</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 

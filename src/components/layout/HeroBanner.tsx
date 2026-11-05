@@ -165,7 +165,7 @@ export function HeroBanner() {
                 {locale === 'pl' ? 'Odbiór własny' : 'Самовивіз із закладу'}
               </div>
               <div className="text-[7.5px] sm:text-[11px] text-zinc-400 sm:text-zinc-300/90 leading-tight mt-0.5">
-                {locale === 'pl' ? 'Rabat przy odbiorze' : 'Знижка на все замовлення'}
+                {locale === 'pl' ? '*Nie łączy się z promocjami' : '*Не сумується з акціями'}
               </div>
             </div>
           </div>
@@ -180,7 +180,7 @@ export function HeroBanner() {
                 {locale === 'pl' ? 'Darmowa dostawa' : 'Безкоштовна доставка'}
               </div>
               <div className="text-[7.5px] sm:text-[11px] text-zinc-400 sm:text-zinc-300/90 leading-tight mt-0.5">
-                {locale === 'pl' ? `Przy zamówieniu powyżej ${displayThreshold} zł` : `При замовленні від ${displayThreshold} zł`}
+                {locale === 'pl' ? `Od ${displayThreshold} zł (w granicach Świdnicy)` : `Від ${displayThreshold} zł (у межах Свідниці)`}
               </div>
             </div>
           </div>

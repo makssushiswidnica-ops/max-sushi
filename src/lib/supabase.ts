@@ -108,3 +108,86 @@ export async function createOrder(order: Order): Promise<{ success: boolean; ord
     return { success: true, orderId: order.id }; // повертаємо успіх для клієнта
   }
 }
+
+export interface SyncedStoreSettings {
+  isOrdersPaused?: boolean;
+  prepWaitTimeMinutes?: number;
+  pausedAtDate?: string; // YYYY-MM-DD
+}
+
+/**
+ * Отримує глобальні системні налаштування магазину з Supabase (синхронізація між усіма пристроями)
+ * Автоматично відновлює прийом замовлень по завершенню робочого дня або наступного ранку.
+ */
+export async function fetchStoreSettings(): Promise<SyncedStoreSettings | null> {
+  try {
+    if (!isSupabaseConfigured) return null;
+    const { data, error } = await supabase
+      .from('orders')
+      .select('comment')
+      .eq('id', '__settings__')
+      .maybeSingle();
+
+    if (error || !data?.comment) return null;
+    const settings: SyncedStoreSettings = JSON.parse(data.comment);
+
+    // Автоматичне відновлення прийому замовлень по завершенню робочого дня:
+    // Пт, Сб заклад працює до 22:00, інші дні до 21:00.
+    if (settings.isOrdersPaused) {
+      const now = new Date();
+      const todayStr = now.toISOString().slice(0, 10);
+      const day = now.getDay();
+      const closingHour = (day === 5 || day === 6) ? 22 : 21;
+      const isPastClosing = now.getHours() >= closingHour;
+      const isNextDay = Boolean(settings.pausedAtDate && settings.pausedAtDate !== todayStr);
+
+      if (isPastClosing || isNextDay) {
+        settings.isOrdersPaused = false;
+        settings.pausedAtDate = undefined;
+        // Оновлюємо в базі без очікування
+        saveStoreSettings({ isOrdersPaused: false, pausedAtDate: undefined });
+      }
+    }
+
+    return settings;
+  } catch (e) {
+    console.warn('Failed to fetch store settings:', e);
+    return null;
+  }
+}
+
+/**
+ * Зберігає глобальні системні налаштування магазину в Supabase для миттєвої синхронізації
+ */
+export async function saveStoreSettings(settings: Partial<SyncedStoreSettings>): Promise<boolean> {
+  try {
+    if (!isSupabaseConfigured) return false;
+    const current = await fetchStoreSettings() || {};
+    
+    // Якщо вмикаємо паузу, фіксуємо поточну дату
+    const updates: Partial<SyncedStoreSettings> = { ...settings };
+    if (settings.isOrdersPaused === true) {
+      updates.pausedAtDate = new Date().toISOString().slice(0, 10);
+    } else if (settings.isOrdersPaused === false) {
+      updates.pausedAtDate = undefined;
+    }
+
+    const merged = { ...current, ...updates };
+    const { error } = await supabase.from('orders').upsert({
+      id: '__settings__',
+      customer_name: '__SYSTEM_SETTINGS__',
+      phone: '000000000',
+      delivery_method: 'delivery',
+      payment_method: 'cash',
+      status: 'system',
+      comment: JSON.stringify(merged),
+      total: 0,
+      subtotal: 0,
+      items: [],
+    });
+    return !error;
+  } catch (e) {
+    console.warn('Failed to save store settings:', e);
+    return false;
+  }
+}

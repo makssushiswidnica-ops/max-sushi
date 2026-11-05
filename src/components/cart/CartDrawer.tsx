@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useEffect } from 'react';
-import { ShoppingBag, ArrowRight, Trash2, Utensils, CheckCircle2, AlertCircle, Plus, ChevronLeft, ChevronRight, Gift } from 'lucide-react';
+import { ShoppingBag, ArrowRight, Trash2, Utensils, CheckCircle2, AlertCircle, Plus, ChevronLeft, ChevronRight, Gift, Clock } from 'lucide-react';
 import { Drawer } from '@/components/ui/Drawer';
 import { CartItem } from '@/components/cart/CartItem';
 import { useCartStore } from '@/store/useCartStore';
@@ -25,6 +25,7 @@ export function CartDrawer() {
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const giftPromo = useSettingsStore((s) => s.giftPromo);
   const cityFreeThreshold = useSettingsStore((s) => s.cityFreeThreshold);
+  const isOrdersPaused = useSettingsStore((s) => s.isOrdersPaused);
 
   // Отримуємо соуси та додатки з категорії dodatki
   const allProducts = menuProducts && menuProducts.length > 0 ? menuProducts : defaultProducts;
@@ -447,18 +448,60 @@ export function CartDrawer() {
               </div>
             </div>
 
-            {/* Головна кнопка оформлення замовлення у формі клинка */}
-            <button
-              onClick={handleProceedToCheckout}
-              id="proceed-to-checkout-btn"
-              style={{
-                clipPath: 'polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)',
-              }}
-              className="w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-gradient-to-r from-[#e50914] via-[#f4222d] to-[#b80710] hover:brightness-110 text-white font-black text-sm sm:text-base shadow-lg shadow-[#e50914]/30 hover:shadow-[#e50914]/50 active:scale-[0.99] transition-all cursor-pointer select-none"
-            >
-              <span>{t.cart.checkout}</span>
-              <ArrowRight className="w-4 h-4 stroke-[2.5]" />
-            </button>
+            {/* Головна кнопка оформлення замовлення або сповіщення про перевантажену кухню з можливістю замовити на завтра */}
+            {isOrdersPaused ? (
+              <div className="w-full p-3.5 rounded-xl bg-red-950/40 border border-red-500/40 text-center space-y-2.5 shadow-lg shadow-black/80">
+                <div className="flex items-center justify-center gap-1.5 text-xs sm:text-sm font-black text-red-400 uppercase tracking-wide">
+                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                  <span>{locale === 'pl' ? 'Kuchnia jest przeciążona' : 'Кухня перевантажена'}</span>
+                </div>
+                <p className="text-[11px] text-zinc-300 leading-snug">
+                  {locale === 'pl'
+                    ? 'Przyjmowanie zamówień online na dzisiaj zostało wstrzymane. Możesz jednak złożyć zamówienie na jutro!'
+                    : 'Прийом онлайн-замовлень на сьогодні призупинено. Але ви можете оформити замовлення на завтра!'}
+                </p>
+
+                <div className="flex flex-col gap-2 pt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false);
+                      setIsCheckoutOpen(true);
+                      setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('set-checkout-order-tomorrow'));
+                      }, 50);
+                    }}
+                    style={{
+                      clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-110 text-black font-black text-xs sm:text-sm shadow-md shadow-amber-500/20 active:scale-[0.98] transition-all cursor-pointer select-none"
+                  >
+                    <Clock className="w-4 h-4 text-black shrink-0" />
+                    <span>{locale === 'pl' ? 'Złóż zamówienie na jutro' : 'Оформити замовлення на завтра'}</span>
+                    <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                  </button>
+
+                  <a
+                    href={`tel:${brandTheme.contacts.phoneRaw}`}
+                    className="inline-flex items-center justify-center gap-1 text-[11px] font-bold text-zinc-400 hover:text-white transition-colors pt-0.5"
+                  >
+                    <span>{locale === 'pl' ? 'Zadzwoń do lokalu:' : 'Зателефонувати:'} {brandTheme.contacts.phone}</span>
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={handleProceedToCheckout}
+                id="proceed-to-checkout-btn"
+                style={{
+                  clipPath: 'polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)',
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-gradient-to-r from-[#e50914] via-[#f4222d] to-[#b80710] hover:brightness-110 text-white font-black text-sm sm:text-base shadow-lg shadow-[#e50914]/30 hover:shadow-[#e50914]/50 active:scale-[0.99] transition-all cursor-pointer select-none"
+              >
+                <span>{t.cart.checkout}</span>
+                <ArrowRight className="w-4 h-4 stroke-[2.5]" />
+              </button>
+            )}
 
             {/* Кнопка "Додати ще щось", що закриває кошик і переносить до каталогу меню */}
             <button
