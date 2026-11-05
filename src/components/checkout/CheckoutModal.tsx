@@ -470,6 +470,14 @@ export function CheckoutModal() {
   const watchStreet = watch('street');
   const watchHouse = watch('house');
 
+  const resetAddressDetails = React.useCallback(() => {
+    setValue('street', '', { shouldValidate: false });
+    setValue('house', '', { shouldValidate: false });
+    setValue('apartment', '', { shouldValidate: false });
+    setValue('floor', '', { shouldValidate: false });
+    setValue('entryCode', '', { shouldValidate: false });
+  }, [setValue]);
+
   const calculateDistanceFee = React.useCallback(async (cityVal?: string, streetVal?: string, houseVal?: string) => {
     const currentCity = cityVal ?? watch('city');
     const currentStreet = streetVal ?? watch('street');
@@ -516,7 +524,8 @@ export function CheckoutModal() {
   const selectCitySuggestion = (town: string) => {
     setValue('city', town, { shouldValidate: true });
     setIsCitySuggestionsOpen(false);
-    calculateDistanceFee(town, watchStreet, watchHouse);
+    resetAddressDetails();
+    calculateDistanceFee(town, '', '');
   };
 
   // Підказки та автокомпліт вулиць
@@ -971,8 +980,13 @@ export function CheckoutModal() {
                   <button
                     type="button"
                     onClick={() => {
-                      setSelectedZone('city');
-                      setValue('zone', 'city');
+                      if (selectedZone !== 'city') {
+                        setSelectedZone('city');
+                        setValue('zone', 'city');
+                        setValue('city', 'Świdnica');
+                        resetAddressDetails();
+                        setDistanceData(null);
+                      }
                     }}
                     className={cn(
                       'p-2 sm:p-2.5 rounded-xl border text-left transition-all cursor-pointer',
@@ -996,8 +1010,13 @@ export function CheckoutModal() {
                   <button
                     type="button"
                     onClick={() => {
-                      setSelectedZone('suburb');
-                      setValue('zone', 'suburb');
+                      if (selectedZone !== 'suburb') {
+                        setSelectedZone('suburb');
+                        setValue('zone', 'suburb');
+                        setValue('city', '');
+                        resetAddressDetails();
+                        setDistanceData(null);
+                      }
                     }}
                     className={cn(
                       'p-2 sm:p-2.5 rounded-xl border text-left transition-all cursor-pointer',
@@ -1105,9 +1124,17 @@ export function CheckoutModal() {
                     {...register('city', {
                       onChange: (e) => {
                         const cleaned = maskCity(e.target.value);
+                        const prevCity = watchCity;
                         e.target.value = cleaned;
                         setValue('city', cleaned, { shouldValidate: true });
                         setIsCitySuggestionsOpen(true);
+                        // При зміні населеного пункту очищаємо вулицю, будинок, квартиру, поверх та код під'їзду
+                        if (cleaned !== prevCity) {
+                          resetAddressDetails();
+                          if (!cleaned || cleaned.trim().length < 2) {
+                            setDistanceData(null);
+                          }
+                        }
                       },
                       onBlur: () => {
                         setTimeout(() => setIsCitySuggestionsOpen(false), 250);
