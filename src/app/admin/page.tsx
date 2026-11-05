@@ -958,11 +958,9 @@ export default function AdminPage() {
       ? `${order.address.city && order.address.zone !== 'city' ? `${order.address.city}, ` : ''}вул. ${order.address.street || ''} ${order.address.house || ''}${order.address.apartment ? `, кв. ${order.address.apartment}` : ''}${order.address.floor ? `, пов. ${order.address.floor}` : ''}${order.address.entryCode ? `, код ${order.address.entryCode}` : ''}`
       : 'Адреса не вказана';
 
-    const zoneStr = order.address?.zone === 'city'
-      ? 'Свідниця'
-      : (order.address?.zone === 'suburb' || order.address?.zone === 'suburb_10km' || order.address?.zone === 'suburb_5km')
-      ? `За місто (до 10 км)${order.address?.city ? ` (${order.address.city})` : ''}`
-      : '';
+    const zoneStr = order.address?.city
+      ? order.address.city
+      : (order.address?.zone === 'city' ? 'Свідниця' : '');
 
     const itemsHtml = order.items
       .map((item) => {
@@ -2544,9 +2542,7 @@ export default function AdminPage() {
                 {order.address?.zone && (
                   <div className="pt-1">
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                      {order.address.zone === 'city'
-                        ? 'Свідниця'
-                        : `За місто (до 10 км)${order.address.city ? ` • ${order.address.city}` : ''}`}
+                      {order.address.city || (order.address.zone === 'city' ? 'Свідниця' : 'За місто')}
                     </span>
                   </div>
                 )}
