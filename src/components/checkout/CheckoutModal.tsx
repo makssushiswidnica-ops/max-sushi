@@ -341,6 +341,9 @@ export function CheckoutModal() {
   const storeSettings = useSettingsStore();
   const isPickup = deliveryMethod === 'pickup';
   const subtotal = useCartStore((s) => s.getSubtotal)();
+  const hasDiscountedItem = items.some(
+    (item) => !item.isGift && ((item.product.discountPercent || 0) > 0 || ((item.product.oldPrice || 0) > (item.product.price || 0)))
+  );
 
   // Динамічний прорахунок кілометражу за місто через Nominatim + OSRM
   const [distanceData, setDistanceData] = useState<{
@@ -792,6 +795,8 @@ export function CheckoutModal() {
               <span className="text-xs font-bold text-white">
                 {createdOrder.deliveryMethod === 'delivery'
                   ? t.checkout.delivery
+                  : hasDiscountedItem
+                  ? t.checkout.pickup
                   : `${t.checkout.pickup} (-${brandTheme.delivery.pickupDiscountPercent}%)`}
               </span>
             </div>
@@ -917,7 +922,9 @@ export function CheckoutModal() {
                 <div className="text-left">
                   <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm leading-none">
                     <span>{t.checkout.pickup}</span>
-                    <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1 py-0.2 rounded font-black">-{brandTheme.delivery.pickupDiscountPercent}%</span>
+                    {!hasDiscountedItem && (
+                      <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1 py-0.2 rounded font-black">-{brandTheme.delivery.pickupDiscountPercent}%</span>
+                    )}
                   </div>
                   <div className="text-[10px] text-zinc-400 mt-0.5">~{prepWaitTimeMinutes} {locale === 'pl' ? 'min' : 'хв'}</div>
                 </div>
@@ -1679,7 +1686,7 @@ export function CheckoutModal() {
               <div className="flex items-baseline gap-2">
                 <span className="text-xs text-zinc-400 font-medium">{t.cart.total}:</span>
                 <span className="text-lg sm:text-xl font-black text-[#e50914]">{formatPrice(total, locale)}</span>
-                {isPickup && (
+                {isPickup && !hasDiscountedItem && (
                   <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">
                     {t.checkout.pickupDiscount}
                   </span>
