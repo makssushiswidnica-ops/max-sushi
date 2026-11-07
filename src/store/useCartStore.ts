@@ -132,9 +132,12 @@ export const useCartStore = create<CartState>()(
 
       addItem: (product: Product, quantity = 1, selectedOptions?: SelectedProductOptions) => {
         set((state) => {
+          const targetSku = product.sku || (product as any).nutrition?.sku || state.menuProducts.find(p => p.id === product.id)?.sku || defaultProducts.find(p => p.id === product.id)?.sku;
+          const safeProduct = targetSku && !product.sku ? { ...product, sku: targetSku } : product;
+
           const rawItems = state.items.filter((i) => !i.isGift);
           const existingIndex = rawItems.findIndex(
-            (item) => item.product.id === product.id && isSameProductOptions(item.selectedOptions, selectedOptions)
+            (item) => item.product.id === safeProduct.id && isSameProductOptions(item.selectedOptions, selectedOptions)
           );
 
           let updated: CartItem[];
@@ -142,7 +145,7 @@ export const useCartStore = create<CartState>()(
             updated = [...rawItems];
             updated[existingIndex].quantity += quantity;
           } else {
-            updated = [...rawItems, { product, quantity, selectedOptions }];
+            updated = [...rawItems, { product: safeProduct, quantity, selectedOptions }];
           }
 
           return { items: syncGiftItem(updated, state.menuProducts) };
