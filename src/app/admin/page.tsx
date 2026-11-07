@@ -985,13 +985,21 @@ export default function AdminPage() {
             (prod.id && p.id === prod.id) ||
             (typeof prod.name === 'object' && ((prod.name.pl && p.name.pl === prod.name.pl) || (prod.name.uk && p.name.uk === prod.name.uk))) ||
             (typeof prod.name === 'string' && (p.name.pl === prod.name || p.name.uk === prod.name))
-        ) || defaultProducts.find(
+        );
+        const defaultMatched = defaultProducts.find(
           (p) =>
             (prod.id && p.id === prod.id) ||
             (typeof prod.name === 'object' && ((prod.name.pl && p.name.pl === prod.name.pl) || (prod.name.uk && p.name.uk === prod.name.uk))) ||
             (typeof prod.name === 'string' && (p.name.pl === prod.name || p.name.uk === prod.name))
         );
-        const sku = prod.sku || (prod as any).nutrition?.sku || matchedProduct?.sku || (matchedProduct as any)?.nutrition?.sku || '';
+        const sku =
+          prod.sku ||
+          (prod as any).nutrition?.sku ||
+          matchedProduct?.sku ||
+          (matchedProduct as any)?.nutrition?.sku ||
+          defaultMatched?.sku ||
+          (defaultMatched as any)?.nutrition?.sku ||
+          '';
         const skuBadge = sku ? `<span class="sku-badge">#${sku}</span>` : '';
         const isGift = Boolean(item.isGift);
         const opts: string[] = [];
@@ -2685,7 +2693,11 @@ export default function AdminPage() {
                 const titlePl =
                   typeof prod.name === 'object' ? prod.name.pl : '';
                 const price = Number(prod.price || 0);
-                const itemSku = prod.sku || (prod as any).nutrition?.sku || products.find((p) => (prod.id && p.id === prod.id) || (typeof prod.name === 'object' && p.name.pl === prod.name.pl))?.sku;
+                const itemSku =
+                  prod.sku ||
+                  (prod as any).nutrition?.sku ||
+                  products.find((p) => (prod.id && p.id === prod.id) || (typeof prod.name === 'object' && p.name.pl === prod.name.pl))?.sku ||
+                  defaultProducts.find((p) => (prod.id && p.id === prod.id) || (typeof prod.name === 'object' && p.name.pl === prod.name.pl))?.sku;
 
                 return (
                   <div
