@@ -948,25 +948,34 @@ export default function AdminPage() {
     return `${day}.${month < 10 ? '0' + month : month}, ${timeStr}`;
   };
 
-  // Друк чека замовлення для кухні
+  // Друк чека замовлення для кухні (польською мовою)
   const handlePrintKitchenReceipt = (order: AdminOrder) => {
     const isPickup = order.delivery_method === 'pickup' || order.deliveryMethod === 'pickup';
     const scheduled = order.scheduled_time || order.scheduledTime;
     const isScheduled = (order.timing_type === 'scheduled' || order.timingType === 'scheduled') && Boolean(scheduled);
-    const timingBadge = isScheduled ? `НА ЧАС: ${formatScheduledBadgeTime(order)}` : 'ЯКНАЙШВИДШЕ';
+    const timingBadge = isScheduled ? `NA GODZINĘ: ${formatScheduledBadgeTime(order)}` : 'JAK NAJSZYBCIEJ';
     const addressStr = order.address
-      ? `${order.address.city && order.address.zone !== 'city' ? `${order.address.city}, ` : ''}вул. ${order.address.street || ''} ${order.address.house || ''}${order.address.apartment ? `, кв. ${order.address.apartment}` : ''}${order.address.floor ? `, пов. ${order.address.floor}` : ''}${order.address.entryCode ? `, код ${order.address.entryCode}` : ''}`
-      : 'Адреса не вказана';
+      ? `${order.address.city && order.address.zone !== 'city' ? `${order.address.city}, ` : ''}ul. ${order.address.street || ''} ${order.address.house || ''}${order.address.apartment ? `, lok. ${order.address.apartment}` : ''}${order.address.floor ? `, piętro ${order.address.floor}` : ''}${order.address.entryCode ? `, kod: ${order.address.entryCode}` : ''}`
+      : 'Brak adresu';
 
     const zoneStr = order.address?.city
       ? order.address.city
-      : (order.address?.zone === 'city' ? 'Свідниця' : '');
+      : (order.address?.zone === 'city' ? 'Świdnica' : '');
+
+    const formatReceiptDate = (isoString?: string) => {
+      if (!isoString) return '';
+      try {
+        const d = new Date(isoString);
+        return d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+      } catch {
+        return isoString;
+      }
+    };
 
     const itemsHtml = order.items
       .map((item) => {
         const prod = item.product || {};
-        const titleUk = typeof prod.name === 'object' ? (prod.name.uk || prod.name.pl || 'Страва') : (prod.name || 'Страва');
-        const titlePl = typeof prod.name === 'object' ? (prod.name.pl || '') : '';
+        const title = typeof prod.name === 'object' ? (prod.name.pl || prod.name.uk || 'Pozycja') : (prod.name || 'Pozycja');
         const price = Number(prod.price || 0);
         const sku = prod.sku || (prod as any).nutrition?.sku || '';
         const skuText = sku ? ` ${sku}` : '';
@@ -974,21 +983,20 @@ export default function AdminPage() {
         const opts: string[] = [];
         const optBakedP = prod.bakedPrice ?? (prod as any).nutrition?.bakedPrice ?? 1;
         const optTempuraP = prod.tempuraPrice ?? (prod as any).nutrition?.tempuraPrice ?? 2;
-        if (item.selectedOptions?.baked) opts.push(`ПЕЧЕНА РИБА (+${optBakedP} zł)`);
-        if (item.selectedOptions?.tempura) opts.push(`В ТЕМПУРІ (+${optTempuraP} zł)`);
+        if (item.selectedOptions?.baked) opts.push(`PIECZONA RYBA (+${optBakedP} zł)`);
+        if (item.selectedOptions?.tempura) opts.push(`W TEMPURZE (+${optTempuraP} zł)`);
         const optsHtml = opts.length > 0 
           ? `<div style="font-size: 11px; font-weight: 900; color: #000; margin-top: 2px;">➔ ${opts.join(', ')}</div>` 
           : '';
         const displayPrice = isGift ? '0 zł' : `${price * item.quantity} zł`;
-        const giftLabel = isGift ? '<span style="font-size: 10px; font-weight: 900; background: #000; color: #fff; padding: 1px 4px; border-radius: 2px; margin-left: 4px;">ПОДАРУНОК</span>' : '';
+        const giftLabel = isGift ? '<span style="font-size: 10px; font-weight: 900; background: #000; color: #fff; padding: 1px 4px; border-radius: 2px; margin-left: 4px;">GRATIS</span>' : '';
         return `
           <tr style="border-bottom: 1px dashed #666;">
             <td style="padding: 6px 0; font-size: 16px; font-weight: 900; width: 36px; vertical-align: top;">
               ${item.quantity}×
             </td>
             <td style="padding: 6px 4px; font-size: 14px; font-weight: bold; vertical-align: top;">
-              <div>${titleUk}${skuText}${giftLabel}</div>
-              ${titlePl && titlePl !== titleUk ? `<div style="font-size: 11px; font-weight: normal; color: #444; margin-top: 1px;">${titlePl}${skuText}</div>` : ''}
+              <div>${title}${skuText}${giftLabel}</div>
               ${optsHtml}
             </td>
             <td style="padding: 6px 0; font-size: 13px; text-align: right; vertical-align: top; white-space: nowrap;">
@@ -1001,7 +1009,7 @@ export default function AdminPage() {
 
     const printWindow = window.open('', '_blank', 'width=420,height=650');
     if (!printWindow) {
-      alert('Будь ласка, дозвольте відкриття спливаючих вікон у браузері для друку чека.');
+      alert('Zezwól na wyskakujące okienka w przeglądarce, aby wydrukować paragon.');
       return;
     }
 
@@ -1010,7 +1018,7 @@ export default function AdminPage() {
       <html>
         <head>
           <meta charset="utf-8" />
-          <title>Чек #${order.id} - Max Sushi</title>
+          <title>Paragon #${order.id} - Maks Sushi</title>
           <style>
             @page {
               size: 80mm auto;
@@ -1097,9 +1105,9 @@ export default function AdminPage() {
         </head>
         <body>
           <div class="center header">
-            <div class="logo">MAX SUSHI</div>
+            <div class="logo">MAKS SUSHI</div>
             <div class="order-id">#${order.id}</div>
-            <div style="font-size: 11px; color: #444;">${formatOrderTime(order.created_at)}</div>
+            <div style="font-size: 11px; color: #444;">${formatReceiptDate(order.created_at)}</div>
           </div>
 
           <div class="timing-banner">
@@ -1107,34 +1115,34 @@ export default function AdminPage() {
           </div>
 
           <div class="info-row">
-            <span class="bold">Спосіб:</span>
-            <span class="bold" style="font-size: 13px;">${isPickup ? 'САМОВИВІЗ' : 'ДОСТАВКА КУРʼЄРОМ'}</span>
+            <span class="bold">Sposób:</span>
+            <span class="bold" style="font-size: 13px;">${isPickup ? 'ODBIÓR OSOBISTY' : 'DOSTAWA KURIEREM'}</span>
           </div>
-          ${!isPickup ? `<div style="font-size: 12px; margin: 3px 0 6px 0;"><strong>Адреса:</strong> ${addressStr}</div>` : ''}
-          ${(!isPickup && zoneStr) ? `<div style="font-size: 11px; margin: -2px 0 6px 0; font-weight: bold; color: #222;">📍 Зона: ${zoneStr}</div>` : ''}
+          ${!isPickup ? `<div style="font-size: 12px; margin: 3px 0 6px 0;"><strong>Adres:</strong> ${addressStr}</div>` : ''}
+          ${(!isPickup && zoneStr) ? `<div style="font-size: 11px; margin: -2px 0 6px 0; font-weight: bold; color: #222;">📍 Strefa: ${zoneStr}</div>` : ''}
 
           <div class="info-row">
-            <span>Клієнт:</span>
-            <span class="bold">${order.customer_name || order.name || 'Клієнт'}</span>
+            <span>Klient:</span>
+            <span class="bold">${order.customer_name || order.name || 'Klient'}</span>
           </div>
           <div class="info-row">
-            <span>Телефон:</span>
+            <span>Telefon:</span>
             <span class="bold">${order.phone}</span>
           </div>
           <div class="info-row">
-            <span>Персон / приборів:</span>
-            <span class="bold">${order.personsCount || 1} шт</span>
+            <span>Liczba osób / pałeczek:</span>
+            <span class="bold">${order.personsCount || 1} szt.</span>
           </div>
 
           ${order.comment ? `
             <div class="comment-box">
-              <strong style="text-transform: uppercase;">Коментар:</strong> ${order.comment}
+              <strong style="text-transform: uppercase;">Uwagi:</strong> ${order.comment}
             </div>
           ` : ''}
 
           <div class="divider"></div>
           <div class="bold" style="font-size: 13px; margin-bottom: 2px;">
-            СТРАВИ (${order.items.reduce((s, i) => s + (i.quantity || 1), 0)} шт):
+            POZYCJE (${order.items.reduce((s, i) => s + (i.quantity || 1), 0)} szt.):
           </div>
 
           <table>
@@ -1144,28 +1152,28 @@ export default function AdminPage() {
           </table>
 
           <div class="total-row">
-            <span>РАЗОМ:</span>
+            <span>RAZEM:</span>
             <span>${order.total} zł</span>
           </div>
           <div class="info-row" style="margin-top: 5px;">
-            <span>Оплата:</span>
-            <span class="bold">${order.payment_method === 'cash' || order.paymentMethod === 'cash' ? 'Готівка' : 'BLIK / Картка'}</span>
+            <span>Płatność:</span>
+            <span class="bold">${order.payment_method === 'cash' || order.paymentMethod === 'cash' ? 'Gotówka' : 'BLIK / Karta'}</span>
           </div>
           ${(order.changeFrom || (order as any).change_from) ? `
             <div class="info-row">
-              <span>Решта з купюри:</span>
+              <span>Reszta z:</span>
               <span class="bold">${order.changeFrom || (order as any).change_from}</span>
             </div>
           ` : ''}
 
           <div class="divider" style="margin-top: 10px;"></div>
           <div class="center" style="font-size: 11px; margin-top: 8px; color: #555;">
-            Max Sushi • Смачного!
+            Maks Sushi • Smacznego!
           </div>
 
           <div class="no-print center" style="margin-top: 15px;">
             <button onclick="window.print()" style="padding: 8px 16px; font-weight: bold; cursor: pointer; border-radius: 4px;">
-              Роздрукувати ще раз
+              Drukuj ponownie
             </button>
           </div>
 
