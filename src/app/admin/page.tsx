@@ -87,6 +87,7 @@ import {
   createCategory
 } from '@/lib/menuService';
 import { autoTranslateDish } from '@/lib/translateService';
+import { products as defaultProducts } from '@/lib/mockData';
 
 type AdminTab = 'dashboard' | 'orders' | 'menu' | 'marketing' | 'stats' | 'settings';
 
@@ -977,8 +978,21 @@ export default function AdminPage() {
         const prod = item.product || {};
         const title = typeof prod.name === 'object' ? (prod.name.pl || prod.name.uk || 'Pozycja') : (prod.name || 'Pozycja');
         const price = Number(prod.price || 0);
-        const sku = prod.sku || (prod as any).nutrition?.sku || '';
-        const skuText = sku ? ` ${sku}` : '';
+
+        // Пошук коду каси (PLU) страви з обʼєкта страви або зі списку меню
+        const matchedProduct = products.find(
+          (p) =>
+            (prod.id && p.id === prod.id) ||
+            (typeof prod.name === 'object' && ((prod.name.pl && p.name.pl === prod.name.pl) || (prod.name.uk && p.name.uk === prod.name.uk))) ||
+            (typeof prod.name === 'string' && (p.name.pl === prod.name || p.name.uk === prod.name))
+        ) || defaultProducts.find(
+          (p) =>
+            (prod.id && p.id === prod.id) ||
+            (typeof prod.name === 'object' && ((prod.name.pl && p.name.pl === prod.name.pl) || (prod.name.uk && p.name.uk === prod.name.uk))) ||
+            (typeof prod.name === 'string' && (p.name.pl === prod.name || p.name.uk === prod.name))
+        );
+        const sku = prod.sku || (prod as any).nutrition?.sku || matchedProduct?.sku || (matchedProduct as any)?.nutrition?.sku || '';
+        const skuBadge = sku ? `<span class="sku-badge">#${sku}</span>` : '';
         const isGift = Boolean(item.isGift);
         const opts: string[] = [];
         const optBakedP = prod.bakedPrice ?? (prod as any).nutrition?.bakedPrice ?? 1;
@@ -996,7 +1010,7 @@ export default function AdminPage() {
               ${item.quantity}×
             </td>
             <td style="padding: 6px 4px; font-size: 14px; font-weight: bold; vertical-align: top;">
-              <div>${title}${skuText}${giftLabel}</div>
+              <div>${title}${skuBadge}${giftLabel}</div>
               ${optsHtml}
             </td>
             <td style="padding: 6px 0; font-size: 13px; text-align: right; vertical-align: top; white-space: nowrap;">
@@ -1064,6 +1078,22 @@ export default function AdminPage() {
               text-align: center;
               border-radius: 4px;
               letter-spacing: 0.5px;
+            }
+            .sku-badge {
+              display: inline-block;
+              font-family: monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              font-size: 11px;
+              font-weight: 900;
+              background: #000;
+              color: #fff;
+              border: 1px solid #000;
+              padding: 0 4px;
+              border-radius: 3px;
+              margin-left: 5px;
+              vertical-align: middle;
+              line-height: 1.3;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
             }
             .info-row {
               display: flex;
@@ -2655,6 +2685,7 @@ export default function AdminPage() {
                 const titlePl =
                   typeof prod.name === 'object' ? prod.name.pl : '';
                 const price = Number(prod.price || 0);
+                const itemSku = prod.sku || (prod as any).nutrition?.sku || products.find((p) => (prod.id && p.id === prod.id) || (typeof prod.name === 'object' && p.name.pl === prod.name.pl))?.sku;
 
                 return (
                   <div
@@ -2681,9 +2712,9 @@ export default function AdminPage() {
                               ПОДАРУНОК
                             </span>
                           )}
-                          {(prod.sku || (prod as any).nutrition?.sku) && (
+                          {itemSku && (
                             <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                              #{prod.sku || (prod as any).nutrition?.sku}
+                              #{itemSku}
                             </span>
                           )}
                         </div>
