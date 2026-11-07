@@ -48,7 +48,7 @@ export function Footer() {
               <div className="relative w-8 h-8 rounded-full overflow-hidden border border-[#e50914] bg-black shrink-0 group-hover:scale-105 transition-transform">
                 <img
                   src={brandTheme.logo}
-                  alt={brandTheme.name}
+                  alt="Maks Sushi Świdnica"
                   className="w-full h-full object-cover"
                 />
               </div>

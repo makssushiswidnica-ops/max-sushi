@@ -83,7 +83,7 @@ export function CompactProductCard({ product }: CompactProductCardProps) {
               >
                 <img
                   src={product.image}
-                  alt={product.name[locale]}
+                  alt={`${product.name[locale]} — Maks Sushi Świdnica`}
                   loading="lazy"
                   decoding="async"
                   className="w-full h-full object-contain filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.95)]"

@@ -23,16 +23,56 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale: rawLocale } = await params;
   const locale = (rawLocale === 'uk' ? 'uk' : 'pl') as Locale;
-  const dict = getDictionary(locale);
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://maks-sushi.pl';
+
+  const title = locale === 'pl'
+    ? 'Maks Sushi Świdnica — Najlepsze Sushi z Dostawą i na Wynos'
+    : 'Maks Sushi Свідниця — Найкращі Суші з Доставкою та Самовивозом';
+
+  const description = locale === 'pl'
+    ? 'Maks Sushi w Świdnicy: wyśmienite rolki, zestawy sushi i dania japońskie. Szybka dostawa pod Twoje drzwi lub odbiór przy ul. Parkowej 8. Zamów online!'
+    : 'Maks Sushi у Свідниці: вишукані роли, суші-сети та японські страви. Швидка доставка до дверей або самовивіз на вул. Parkowa 8. Замовляйте онлайн!';
+
+  const keywords = locale === 'pl'
+    ? ['sushi świdnica', 'dostawa sushi świdnica', 'rolki świdnica', 'zestawy sushi świdnica', 'jedzenie na dowóz świdnica', 'japońska restauracja świdnica', 'maks sushi', 'sushi parkowa 8']
+    : ['суші свідниця', 'доставка суші свідниця', 'роли свідниця', 'сети свідниця', 'суші бар свідниця', 'maks sushi swidnica'];
 
   return {
-    title: `${dict.brand.name} — ${dict.brand.slogan}`,
-    description: dict.hero.subtitle,
+    metadataBase: new URL(baseUrl),
+    title,
+    description,
+    keywords,
+    alternates: {
+      canonical: `/${locale}`,
+      languages: {
+        'pl-PL': '/pl',
+        'uk-UA': '/uk',
+        'x-default': '/pl',
+      },
+    },
     openGraph: {
-      title: `${dict.brand.name} — ${dict.brand.slogan}`,
-      description: dict.hero.subtitle,
+      title,
+      description,
+      url: `${baseUrl}/${locale}`,
+      siteName: 'Maks Sushi Świdnica',
       locale: locale === 'pl' ? 'pl_PL' : 'uk_UA',
       type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-video-preview': -1,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+      },
     },
   };
 }
@@ -53,26 +93,54 @@ export default async function LocaleLayout({
   const locale = rawLocale as Locale;
   const dictionary = getDictionary(locale);
 
-  // Schema.org мікродані для Google (рейтинг ресторану, кухня, ціни та місто Świdnica)
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://maks-sushi.pl';
+
+  // Schema.org мікродані для Google (ресторан, гео-координати, адреса, телефон, години роботи)
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Restaurant',
     name: 'Maks Sushi Świdnica',
-    description: locale === 'pl' 
-      ? 'Najlepsze sushi w Świdnicy. Świeże rolki, zestawy, futomaki z szybką dostawą na terenie Świdnicy.'
-      : 'Найкращі суші у Свідниці. Свіжі роли, сети, футомакі зі швидкою доставкою по Свідниці.',
-    servesCuisine: ['Sushi', 'Japanese', 'Asian'],
+    image: `${baseUrl}/images/hero_sushi_bg.jpg`,
+    url: `${baseUrl}/${locale}`,
+    telephone: '+48 791 744 048',
     priceRange: '$$',
+    servesCuisine: ['Sushi', 'Japanese', 'Asian'],
     currenciesAccepted: 'PLN',
+    paymentAccepted: 'Cash, Credit Card, BLIK',
+    description: locale === 'pl' 
+      ? 'Najlepsze sushi w Świdnicy. Świeże rolki, zestawy, futomaki z szybką dostawą na terenie Świdnicy i okolic.'
+      : 'Найкращі суші у Свідниці. Свіжі роли, сети, футомакі зі швидкою доставкою по Свідниці та околицях.',
     address: {
       '@type': 'PostalAddress',
+      streetAddress: 'Parkowa 8',
       addressLocality: 'Świdnica',
+      postalCode: '58-100',
       addressRegion: 'Dolnośląskie',
       addressCountry: 'PL',
     },
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: 50.8438,
+      longitude: 16.4886,
+    },
+    openingHoursSpecification: [
+      {
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: ['Tuesday', 'Wednesday', 'Thursday', 'Sunday'],
+        opens: '12:00',
+        closes: '21:00',
+      },
+      {
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: ['Friday', 'Saturday'],
+        opens: '12:00',
+        closes: '22:00',
+      },
+    ],
     hasMenu: {
       '@type': 'Menu',
       name: 'Maks Sushi Menu',
+      url: `${baseUrl}/${locale}#catalog`,
       hasMenuItemSection: [
         { '@type': 'MenuSection', name: 'Mini Maki' },
         { '@type': 'MenuSection', name: 'Futomaki' },
