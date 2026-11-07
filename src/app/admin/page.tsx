@@ -1000,7 +1000,7 @@ export default function AdminPage() {
           defaultMatched?.sku ||
           (defaultMatched as any)?.nutrition?.sku ||
           '';
-        const skuBadge = sku ? `<span class="sku-badge">#${sku}</span>` : '';
+        const skuText = sku ? ` ${sku}` : '';
         const isGift = Boolean(item.isGift);
         const opts: string[] = [];
         const optBakedP = prod.bakedPrice ?? (prod as any).nutrition?.bakedPrice ?? 1;
@@ -1018,7 +1018,7 @@ export default function AdminPage() {
               ${item.quantity}×
             </td>
             <td style="padding: 6px 4px; font-size: 14px; font-weight: bold; vertical-align: top;">
-              <div>${title}${skuBadge}${giftLabel}</div>
+              <div>${title}${skuText}${giftLabel}</div>
               ${optsHtml}
             </td>
             <td style="padding: 6px 0; font-size: 13px; text-align: right; vertical-align: top; white-space: nowrap;">
@@ -1086,22 +1086,6 @@ export default function AdminPage() {
               text-align: center;
               border-radius: 4px;
               letter-spacing: 0.5px;
-            }
-            .sku-badge {
-              display: inline-block;
-              font-family: monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-              font-size: 11px;
-              font-weight: 900;
-              background: #000;
-              color: #fff;
-              border: 1px solid #000;
-              padding: 0 4px;
-              border-radius: 3px;
-              margin-left: 5px;
-              vertical-align: middle;
-              line-height: 1.3;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
             }
             .info-row {
               display: flex;
