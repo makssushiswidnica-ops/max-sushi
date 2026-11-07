@@ -5,6 +5,14 @@ import { useI18n } from '@/lib/i18nContext';
 import { brandTheme } from '@/config/theme';
 import { Phone, MapPin, Clock } from 'lucide-react';
 
+function FacebookIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+    </svg>
+  );
+}
+
 function InstagramIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -85,28 +93,26 @@ export function Footer() {
             </a>
 
             {/* Соціальні мережі */}
-            <div className="pt-2 flex flex-col gap-2 text-xs">
+            <div className="pt-2 flex items-center gap-2.5">
               <a
                 href={brandTheme.contacts.socials.facebook}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-zinc-400 hover:text-white transition-colors flex items-center gap-2 group"
+                aria-label="Facebook"
+                title="Facebook: Maks Sushi Świdnica"
+                className="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-[#1877F2]/15 border border-white/10 hover:border-[#1877F2]/40 text-zinc-400 hover:text-[#1877F2] flex items-center justify-center transition-all duration-200 hover:scale-105 shadow-sm group"
               >
-                <span className="w-5 h-5 rounded-md bg-[#1877F2]/20 border border-[#1877F2]/40 text-[#1877F2] group-hover:bg-[#1877F2] group-hover:text-white flex items-center justify-center font-bold text-xs transition-colors">
-                  f
-                </span>
-                <span className="group-hover:text-white font-medium">{brandTheme.contacts.socials.facebookHandle}</span>
+                <FacebookIcon className="w-4 h-4 fill-current transition-transform group-hover:scale-110" />
               </a>
               <a
                 href={brandTheme.contacts.socials.instagram}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-zinc-400 hover:text-white transition-colors flex items-center gap-2 group"
+                aria-label="Instagram"
+                title="Instagram: @maks_sushi_swidnica"
+                className="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-gradient-to-tr hover:from-[#f9ce34]/15 hover:via-[#ee2a7b]/15 hover:to-[#6228d7]/15 border border-white/10 hover:border-[#ee2a7b]/40 text-zinc-400 hover:text-[#ee2a7b] flex items-center justify-center transition-all duration-200 hover:scale-105 shadow-sm group"
               >
-                <span className="w-5 h-5 rounded-md bg-gradient-to-tr from-[#f9ce34]/20 via-[#ee2a7b]/20 to-[#6228d7]/20 border border-[#ee2a7b]/40 text-[#ee2a7b] group-hover:bg-gradient-to-tr group-hover:from-[#f9ce34] group-hover:via-[#ee2a7b] group-hover:to-[#6228d7] group-hover:text-white flex items-center justify-center transition-all p-0.5">
-                  <InstagramIcon className="w-3.5 h-3.5" />
-                </span>
-                <span className="group-hover:text-white font-medium">{brandTheme.contacts.socials.instagramHandle}</span>
+                <InstagramIcon className="w-4 h-4 transition-transform group-hover:scale-110" />
               </a>
             </div>
           </div>
