@@ -93,27 +93,32 @@ export function Footer() {
             </a>
 
             {/* Соціальні мережі */}
-            <div className="pt-2 flex items-center gap-2.5">
-              <a
-                href={brandTheme.contacts.socials.facebook}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Facebook"
-                title="Facebook: Maks Sushi Świdnica"
-                className="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-[#1877F2]/15 border border-white/10 hover:border-[#1877F2]/40 text-zinc-400 hover:text-[#1877F2] flex items-center justify-center transition-all duration-200 hover:scale-105 shadow-sm group"
-              >
-                <FacebookIcon className="w-4 h-4 fill-current transition-transform group-hover:scale-110" />
-              </a>
-              <a
-                href={brandTheme.contacts.socials.instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Instagram"
-                title="Instagram: @maks_sushi_swidnica"
-                className="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-gradient-to-tr hover:from-[#f9ce34]/15 hover:via-[#ee2a7b]/15 hover:to-[#6228d7]/15 border border-white/10 hover:border-[#ee2a7b]/40 text-zinc-400 hover:text-[#ee2a7b] flex items-center justify-center transition-all duration-200 hover:scale-105 shadow-sm group"
-              >
-                <InstagramIcon className="w-4 h-4 transition-transform group-hover:scale-110" />
-              </a>
+            <div className="pt-3 border-t border-white/5 space-y-2">
+              <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
+                {locale === 'pl' ? 'Nasze social media:' : 'Ми у соцмережах:'}
+              </span>
+              <div className="flex items-center gap-2.5">
+                <a
+                  href={brandTheme.contacts.socials.facebook}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Facebook"
+                  title="Facebook: Maks Sushi Świdnica"
+                  className="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-[#1877F2]/15 border border-white/10 hover:border-[#1877F2]/40 text-zinc-400 hover:text-[#1877F2] flex items-center justify-center transition-all duration-200 hover:scale-105 shadow-sm group"
+                >
+                  <FacebookIcon className="w-4 h-4 fill-current transition-transform group-hover:scale-110" />
+                </a>
+                <a
+                  href={brandTheme.contacts.socials.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Instagram"
+                  title="Instagram: @maks_sushi_swidnica"
+                  className="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-gradient-to-tr hover:from-[#f9ce34]/15 hover:via-[#ee2a7b]/15 hover:to-[#6228d7]/15 border border-white/10 hover:border-[#ee2a7b]/40 text-zinc-400 hover:text-[#ee2a7b] flex items-center justify-center transition-all duration-200 hover:scale-105 shadow-sm group"
+                >
+                  <InstagramIcon className="w-4 h-4 transition-transform group-hover:scale-110" />
+                </a>
+              </div>
             </div>
           </div>
 
