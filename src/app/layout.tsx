@@ -53,9 +53,12 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
+const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://maks-sushi.pl';
+
 export const metadata: Metadata = {
-  title: 'Maks Sushi — Dostawa Sushi & Japanese Food',
-  description: 'Świeże sushi, zestawy i rolki z szybką dostawą w 30 minut. Najwyższa jakość, świeży łosoś i tradycyjne japońskie receptury.',
+  metadataBase: new URL(baseUrl),
+  title: 'Maks Sushi Świdnica — Najlepsze Sushi z Dostawą i na Wynos',
+  description: 'Maks Sushi w Świdnicy: wyśmienite rolki, zestawy sushi i dania japońskie. Szybka dostawa pod Twoje drzwi lub odbiór przy ul. Parkowej 8. Zamów online!',
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },
@@ -64,6 +67,9 @@ export const metadata: Metadata = {
     apple: [
       { url: '/icon.png' },
     ],
+  },
+  openGraph: {
+    images: [{ url: `${baseUrl}/og-image.png`, width: 1200, height: 630 }],
   },
 };
 
