@@ -2900,40 +2900,6 @@ export default function AdminPage() {
 
           {/* Десктопні кнопки дій у шапці */}
           <div className="hidden sm:flex items-center gap-2 sm:gap-3">
-            {/* Швидка перевірка звуку */}
-            <button
-              type="button"
-              onClick={() => {
-                playOrderSound();
-                showToast('🔊 Відтворено тестовий сигнал замовлення');
-              }}
-              title="Перевірити звук сповіщення"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-zinc-300 hover:text-white bg-[#151520] hover:bg-[#1e1e2d] border border-white/10 rounded-lg transition-colors cursor-pointer"
-            >
-              <Volume2 className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden md:inline">Тест звуку</span>
-            </button>
-
-            {/* Кнопка статусу системних Push сповіщень */}
-            {pushStatus === 'granted' ? (
-              <span
-                title="Push-сповіщення активні"
-                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg select-none"
-              >
-                <Bell className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="hidden md:inline">Push активний</span>
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={handleRequestPush}
-                title="Дозволити системні сповіщення про замовлення"
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-white bg-[#e50914] hover:bg-[#f4222d] border border-[#e50914] rounded-lg transition-all animate-pulse cursor-pointer shadow-md shadow-[#e50914]/30"
-              >
-                <BellRing className="w-3.5 h-3.5" />
-                <span>Увімкнути Push</span>
-              </button>
-            )}
             {/* Кнопка налаштувань (іконка шестерні) */}
             <button
               type="button"
@@ -2970,28 +2936,6 @@ export default function AdminPage() {
           {/* Мобільні кнопки дій у шапці */}
           <div className="flex sm:hidden items-center gap-1.5">
             <button
-              type="button"
-              onClick={() => {
-                playOrderSound();
-                showToast('🔊 Тест звуку');
-              }}
-              title="Тест звуку"
-              className="p-2 rounded-lg bg-[#151520] border border-white/10 text-amber-400 active:scale-95 cursor-pointer"
-            >
-              <Volume2 className="w-4 h-4" />
-            </button>
-            {pushStatus !== 'granted' && (
-              <button
-                type="button"
-                onClick={handleRequestPush}
-                title="Увімкнути Push-сповіщення"
-                className="p-2 rounded-lg bg-[#e50914] text-white animate-pulse active:scale-95 cursor-pointer"
-              >
-                <BellRing className="w-4 h-4" />
-              </button>
-            )}
-            <div className="flex items-center">
-            <button
               ref={burgerButtonRef}
               type="button"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -3004,7 +2948,6 @@ export default function AdminPage() {
                 <Menu className="w-5 h-5 text-white" />
               )}
             </button>
-            </div>
           </div>
         </div>
 
