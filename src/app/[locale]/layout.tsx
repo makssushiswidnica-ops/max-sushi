@@ -34,8 +34,50 @@ export async function generateMetadata({
     : 'Maks Sushi у Свідниці: вишукані роли, суші-сети та японські страви. Швидка доставка до дверей або самовивіз на вул. Parkowa 8. Замовляйте онлайн!';
 
   const keywords = locale === 'pl'
-    ? ['sushi świdnica', 'dostawa sushi świdnica', 'rolki świdnica', 'zestawy sushi świdnica', 'jedzenie na dowóz świdnica', 'japońska restauracja świdnica', 'maks sushi', 'sushi parkowa 8']
-    : ['суші свідниця', 'доставка суші свідниця', 'роли свідниця', 'сети свідниця', 'суші бар свідниця', 'maks sushi swidnica'];
+    ? [
+        'maks sushi',
+        'maks sushi świdnica',
+        'sushi świdnica',
+        'dostawa sushi świdnica',
+        'sushi na dowóz świdnica',
+        'sushi na wynos świdnica',
+        'rolki świdnica',
+        'zestawy sushi świdnica',
+        'najlepsze sushi świdnica',
+        'jedzenie na dowóz świdnica',
+        'japońska restauracja świdnica',
+        'sushi parkowa 8',
+        'sushi świebodzice',
+        'dostawa sushi świebodzice',
+        'sushi pszenno',
+        'dostawa sushi pszenno',
+        'sushi jaworzyna śląska',
+        'dostawa sushi jaworzyna śląska',
+        'sushi żarów',
+        'dostawa sushi żarów',
+        'sushi marcinowice',
+        'sushi witoszów',
+        'sushi bystrzyca',
+      ]
+    : [
+        'maks sushi',
+        'maks sushi swidnica',
+        'макс суші свідниця',
+        'суші свідниця',
+        'доставка суші свідниця',
+        'суші на виніс свідниця',
+        'роли свідниця',
+        'сети свідниця',
+        'суші бар свідниця',
+        'найкращі суші свідниця',
+        'їжа з доставкою свідниця',
+        'суші свібодзіце',
+        'доставка суші свібодзіце',
+        'суші пшенно',
+        'суші явожина шльонська',
+        'суші жарув',
+        'суші марчиновіце',
+      ];
 
   return {
     metadataBase: new URL(baseUrl),
@@ -132,6 +174,16 @@ export default async function LocaleLayout({
       latitude: 50.8438,
       longitude: 16.4886,
     },
+    areaServed: [
+      { '@type': 'AdministrativeArea', name: 'Świdnica' },
+      { '@type': 'AdministrativeArea', name: 'Świebodzice' },
+      { '@type': 'AdministrativeArea', name: 'Pszenno' },
+      { '@type': 'AdministrativeArea', name: 'Jaworzyna Śląska' },
+      { '@type': 'AdministrativeArea', name: 'Żarów' },
+      { '@type': 'AdministrativeArea', name: 'Marcinowice' },
+      { '@type': 'AdministrativeArea', name: 'Witoszów Dolny' },
+      { '@type': 'AdministrativeArea', name: 'Bystrzyca Dolna' },
+    ],
     openingHoursSpecification: [
       {
         '@type': 'OpeningHoursSpecification',
