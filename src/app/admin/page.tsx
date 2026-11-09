@@ -5452,13 +5452,6 @@ export default function AdminPage() {
                         <span className="text-xs font-bold text-zinc-400">%</span>
                       </div>
                     </div>
-
-                    <div className="p-3 bg-[#141420]/60 border border-white/5 rounded-xl text-xs text-zinc-400 space-y-1.5">
-                      <div className="font-semibold text-zinc-300">Як працює акція:</div>
-                      <p>• Плашка над хедером сайту показується <strong>лише зареєстрованим</strong> клієнтам.</p>
-                      <p>• Купон на знижку показується <strong>першим у кошику</strong> (навіть якщо кошик порожній).</p>
-                      <p>• Привʼязка до номера телефону гарантує 1 знижку на одного клієнта.</p>
-                    </div>
                   </div>
                 </div>
 
