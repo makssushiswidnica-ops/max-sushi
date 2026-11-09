@@ -43,8 +43,8 @@ export function FirstOrderCouponCard({
               </div>
               <p className="text-[11px] text-zinc-400 truncate mt-0.5">
                 {locale === 'pl'
-                  ? 'Zniżka na 1. zamówienie naliczy się przy kasie'
-                  : 'Знижка на 1-ше замовлення нарахується в чеку'}
+                  ? 'Zniżka na pierwsze zamówienie'
+                  : 'Знижка на перше замовлення'}
               </p>
             </div>
           </div>

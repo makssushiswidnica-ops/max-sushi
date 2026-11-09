@@ -841,7 +841,7 @@ export function CheckoutModal() {
             {createdOrder.firstOrderDiscount && createdOrder.firstOrderDiscount > 0 ? (
               <div className="flex justify-between items-center pb-2 border-b border-white/5 text-emerald-400">
                 <span className="text-xs font-medium">
-                  {locale === 'pl' ? 'Zniżka na 1. zamówienie (-10%)' : 'Знижка на 1-ше замовлення (-10%)'}
+                  {locale === 'pl' ? 'Zniżka powitalna (-10%)' : 'Знижка привітальна (-10%)'}
                 </span>
                 <span className="text-xs font-bold">-{createdOrder.firstOrderDiscount} zł</span>
               </div>
@@ -1719,14 +1719,14 @@ export function CheckoutModal() {
                 )}
                 {firstOrderDiscount > 0 && (
                   <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded">
-                    -{firstOrderPromo?.discountPercent || 10}% {locale === 'pl' ? '1. zamówienie' : '1-ше замовлення'}
+                    -{firstOrderPromo?.discountPercent || 10}%
                   </span>
                 )}
               </div>
 
               {firstOrderDiscount > 0 && (
                 <div className="text-[11px] text-emerald-400 font-medium flex items-center gap-1.5">
-                  <span>{locale === 'pl' ? 'W tym zniżka powitalna:' : 'У тому числі вітальна знижка:'}</span>
+                  <span>{locale === 'pl' ? 'Zniżka powitalna:' : 'Знижка привітальна:'}</span>
                   <span className="font-bold">-{firstOrderDiscount} zł</span>
                 </div>
               )}
