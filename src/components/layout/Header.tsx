@@ -429,8 +429,8 @@ export function Header() {
                   </span>
                   <span className="font-bold text-emerald-400 group-hover:text-emerald-300 transition-colors truncate">
                     {locale === 'pl'
-                      ? `Zniżka ${firstOrderPromo?.discountPercent || 10}% na 1. zamówienie aktywna w koszyku!`
-                      : `Знижка ${firstOrderPromo?.discountPercent || 10}% на 1-ше замовлення активна у кошику!`}
+                      ? `Masz -${firstOrderPromo?.discountPercent || 10}% na pierwsze zamówienie`
+                      : `Маєш -${firstOrderPromo?.discountPercent || 10}% на перше замовлення`}
                   </span>
                 </button>
               ) : (
