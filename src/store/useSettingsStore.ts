@@ -12,6 +12,10 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
     minAmount: 150,       // Подарунок від 150 zł
     productId: 'maki-ogorek', // Страва в подарунок за замовчуванням (Макі Огірок)
   },
+  firstOrderPromo: {
+    enabled: true,
+    discountPercent: 10,  // Знижка 10% на перше замовлення для зареєстрованих
+  },
   soundNotificationsEnabled: true,
 };
 

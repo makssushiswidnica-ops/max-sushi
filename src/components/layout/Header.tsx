@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ShoppingBag, Phone, Clock, MapPin, User, Gift } from 'lucide-react';
+import { ShoppingBag, Phone, Clock, MapPin, User, Gift, Percent } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useCustomerStore, normalizePhone } from '@/store/useCustomerStore';
@@ -19,36 +19,52 @@ export function Header() {
   const items = useCartStore((s) => s.items);
   const menuProducts = useCartStore((s) => s.menuProducts);
   const giftPromo = useSettingsStore((s) => s.giftPromo);
+  const firstOrderPromo = useSettingsStore((s) => s.firstOrderPromo);
 
   const toggleCustomerDrawer = useCustomerStore((s) => s.toggleOpen);
   const customer = useCustomerStore((s) => s.customer);
+  const isFirstOrderEligible = useCustomerStore((s) => s.isFirstOrderEligible);
 
   const [mounted, setMounted] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [hasNewAdminOrder, setHasNewAdminOrder] = useState(false);
   const [customerOrderStatus, setCustomerOrderStatus] = useState<'pending' | 'kitchen' | 'in_delivery' | null>(null);
 
-  // Слайдер верхньої плашки: статус роботи (5 сек) / активна акція (10 сек)
-  const [activeTopSlide, setActiveTopSlide] = useState<'status' | 'promo'>('status');
+  // Плашка про знижку на перше замовлення показується ЛИШЕ зареєстрованим користувачам, які ще не робили замовлень
+  const showFirstOrderBanner = Boolean(customer && firstOrderPromo?.enabled && isFirstOrderEligible);
+
+  // Слайдер верхньої плашки: статус роботи / акція 1-го замовлення (для зареєстрованих) / акція ролу в подарунок
+  const [activeTopSlide, setActiveTopSlide] = useState<'status' | 'promo' | 'firstOrder'>('status');
 
   const giftProduct = React.useMemo(() => {
     if (!giftPromo?.enabled || !giftPromo.productId) return null;
     return menuProducts?.find((p) => p.id === giftPromo.productId) || null;
   }, [giftPromo, menuProducts]);
 
+  const availableSlides = React.useMemo(() => {
+    const list: Array<'status' | 'promo' | 'firstOrder'> = ['status'];
+    if (showFirstOrderBanner) list.push('firstOrder');
+    if (giftPromo?.enabled) list.push('promo');
+    return list;
+  }, [showFirstOrderBanner, giftPromo?.enabled]);
+
   useEffect(() => {
-    if (!mounted || !giftPromo?.enabled) {
-      setActiveTopSlide('status');
+    if (!mounted || availableSlides.length <= 1) {
+      setActiveTopSlide(availableSlides[0] || 'status');
       return;
     }
 
-    const duration = activeTopSlide === 'status' ? 5000 : 10000;
+    const duration = activeTopSlide === 'status' ? 5000 : 8000;
     const timer = setTimeout(() => {
-      setActiveTopSlide((prev) => (prev === 'status' ? 'promo' : 'status'));
+      setActiveTopSlide((prev) => {
+        const currentIndex = availableSlides.indexOf(prev);
+        const nextIndex = (currentIndex + 1) % availableSlides.length;
+        return availableSlides[nextIndex];
+      });
     }, duration);
 
     return () => clearTimeout(timer);
-  }, [activeTopSlide, giftPromo?.enabled, mounted]);
+  }, [activeTopSlide, availableSlides, mounted]);
 
   useEffect(() => {
     setMounted(true);
@@ -61,6 +77,12 @@ export function Header() {
         }
         if (typeof synced.prepWaitTimeMinutes === 'number') {
           useCartStore.getState().setPrepWaitTimeMinutes(synced.prepWaitTimeMinutes);
+        }
+        if (synced.firstOrderPromo) {
+          useSettingsStore.getState().updateSettings({ firstOrderPromo: synced.firstOrderPromo });
+        }
+        if (synced.giftPromo) {
+          useSettingsStore.getState().updateSettings({ giftPromo: synced.giftPromo });
         }
       }
     });
@@ -81,6 +103,12 @@ export function Header() {
                 }
                 if (typeof parsed.prepWaitTimeMinutes === 'number') {
                   useCartStore.getState().setPrepWaitTimeMinutes(parsed.prepWaitTimeMinutes);
+                }
+                if (parsed.firstOrderPromo) {
+                  useSettingsStore.getState().updateSettings({ firstOrderPromo: parsed.firstOrderPromo });
+                }
+                if (parsed.giftPromo) {
+                  useSettingsStore.getState().updateSettings({ giftPromo: parsed.giftPromo });
                 }
               } catch { }
             }
@@ -366,7 +394,7 @@ export function Header() {
         <div className="top-info-bar border-b border-white/5 bg-[#070709]/90 py-1.5 sm:py-2 text-[11px] sm:text-xs text-zinc-400">
           <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2">
             <div className="flex items-center gap-3 sm:gap-5 min-w-0 flex-1 overflow-hidden">
-              {activeTopSlide === 'status' || !giftPromo?.enabled ? (
+              {activeTopSlide === 'status' ? (
                 <div key="status" className="flex items-center gap-1.5 min-w-0 truncate animate-in fade-in duration-300">
                   <span className="relative flex h-2 w-2 shrink-0">
                     {storeStatus.isOpen ? (
@@ -387,6 +415,24 @@ export function Header() {
                     {storeStatus.todayHours}
                   </span>
                 </div>
+              ) : activeTopSlide === 'firstOrder' ? (
+                <button
+                  key="firstOrder"
+                  type="button"
+                  onClick={() => {
+                    useCartStore.getState().setOpen(true);
+                  }}
+                  className="flex items-center gap-1.5 text-left min-w-0 truncate animate-in fade-in duration-300 cursor-pointer group"
+                >
+                  <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 shrink-0">
+                    <Percent className="w-2.5 h-2.5" />
+                  </span>
+                  <span className="font-bold text-emerald-400 group-hover:text-emerald-300 transition-colors truncate">
+                    {locale === 'pl'
+                      ? `Zniżka ${firstOrderPromo?.discountPercent || 10}% na 1. zamówienie aktywna w koszyku!`
+                      : `Знижка ${firstOrderPromo?.discountPercent || 10}% на 1-ше замовлення активна у кошику!`}
+                  </span>
+                </button>
               ) : (
                 <button
                   key="promo"

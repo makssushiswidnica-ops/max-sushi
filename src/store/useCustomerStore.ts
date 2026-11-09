@@ -6,9 +6,11 @@ interface CustomerState {
   customer: CustomerProfile | null;
   isOpen: boolean;
   activeTab: 'orders' | 'profile';
+  isFirstOrderEligible: boolean;
   setOpen: (open: boolean) => void;
   toggleOpen: () => void;
   setActiveTab: (tab: 'orders' | 'profile') => void;
+  checkEligibility: (phone?: string) => Promise<boolean>;
   registerCustomer: (params: { phone: string; name: string; password: string; email?: string }) => Promise<CustomerProfile>;
   loginUser: (identifier: string, password: string) => Promise<{ type: 'admin' | 'customer'; profile?: CustomerProfile }>;
   updateProfile: (data: Partial<CustomerProfile>) => Promise<void>;
@@ -45,14 +47,63 @@ export const normalizePhone = (phone: string): string => {
   return phone.replace(/[^\d+]/g, '').trim();
 };
 
+// Перевірка чи має номер телефону попередні замовлення (для акції 10% на перше замовлення)
+export const checkPhoneHasOrders = async (phone: string): Promise<boolean> => {
+  if (!phone) return false;
+  const digits = normalizePhone(phone).slice(-9);
+  if (!digits || digits.length < 6) return false;
+
+  // 1. Перевірка локальних замовлень у браузері
+  if (typeof window !== 'undefined') {
+    try {
+      const localOrders: Order[] = JSON.parse(localStorage.getItem('max-sushi-orders') || '[]');
+      const hasLocal = localOrders.some((o) => normalizePhone(o.phone).includes(digits) && o.status !== 'cancelled');
+      if (hasLocal) return true;
+    } catch {}
+  }
+
+  // 2. Перевірка в Supabase
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, status')
+        .ilike('phone', `%${digits}%`)
+        .neq('status', 'cancelled')
+        .limit(1);
+
+      if (!error && data && data.length > 0) {
+        return true;
+      }
+    } catch (e) {
+      console.warn('Notice checking customer orders in Supabase:', e);
+    }
+  }
+
+  return false;
+};
+
 export const useCustomerStore = create<CustomerState>((set, get) => ({
   customer: getInitialCustomer(),
   isOpen: false,
   activeTab: 'orders',
+  isFirstOrderEligible: true,
 
   setOpen: (open: boolean) => set({ isOpen: open }),
   toggleOpen: () => set((state) => ({ isOpen: !state.isOpen })),
   setActiveTab: (tab) => set({ activeTab: tab }),
+
+  checkEligibility: async (phone?: string): Promise<boolean> => {
+    const targetPhone = phone || get().customer?.phone;
+    if (!targetPhone) {
+      set({ isFirstOrderEligible: false });
+      return false;
+    }
+    const hasOrders = await checkPhoneHasOrders(targetPhone);
+    const eligible = !hasOrders;
+    set({ isFirstOrderEligible: eligible });
+    return eligible;
+  },
 
   // 1. РЕЄСТРАЦІЯ НОВОГО КЛІЄНТА
   registerCustomer: async ({ phone, name, password, email }) => {
@@ -152,6 +203,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     }
 
     set({ customer: newProfile });
+    get().checkEligibility(newProfile.phone);
     return newProfile;
   },
 
@@ -225,6 +277,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
         localStorage.setItem('max-sushi-customer', JSON.stringify(customerMatch));
       }
       set({ customer: customerMatch });
+      get().checkEligibility(customerMatch.phone);
       return { type: 'customer', profile: customerMatch };
     }
 
@@ -267,6 +320,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
               localStorage.setItem('max-sushi-customer', JSON.stringify(restoredProfile));
             }
             set({ customer: restoredProfile });
+            get().checkEligibility(restoredProfile.phone);
             return { type: 'customer', profile: restoredProfile };
           }
         }
@@ -303,6 +357,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
           localStorage.setItem('max-sushi-customer', JSON.stringify(autoProfile));
         }
         set({ customer: autoProfile });
+        get().checkEligibility(autoProfile.phone);
         return { type: 'customer', profile: autoProfile };
       }
     }
@@ -358,7 +413,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     if (typeof window !== 'undefined') {
       localStorage.removeItem('max-sushi-customer');
     }
-    set({ customer: null, activeTab: 'orders' });
+    set({ customer: null, activeTab: 'orders', isFirstOrderEligible: false });
   },
 
   fetchCustomerOrders: async (): Promise<Order[]> => {
@@ -434,3 +489,13 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     );
   },
 }));
+
+// Фонова перевірка права на знижку на перше замовлення для збереженого профілю
+if (typeof window !== 'undefined') {
+  const initCust = getInitialCustomer();
+  if (initCust?.phone) {
+    checkPhoneHasOrders(initCust.phone).then((hasOrders) => {
+      useCustomerStore.setState({ isFirstOrderEligible: !hasOrders });
+    });
+  }
+}

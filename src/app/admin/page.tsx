@@ -111,6 +111,8 @@ export interface AdminOrder {
   paymentMethod?: string;
   changeFrom?: string;
   comment?: string;
+  firstOrderDiscount?: number;
+  first_order_discount?: number;
   personsCount?: number;
   timing_type?: 'asap' | 'scheduled';
   timingType?: 'asap' | 'scheduled';
@@ -281,6 +283,9 @@ export default function AdminPage() {
   const [mktGiftMinAmount, setMktGiftMinAmount] = useState<number>(storeSettings.giftPromo.minAmount);
   const [mktGiftProductId, setMktGiftProductId] = useState<string>(storeSettings.giftPromo.productId);
 
+  const [mktFirstOrderEnabled, setMktFirstOrderEnabled] = useState<boolean>(storeSettings.firstOrderPromo?.enabled ?? true);
+  const [mktFirstOrderDiscount, setMktFirstOrderDiscount] = useState<number>(storeSettings.firstOrderPromo?.discountPercent ?? 10);
+
   const [mktSoundEnabled, setMktSoundEnabled] = useState<boolean>(storeSettings.soundNotificationsEnabled);
   const [pushStatus, setPushStatus] = useState<string>('default');
   const [unreadOrderCount, setUnreadOrderCount] = useState<number>(0);
@@ -360,6 +365,10 @@ export default function AdminPage() {
     setMktGiftEnabled(storeSettings.giftPromo.enabled);
     setMktGiftMinAmount(storeSettings.giftPromo.minAmount);
     setMktGiftProductId(storeSettings.giftPromo.productId);
+    if (storeSettings.firstOrderPromo) {
+      setMktFirstOrderEnabled(storeSettings.firstOrderPromo.enabled ?? true);
+      setMktFirstOrderDiscount(storeSettings.firstOrderPromo.discountPercent ?? 10);
+    }
     setMktSoundEnabled(storeSettings.soundNotificationsEnabled);
   }, [storeSettings]);
 
@@ -616,6 +625,11 @@ export default function AdminPage() {
               if (typeof parsed.prepWaitTimeMinutes === 'number') {
                 setPrepWaitTimeMinutes(parsed.prepWaitTimeMinutes);
               }
+              if (parsed.firstOrderPromo) {
+                updateSettings({ firstOrderPromo: parsed.firstOrderPromo });
+                setMktFirstOrderEnabled(parsed.firstOrderPromo.enabled ?? true);
+                setMktFirstOrderDiscount(parsed.firstOrderPromo.discountPercent ?? 10);
+              }
             } catch {}
           }
 
@@ -626,7 +640,12 @@ export default function AdminPage() {
             const matchScheduled = !d.scheduled_time && rawComment.match(/\[НА ЧАС:\s*([^\]]+)\]/i);
             const scheduledTime = d.scheduled_time || d.scheduledTime || (matchScheduled ? matchScheduled[1].trim() : undefined);
             const timingType = d.timing_type || d.timingType || (scheduledTime ? 'scheduled' : 'asap');
-            const cleanComment = matchScheduled ? rawComment.replace(/\[НА ЧАС:\s*[^\]]+\]\s*/i, '').trim() : rawComment;
+            let cleanComment = matchScheduled ? rawComment.replace(/\[НА ЧАС:\s*[^\]]+\]\s*/i, '').trim() : rawComment;
+            const matchFirstOrder = cleanComment.match(/\[1\.\s*ZAMÓWIENIE:\s*-[0-9]+%\s*\(-([0-9]+)\s*zł\)\]/i);
+            const firstOrderDiscount = Number(d.first_order_discount ?? d.firstOrderDiscount ?? (matchFirstOrder ? matchFirstOrder[1] : 0)) || undefined;
+            if (matchFirstOrder) {
+              cleanComment = cleanComment.replace(/\[1\.\s*ZAMÓWIENIE:\s*-[0-9]+%\s*\(-[0-9]+\s*zł\)\]\s*/i, '').trim();
+            }
 
             return {
               id: String(d.id || ''),
@@ -640,6 +659,8 @@ export default function AdminPage() {
               paymentMethod: d.payment_method || d.paymentMethod || 'blik_online',
               changeFrom: d.change_from || d.changeFrom,
               comment: cleanComment,
+              firstOrderDiscount: firstOrderDiscount,
+              first_order_discount: firstOrderDiscount,
               personsCount: d.persons_count || d.personsCount || 1,
               timing_type: timingType,
               timingType: timingType,
@@ -667,6 +688,11 @@ export default function AdminPage() {
             const existingIds = new Set(loaded.map((o) => o.id));
             for (const item of local) {
               if (item && item.id && !existingIds.has(item.id)) {
+                const rawItemComment = item.comment || '';
+                const matchFirstOrderLocal = rawItemComment.match(/\[1\.\s*ZAMÓWIENIE:\s*-[0-9]+%\s*\(-([0-9]+)\s*zł\)\]/i);
+                const firstOrderDiscount = Number(item.firstOrderDiscount ?? item.first_order_discount ?? (matchFirstOrderLocal ? matchFirstOrderLocal[1] : 0)) || undefined;
+                const cleanItemComment = matchFirstOrderLocal ? rawItemComment.replace(/\[1\.\s*ZAMÓWIENIE:\s*-[0-9]+%\s*\(-[0-9]+\s*zł\)\]\s*/i, '').trim() : rawItemComment;
+
                 // Автоматично вивантажуємо в Supabase локальні замовлення, які були збережені до додавання колонок
                 if (isSupabaseConfigured) {
                   createOrder({
@@ -678,6 +704,8 @@ export default function AdminPage() {
                     paymentMethod: item.paymentMethod || item.payment_method || 'blik_online',
                     changeFrom: item.changeFrom || item.change_from,
                     comment: item.comment || '',
+                    firstOrderDiscount: firstOrderDiscount,
+                    first_order_discount: firstOrderDiscount,
                     personsCount: item.personsCount || item.persons_count || 1,
                     timingType: item.timingType || item.timing_type || 'asap',
                     scheduledDate: item.scheduledDate || item.scheduled_date,
@@ -703,7 +731,9 @@ export default function AdminPage() {
                   payment_method: item.paymentMethod || item.payment_method || 'blik_online',
                   paymentMethod: item.paymentMethod || item.paymentMethod || 'blik_online',
                   changeFrom: item.changeFrom || item.change_from,
-                  comment: item.comment || '',
+                  comment: cleanItemComment,
+                  firstOrderDiscount: firstOrderDiscount,
+                  first_order_discount: firstOrderDiscount,
                   personsCount: item.personsCount || item.persons_count || 1,
                   timing_type: item.timingType || item.timing_type,
                   timingType: item.timingType || item.timing_type,
@@ -1172,6 +1202,13 @@ export default function AdminPage() {
               ${itemsHtml}
             </tbody>
           </table>
+
+          ${(order.firstOrderDiscount || order.first_order_discount) ? `
+          <div class="info-row" style="margin-top: 4px; font-weight: bold;">
+            <span>Zniżka na 1. zamówienie:</span>
+            <span>-${order.firstOrderDiscount || order.first_order_discount} zł</span>
+          </div>
+          ` : ''}
 
           <div class="total-row">
             <span>RAZEM:</span>
@@ -2435,6 +2472,20 @@ export default function AdminPage() {
                 </span>
               ) : null}
 
+              {/* Бейдж знижки на 1-ше замовлення */}
+              {(order.firstOrderDiscount || order.first_order_discount) ? (
+                <span 
+                  style={{
+                    clipPath: 'polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px)',
+                  }}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold text-[11px]"
+                  title={`Знижка на 1-ше замовлення: -${order.firstOrderDiscount || order.first_order_discount} zł`}
+                >
+                  <Percent className="w-3 h-3 text-emerald-400 shrink-0" />
+                  <span>1. Замовлення (-{order.firstOrderDiscount || order.first_order_discount} zł)</span>
+                </span>
+              ) : null}
+
               {/* Пульсуючий відлік для кухні: показується лише коли часу залишилось менше або дорівнює часу очікування */}
               {isKitchen && remainingMins !== null && remainingMins <= (prepWaitTimeMinutes || 40) && (
                 <span
@@ -2757,10 +2808,15 @@ export default function AdminPage() {
         {/* Фінансовий підсумок + Кнопки зміни статусів */}
         <div className="pt-3 border-t border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
           {/* Суми */}
-          <div className="flex items-baseline gap-3 text-xs">
+          <div className="flex items-baseline gap-3 text-xs flex-wrap">
             <span className="text-zinc-400">
               Страви: <strong className="text-white">{formatPrice(order.subtotal)}</strong>
             </span>
+            {(order.firstOrderDiscount || order.first_order_discount) ? (
+              <span className="text-emerald-400 font-bold">
+                Знижка: -{formatPrice(order.firstOrderDiscount || order.first_order_discount || 0)}
+              </span>
+            ) : null}
             {!isPickup && order.delivery_fee > 0 && (
               <span className="text-zinc-400">
                 Доставка: <strong className="text-white">{formatPrice(order.delivery_fee)}</strong>
@@ -5310,14 +5366,14 @@ export default function AdminPage() {
                 <div className="pt-3 border-t border-white/5 flex justify-end">
                   <button
                     type="button"
-                    onClick={() => {
-                      updateSettings({
-                        giftPromo: {
-                          enabled: mktGiftEnabled,
-                          minAmount: Number(mktGiftMinAmount),
-                          productId: mktGiftProductId,
-                        },
-                      });
+                    onClick={async () => {
+                      const giftPromo = {
+                        enabled: mktGiftEnabled,
+                        minAmount: Number(mktGiftMinAmount),
+                        productId: mktGiftProductId,
+                      };
+                      updateSettings({ giftPromo });
+                      await saveStoreSettings({ giftPromo });
                       showToast('Налаштування подарункової акції збережено!');
                     }}
                     style={{
@@ -5332,54 +5388,29 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* 3. Блок сповіщень (по центру, компактний, не розтягнутий) */}
-            <div className="max-w-2xl mx-auto w-full pt-1 sm:pt-2">
-              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 space-y-3.5">
-                <div className="flex items-center gap-2.5 pb-2.5 border-b border-white/10">
-                  <BellRing className="w-5 h-5 text-emerald-400" />
-                  <h3 className="text-sm sm:text-base font-black text-white uppercase tracking-wider">
-                    Сповіщення про нові замовлення
-                  </h3>
-                </div>
-
-                <div className="space-y-2.5">
-                  {/* Звуковий сигнал */}
-                  <div className="p-3 bg-[#141420] border border-white/5 rounded-xl flex items-center justify-between gap-3">
-                    <div className="space-y-0.5 min-w-0">
-                      <span className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
-                        <Volume2 className="w-4 h-4 text-[#e50914] shrink-0" />
-                        Звуковий сигнал (дзвіночок)
-                      </span>
-                      <p className="text-[11px] text-zinc-400 leading-tight">
-                        Ресторанний подвійний сигнал при надходженні нового замовлення
-                      </p>
+            {/* Нижній ряд: Знижка на перше замовлення та Сповіщення */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-stretch">
+              {/* 3. Блок Акції "Знижка на перше замовлення" */}
+              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between pb-2.5 border-b border-white/10">
+                    <div className="flex items-center gap-2.5">
+                      <Percent className="w-5 h-5 text-emerald-400" />
+                      <h3 className="text-sm sm:text-base font-black text-white uppercase tracking-wider">
+                        Знижка на 1-ше замовлення
+                      </h3>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          playOrderSound();
-                          showToast('Звуковий сигнал перевірено! 🔔');
-                        }}
-                        title="Протестувати звук"
-                        className="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-white rounded text-xs font-bold cursor-pointer transition-colors"
-                      >
-                        🔔 Тест
-                      </button>
+                    {/* Тумблер активності акції */}
+                    <div className="flex items-center gap-2">
                       <button
                         type="button"
                         role="switch"
-                        aria-checked={mktSoundEnabled}
-                        onClick={() => {
-                          const next = !mktSoundEnabled;
-                          setMktSoundEnabled(next);
-                          updateSettings({ soundNotificationsEnabled: next });
-                          showToast(next ? 'Звук замовлень увімкнено!' : 'Звук вимкнено');
-                        }}
+                        aria-checked={mktFirstOrderEnabled}
+                        onClick={() => setMktFirstOrderEnabled(!mktFirstOrderEnabled)}
                         className={cn(
                           'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-none border border-white/15',
-                          mktSoundEnabled
+                          mktFirstOrderEnabled
                             ? 'bg-emerald-500 shadow-sm shadow-emerald-500/40'
                             : 'bg-zinc-700'
                         )}
@@ -5387,39 +5418,162 @@ export default function AdminPage() {
                         <span
                           className={cn(
                             'pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform duration-200 ease-in-out',
-                            mktSoundEnabled ? 'translate-x-4' : 'translate-x-0'
+                            mktFirstOrderEnabled ? 'translate-x-4' : 'translate-x-0'
                           )}
                         />
                       </button>
+                      <span className="text-xs font-bold text-zinc-300 select-none">
+                        {mktFirstOrderEnabled ? 'Увімкнено' : 'Вимкнено'}
+                      </span>
                     </div>
                   </div>
 
-                  {/* Браузерні Push сповіщення */}
-                  <div className="p-3 bg-[#141420] border border-white/5 rounded-xl flex items-center justify-between gap-3">
-                    <div className="space-y-0.5 min-w-0">
-                      <span className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
-                        <Bell className="w-4 h-4 text-amber-400 shrink-0" />
-                        Системні Push-сповіщення браузера
-                      </span>
-                      <p className="text-[11px] text-zinc-400 leading-tight">
-                        {pushStatus === 'granted'
-                          ? 'Статус: Активно! Працює навіть якщо вкладку згорнуто.'
-                          : 'Дозвольте браузеру надсилати push-повідомлення.'}
-                      </p>
+                  <div className="space-y-2.5">
+                    {/* Розмір знижки у відсотках */}
+                    <div className="p-3 bg-[#141420] border border-white/5 rounded-xl flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs sm:text-sm font-bold text-white block">
+                          Розмір знижки на перше замовлення
+                        </span>
+                        <p className="text-[11px] text-zinc-400 mt-0.5 leading-tight">
+                          Діє виключно для зареєстрованих клієнтів за їхнім номером телефону
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <input
+                          type="number"
+                          min="1"
+                          max="50"
+                          step="1"
+                          value={mktFirstOrderDiscount}
+                          onChange={(e) => setMktFirstOrderDiscount(Number(e.target.value))}
+                          className="w-20 sm:w-24 bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-2.5 py-1.5 text-right text-sm text-white font-black focus:outline-none"
+                        />
+                        <span className="text-xs font-bold text-zinc-400">%</span>
+                      </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={handleRequestPush}
-                      className={cn(
-                        'px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all shrink-0',
-                        pushStatus === 'granted'
-                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                          : 'bg-[#e50914] text-white shadow-sm hover:bg-[#f4222d]'
-                      )}
-                    >
-                      {pushStatus === 'granted' ? '✓ Активно' : 'Увімкнути Push'}
-                    </button>
+                    <div className="p-3 bg-[#141420]/60 border border-white/5 rounded-xl text-xs text-zinc-400 space-y-1.5">
+                      <div className="font-semibold text-zinc-300">Як працює акція:</div>
+                      <p>• Плашка над хедером сайту показується <strong>лише зареєстрованим</strong> клієнтам.</p>
+                      <p>• Купон на знижку показується <strong>першим у кошику</strong> (навіть якщо кошик порожній).</p>
+                      <p>• Привʼязка до номера телефону гарантує 1 знижку на одного клієнта.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-white/5 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const promo = {
+                        enabled: mktFirstOrderEnabled,
+                        discountPercent: Number(mktFirstOrderDiscount) || 10,
+                      };
+                      updateSettings({ firstOrderPromo: promo });
+                      await saveStoreSettings({ firstOrderPromo: promo });
+                      showToast('Налаштування знижки на 1-ше замовлення збережено!');
+                    }}
+                    style={{
+                      clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
+                    }}
+                    className="w-full sm:w-auto px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-emerald-600/25 active:scale-98 flex items-center justify-center gap-2"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Зберегти знижку на 1-ше замовлення</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 4. Блок сповіщень */}
+              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4">
+                <div className="space-y-3.5">
+                  <div className="flex items-center gap-2.5 pb-2.5 border-b border-white/10">
+                    <BellRing className="w-5 h-5 text-emerald-400" />
+                    <h3 className="text-sm sm:text-base font-black text-white uppercase tracking-wider">
+                      Сповіщення про нові замовлення
+                    </h3>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {/* Звуковий сигнал */}
+                    <div className="p-3 bg-[#141420] border border-white/5 rounded-xl flex items-center justify-between gap-3">
+                      <div className="space-y-0.5 min-w-0">
+                        <span className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+                          <Volume2 className="w-4 h-4 text-[#e50914] shrink-0" />
+                          Звуковий сигнал (дзвіночок)
+                        </span>
+                        <p className="text-[11px] text-zinc-400 leading-tight">
+                          Ресторанний подвійний сигнал при надходженні нового замовлення
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            playOrderSound();
+                            showToast('Звуковий сигнал перевірено! 🔔');
+                          }}
+                          title="Протестувати звук"
+                          className="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-white rounded text-xs font-bold cursor-pointer transition-colors"
+                        >
+                          🔔 Тест
+                        </button>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={mktSoundEnabled}
+                          onClick={() => {
+                            const next = !mktSoundEnabled;
+                            setMktSoundEnabled(next);
+                            updateSettings({ soundNotificationsEnabled: next });
+                            showToast(next ? 'Звук замовлень увімкнено!' : 'Звук вимкнено');
+                          }}
+                          className={cn(
+                            'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-none border border-white/15',
+                            mktSoundEnabled
+                              ? 'bg-emerald-500 shadow-sm shadow-emerald-500/40'
+                              : 'bg-zinc-700'
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              'pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform duration-200 ease-in-out',
+                              mktSoundEnabled ? 'translate-x-4' : 'translate-x-0'
+                            )}
+                          />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Браузерні Push сповіщення */}
+                    <div className="p-3 bg-[#141420] border border-white/5 rounded-xl flex items-center justify-between gap-3">
+                      <div className="space-y-0.5 min-w-0">
+                        <span className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+                          <Bell className="w-4 h-4 text-amber-400 shrink-0" />
+                          Системні Push-сповіщення браузера
+                        </span>
+                        <p className="text-[11px] text-zinc-400 leading-tight">
+                          {pushStatus === 'granted'
+                            ? 'Статус: Активно! Працює навіть якщо вкладку згорнуто.'
+                            : 'Дозвольте браузеру надсилати push-повідомлення.'}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleRequestPush}
+                        className={cn(
+                          'px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all shrink-0',
+                          pushStatus === 'granted'
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                            : 'bg-[#e50914] text-white shadow-sm hover:bg-[#f4222d]'
+                        )}
+                      >
+                        {pushStatus === 'granted' ? '✓ Активно' : 'Увімкнути Push'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

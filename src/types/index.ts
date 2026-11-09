@@ -106,6 +106,11 @@ export interface CartItem {
 
 export type DeliveryZoneId = 'city' | 'suburb' | 'suburb_5km' | 'suburb_10km';
 
+export interface FirstOrderPromo {
+  enabled: boolean;
+  discountPercent: number; // Наприклад 10%
+}
+
 export interface StoreSettings {
   cityFreeThreshold: number;
   cityStandardFee: number;
@@ -117,6 +122,7 @@ export interface StoreSettings {
     minAmount: number;
     productId: string;
   };
+  firstOrderPromo?: FirstOrderPromo;
   soundNotificationsEnabled: boolean;
 }
 
@@ -153,8 +159,9 @@ export interface Order extends CheckoutFormData {
   items: CartItem[];
   subtotal: number;
   deliveryFee: number;
+  firstOrderDiscount?: number;
   total: number;
-  status: 'pending' | 'confirmed' | 'preparing' | 'in_delivery' | 'delivered';
+  status: 'pending' | 'confirmed' | 'preparing' | 'in_delivery' | 'delivered' | 'cancelled';
   createdAt: string;
 }
 

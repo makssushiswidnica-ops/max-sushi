@@ -22,6 +22,7 @@ import {
   Zap,
   Navigation,
   Loader2,
+  Percent,
 } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
@@ -365,7 +366,15 @@ export function CheckoutModal() {
     : undefined;
 
   const deliveryFee = useCartStore((s) => s.getDeliveryFee)(isPickup, selectedZone, customFee);
-  const total = useCartStore((s) => s.getTotal)(isPickup, selectedZone, customFee);
+  const rawTotal = useCartStore((s) => s.getTotal)(isPickup, selectedZone, customFee);
+
+  // Знижка на 1-ше замовлення (10%) для зареєстрованих клієнтів
+  const isFirstOrderEligible = useCustomerStore((s) => s.isFirstOrderEligible);
+  const firstOrderPromo = storeSettings.firstOrderPromo;
+  const isFirstOrderApplied = Boolean(customer && firstOrderPromo?.enabled && isFirstOrderEligible);
+  const firstOrderDiscountRate = (firstOrderPromo?.discountPercent || 10) / 100;
+  const firstOrderDiscount = isFirstOrderApplied ? Math.round(subtotal * firstOrderDiscountRate) : 0;
+  const total = Math.max(0, rawTotal - firstOrderDiscount);
 
   // Розрахунок обмежень для вибору часу:
   // - Понеділок: вихідний день (ресторан зачинено весь день).
@@ -663,7 +672,9 @@ export function CheckoutModal() {
             : undefined,
         paymentMethod: values.paymentMethod,
         changeFrom: values.changeFrom ? maskChangeFrom(values.changeFrom) : undefined,
-        comment: values.comment,
+        comment: firstOrderDiscount > 0
+          ? `[1. ZAMÓWIENIE: -${firstOrderPromo?.discountPercent || 10}% (-${firstOrderDiscount} zł)] ${values.comment || ''}`.trim()
+          : values.comment,
         personsCount,
         timingType: values.timingType,
         scheduledDate: values.timingType === 'scheduled' ? scheduledDate : undefined,
@@ -671,12 +682,18 @@ export function CheckoutModal() {
         items,
         subtotal,
         deliveryFee,
+        firstOrderDiscount: firstOrderDiscount > 0 ? firstOrderDiscount : undefined,
         total,
         status: 'pending',
         createdAt: new Date().toISOString(),
       };
 
       await createOrder(orderData);
+
+      // Якщо використано знижку на перше замовлення, миттєво знімаємо право на повторну знижку
+      if (firstOrderDiscount > 0) {
+        useCustomerStore.setState({ isFirstOrderEligible: false });
+      }
 
       // Запам'ятовуємо або оновлюємо дані клієнта та адресу для майбутніх замовлень
       try {
@@ -820,6 +837,15 @@ export function CheckoutModal() {
                     : `~${prepWaitTimeMinutes} ${locale === 'pl' ? 'min' : 'хв'}`)}
               </span>
             </div>
+
+            {createdOrder.firstOrderDiscount && createdOrder.firstOrderDiscount > 0 ? (
+              <div className="flex justify-between items-center pb-2 border-b border-white/5 text-emerald-400">
+                <span className="text-xs font-medium">
+                  {locale === 'pl' ? 'Zniżka na 1. zamówienie (-10%)' : 'Знижка на 1-ше замовлення (-10%)'}
+                </span>
+                <span className="text-xs font-bold">-{createdOrder.firstOrderDiscount} zł</span>
+              </div>
+            ) : null}
 
             <div className="flex justify-between items-center pt-1 text-base font-extrabold text-white">
               <span>{t.checkout.orderSummary}</span>
@@ -1683,7 +1709,7 @@ export function CheckoutModal() {
           {/* Підсумок замовлення та кнопка відправки у формі клинка */}
           <div className="pt-2 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="space-y-0.5">
-              <div className="flex items-baseline gap-2">
+              <div className="flex items-baseline gap-2 flex-wrap">
                 <span className="text-xs text-zinc-400 font-medium">{t.cart.total}:</span>
                 <span className="text-lg sm:text-xl font-black text-[#e50914]">{formatPrice(total, locale)}</span>
                 {isPickup && !hasDiscountedItem && (
@@ -1691,7 +1717,19 @@ export function CheckoutModal() {
                     {t.checkout.pickupDiscount}
                   </span>
                 )}
+                {firstOrderDiscount > 0 && (
+                  <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded">
+                    -{firstOrderPromo?.discountPercent || 10}% {locale === 'pl' ? '1. zamówienie' : '1-ше замовлення'}
+                  </span>
+                )}
               </div>
+
+              {firstOrderDiscount > 0 && (
+                <div className="text-[11px] text-emerald-400 font-medium flex items-center gap-1.5">
+                  <span>{locale === 'pl' ? 'W tym zniżka powitalna:' : 'У тому числі вітальна знижка:'}</span>
+                  <span className="font-bold">-{firstOrderDiscount} zł</span>
+                </div>
+              )}
 
               {!isPickup && (
                 <div className="text-[11px] text-zinc-400 flex items-center gap-1.5">

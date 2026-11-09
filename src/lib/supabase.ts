@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Order } from '@/types';
+import { Order, FirstOrderPromo } from '@/types';
 
 // Отримуємо змінні оточення для проєкту Maks Sushi на Supabase
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://czjqvocewhucknsrnese.supabase.co';
@@ -113,6 +113,12 @@ export interface SyncedStoreSettings {
   isOrdersPaused?: boolean;
   prepWaitTimeMinutes?: number;
   pausedAtDate?: string; // YYYY-MM-DD
+  firstOrderPromo?: FirstOrderPromo;
+  giftPromo?: {
+    enabled: boolean;
+    minAmount: number;
+    productId: string;
+  };
 }
 
 /**

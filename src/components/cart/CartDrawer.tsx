@@ -6,6 +6,8 @@ import { Drawer } from '@/components/ui/Drawer';
 import { CartItem } from '@/components/cart/CartItem';
 import { useCartStore } from '@/store/useCartStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { useCustomerStore } from '@/store/useCustomerStore';
+import { FirstOrderCouponCard } from '@/components/cart/FirstOrderCouponCard';
 import { useI18n } from '@/lib/i18nContext';
 import { brandTheme } from '@/config/theme';
 import { formatPrice, cn } from '@/lib/utils';
@@ -24,8 +26,12 @@ export function CartDrawer() {
   const addItem = useCartStore((s) => s.addItem);
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const giftPromo = useSettingsStore((s) => s.giftPromo);
+  const firstOrderPromo = useSettingsStore((s) => s.firstOrderPromo);
   const cityFreeThreshold = useSettingsStore((s) => s.cityFreeThreshold);
   const isOrdersPaused = useSettingsStore((s) => s.isOrdersPaused);
+  const customer = useCustomerStore((s) => s.customer);
+  const isFirstOrderEligible = useCustomerStore((s) => s.isFirstOrderEligible);
+  const toggleCustomerDrawer = useCustomerStore((s) => s.toggleOpen);
 
   // Отримуємо соуси та додатки з категорії dodatki
   const allProducts = menuProducts && menuProducts.length > 0 ? menuProducts : defaultProducts;
@@ -56,6 +62,19 @@ export function CartDrawer() {
   const remainingForGift = giftPromo?.enabled ? Math.max(0, giftPromo.minAmount - subtotal) : 0;
   const giftProgress = giftPromo?.enabled ? Math.min(100, (subtotal / giftPromo.minAmount) * 100) : 0;
   const hasGiftInCart = items.some((i) => i.isGift);
+
+  const couponElement = firstOrderPromo?.enabled ? (
+    <FirstOrderCouponCard
+      locale={locale as 'pl' | 'uk'}
+      discountPercent={firstOrderPromo.discountPercent}
+      isRegistered={Boolean(customer)}
+      isEligible={isFirstOrderEligible}
+      onLoginClick={() => {
+        setOpen(false);
+        toggleCustomerDrawer();
+      }}
+    />
+  ) : null;
 
   const handleProceedToCheckout = () => {
     setOpen(false);
@@ -171,28 +190,34 @@ export function CartDrawer() {
     >
       {items.length === 0 ? (
         /* Порожній стан кошика */
-        <div className="flex flex-col items-center justify-center h-full text-center py-16 px-4">
-          <div className="flex items-center justify-center w-20 h-20 rounded-full bg-[#1b1b24] border border-white/5 text-zinc-500 mb-6">
-            <ShoppingBag className="w-10 h-10 stroke-1 text-zinc-600" />
+        <div className="flex flex-col h-full justify-between -m-5 sm:-m-6 p-5 sm:p-6 space-y-4">
+          {couponElement}
+          <div className="flex-1 flex flex-col items-center justify-center text-center py-8 px-4">
+            <div className="flex items-center justify-center w-20 h-20 rounded-full bg-[#1b1b24] border border-white/5 text-zinc-500 mb-6">
+              <ShoppingBag className="w-10 h-10 stroke-1 text-zinc-600" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">{t.cart.emptyTitle}</h3>
+            <p className="text-sm text-zinc-400 max-w-xs mb-8">
+              {t.cart.emptySubtitle}
+            </p>
+            <button
+              onClick={() => setOpen(false)}
+              style={{
+                clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
+              }}
+              className="px-6 py-3 bg-[#e50914] hover:bg-[#f4222d] text-white font-bold text-sm shadow-lg shadow-[#e50914]/30 hover:shadow-[#e50914]/50 active:scale-95 transition-all cursor-pointer"
+            >
+              {t.cart.browseMenu}
+            </button>
           </div>
-          <h3 className="text-xl font-bold text-white mb-2">{t.cart.emptyTitle}</h3>
-          <p className="text-sm text-zinc-400 max-w-xs mb-8">
-            {t.cart.emptySubtitle}
-          </p>
-          <button
-            onClick={() => setOpen(false)}
-            style={{
-              clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
-            }}
-            className="px-6 py-3 bg-[#e50914] hover:bg-[#f4222d] text-white font-bold text-sm shadow-lg shadow-[#e50914]/30 hover:shadow-[#e50914]/50 active:scale-95 transition-all cursor-pointer"
-          >
-            {t.cart.browseMenu}
-          </button>
         </div>
       ) : (
         /* Кошик із товарами */
         <div className="flex flex-col h-full justify-between -m-5 sm:-m-6 overscroll-contain">
           <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5 overscroll-contain">
+            {/* Купон на перше замовлення (першим у списку) */}
+            {couponElement}
+
             {/* Компактний статус-бар безкоштовної доставки (показується тільки поки сума не досягла порогу) */}
             {remainingForFree > 0 && (
               <div className="px-3 py-2 rounded-xl bg-[#171722] border border-white/5 flex items-center justify-between gap-2.5">
