@@ -58,6 +58,7 @@ import {
   Minus,
   Timer,
   Printer,
+  FileText,
   TrendingUp,
   Award,
   Users,
@@ -88,6 +89,7 @@ import {
 } from '@/lib/menuService';
 import { autoTranslateDish } from '@/lib/translateService';
 import { products as defaultProducts } from '@/lib/mockData';
+import { ReceiptPreviewModal } from '@/components/admin/ReceiptPreviewModal';
 
 type AdminTab = 'dashboard' | 'orders' | 'menu' | 'marketing' | 'stats' | 'settings';
 
@@ -377,6 +379,10 @@ export default function AdminPage() {
   const [newCatNamePl, setNewCatNamePl] = useState('');
   const [newCatNameUk, setNewCatNameUk] = useState('');
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+
+  // Модальне вікно превʼю та PDF чеку
+  const [receiptModalOrder, setReceiptModalOrder] = useState<AdminOrder | null>(null);
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
 
   const quickFileInputRef = useRef<HTMLInputElement>(null);
   const [quickUploadProductId, setQuickUploadProductId] = useState<string | null>(null);
@@ -1065,6 +1071,18 @@ export default function AdminPage() {
       return;
     }
 
+    let savedWidthMm = 72;
+    let savedPaddingMm = 2;
+    let savedFontSizePx = 13;
+    if (typeof window !== 'undefined') {
+      try {
+        const s = JSON.parse(localStorage.getItem('max-sushi-receipt-settings') || '{}');
+        if (s.widthMm) savedWidthMm = Number(s.widthMm);
+        if (typeof s.paddingMm === 'number') savedPaddingMm = Number(s.paddingMm);
+        if (s.fontSizePx) savedFontSizePx = Number(s.fontSizePx);
+      } catch {}
+    }
+
     const receiptHtml = `
       <!DOCTYPE html>
       <html>
@@ -1073,20 +1091,20 @@ export default function AdminPage() {
           <title>Paragon #${order.id} - Maks Sushi</title>
           <style>
             @page {
-              size: 80mm auto;
-              margin: 4mm;
+              size: ${savedWidthMm + savedPaddingMm * 2}mm auto;
+              margin: 0;
             }
             * {
               box-sizing: border-box;
             }
             body {
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-              width: 72mm;
+              width: ${savedWidthMm}mm;
               margin: 0 auto;
-              padding: 4mm 2mm;
+              padding: 3mm ${savedPaddingMm}mm;
               color: #000;
               background: #fff;
-              font-size: 13px;
+              font-size: ${savedFontSizePx}px;
               line-height: 1.35;
             }
             .center { text-align: center; }
@@ -2544,6 +2562,19 @@ export default function AdminPage() {
                 <Printer className="w-4 h-4 text-amber-400/90 hover:text-amber-300" />
               </button>
 
+              {/* Кнопка PDF чека та налаштування ширини */}
+              <button
+                type="button"
+                onClick={() => {
+                  setReceiptModalOrder(order);
+                  setIsReceiptModalOpen(true);
+                }}
+                title="Відкрити PDF / Налаштувати ширину чека"
+                className="p-1.5 text-zinc-400 hover:text-rose-400 bg-white/5 hover:bg-rose-500/10 rounded-lg transition-all cursor-pointer active:scale-95 border border-white/5"
+              >
+                <FileText className="w-4 h-4 text-rose-400/90 hover:text-rose-300" />
+              </button>
+
               {/* Іконка видалення (прихована на кухні, у курʼєра та в доставлених) */}
               {!(isKitchen || isInDelivery || isDelivered || orderStatusFilter === 'in_progress' || orderStatusFilter === 'in_delivery' || orderStatusFilter === 'delivered') && (
                 <button
@@ -2876,6 +2907,22 @@ export default function AdminPage() {
                 >
                   <Printer className="w-3.5 h-3.5 text-amber-400" />
                   <span>Друк</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReceiptModalOrder(order);
+                    setIsReceiptModalOpen(true);
+                  }}
+                  style={{
+                    clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                  }}
+                  className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer border border-white/10 hover:border-white/25 active:scale-95 shadow-sm"
+                  title="Відкрити PDF / Налаштувати ширину чека"
+                >
+                  <FileText className="w-3.5 h-3.5 text-rose-400" />
+                  <span>PDF</span>
                 </button>
 
                 <button
@@ -6335,6 +6382,13 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+      {/* Модальне вікно превʼю та PDF чека */}
+      <ReceiptPreviewModal
+        order={receiptModalOrder}
+        isOpen={isReceiptModalOpen}
+        onClose={() => setIsReceiptModalOpen(false)}
+        products={products}
+      />
     </div>
   );
 }
