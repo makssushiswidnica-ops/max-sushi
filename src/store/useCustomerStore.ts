@@ -219,42 +219,20 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
       localStorage.setItem('max-sushi-last-identifier', rawId);
     }
 
-    // Перевірка 1: ВХІД В АДМІНКУ
-    // Якщо це системний email та пароль адміна або обліковий запис у Supabase Auth
-    const isDirectAdminCredentials =
-      cleanEmail === 'makssushiswidnica@gmail.com' && password === 'MaksSushi@2026';
-
-    if (isDirectAdminCredentials) {
-      try {
-        await supabase.auth.signInWithPassword({
-          email: 'makssushiswidnica@gmail.com',
-          password: password,
-        });
-      } catch (e) {}
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('max-sushi-is-admin', 'true');
-        window.dispatchEvent(new Event('admin-auth-changed'));
-      }
-      return { type: 'admin' };
-    }
-
-    // Спроба входу через Supabase Auth для інших адмінів або зареєстрованих поштових акаунтів
-    if (rawId.includes('@') && isSupabaseConfigured) {
+    // Перевірка 1: ВХІД В АДМІНКУ (виключно через захищений сервер Supabase Auth без збереження пароля в коді)
+    if (cleanEmail === 'makssushiswidnica@gmail.com' && isSupabaseConfigured) {
       try {
         const { data, error } = await supabase.auth.signInWithPassword({
-          email: rawId,
+          email: cleanEmail,
           password: password,
         });
 
-        if (!error && data?.session) {
-          // Якщо це адмінський email або в сесії є права
-          if (data.session.user.email?.toLowerCase().includes('makssushi') || data.session.user.email?.toLowerCase().includes('admin')) {
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('max-sushi-is-admin', 'true');
-              window.dispatchEvent(new Event('admin-auth-changed'));
-            }
-            return { type: 'admin' };
+        if (!error && data?.session && data.session.user?.email?.toLowerCase() === 'makssushiswidnica@gmail.com') {
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('max-sushi-is-admin', 'true');
+            window.dispatchEvent(new Event('admin-auth-changed'));
           }
+          return { type: 'admin' };
         }
       } catch (e) {}
     }

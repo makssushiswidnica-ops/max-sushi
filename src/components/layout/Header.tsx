@@ -213,14 +213,10 @@ export function Header() {
       try {
         const { data } = await supabase.auth.getSession();
         const email = data?.session?.user?.email?.toLowerCase() || '';
-        if (email === 'makssushiswidnica@gmail.com' || email.includes('admin') || email.includes('makssushi')) {
+        if (email === 'makssushiswidnica@gmail.com') {
           adminLogged = true;
         }
       } catch (e) { }
-
-      if (!adminLogged && typeof window !== 'undefined') {
-        adminLogged = localStorage.getItem('max-sushi-is-admin') === 'true';
-      }
 
       if (isMounted) {
         setIsAdmin(adminLogged);
@@ -234,7 +230,7 @@ export function Header() {
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       const email = session?.user?.email?.toLowerCase() || '';
-      const adminActive = email === 'makssushiswidnica@gmail.com' || email.includes('admin') || email.includes('makssushi');
+      const adminActive = email === 'makssushiswidnica@gmail.com';
       if (isMounted) {
         setIsAdmin(adminActive);
         if (adminActive) {

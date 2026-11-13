@@ -152,11 +152,17 @@ export interface AdminOrder {
   acceptedAt?: string;
 }
 
+const ALLOWED_ADMIN_EMAILS = ['makssushiswidnica@gmail.com'];
+const isAllowedAdmin = (userEmail?: string | null): boolean =>
+  Boolean(userEmail && ALLOWED_ADMIN_EMAILS.includes(userEmail.trim().toLowerCase()));
+
 export default function AdminPage() {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [email, setEmail] = useState('makssushiswidnica@gmail.com');
-  const [password, setPassword] = useState('MaksSushi@2026');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockoutUntil, setLockoutUntil] = useState<number>(0);
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -387,18 +393,19 @@ export default function AdminPage() {
   const quickFileInputRef = useRef<HTMLInputElement>(null);
   const [quickUploadProductId, setQuickUploadProductId] = useState<string | null>(null);
 
-  // Перевірка сесії при завантаженні
+  // Перевірка сесії при завантаженні (сувора перевірка дозволеного email адміністратора)
   useEffect(() => {
     async function checkSession() {
       try {
         const { data } = await supabase.auth.getSession();
-        setSession(data.session);
-        if (data.session?.user?.email) {
-          const em = data.session.user.email.toLowerCase();
-          if (em === 'makssushiswidnica@gmail.com' || em.includes('admin') || em.includes('makssushi')) {
-            localStorage.setItem('max-sushi-is-admin', 'true');
-            window.dispatchEvent(new Event('admin-auth-changed'));
-          }
+        if (data.session && isAllowedAdmin(data.session.user?.email)) {
+          setSession(data.session);
+          localStorage.setItem('max-sushi-is-admin', 'true');
+          window.dispatchEvent(new Event('admin-auth-changed'));
+        } else {
+          setSession(null);
+          localStorage.removeItem('max-sushi-is-admin');
+          window.dispatchEvent(new Event('admin-auth-changed'));
         }
       } catch (err) {
         console.warn('Session check error:', err);
@@ -410,14 +417,12 @@ export default function AdminPage() {
     checkSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, currentSession) => {
-      setSession(currentSession);
-      if (currentSession?.user?.email) {
-        const em = currentSession.user.email.toLowerCase();
-        if (em === 'makssushiswidnica@gmail.com' || em.includes('admin') || em.includes('makssushi')) {
-          localStorage.setItem('max-sushi-is-admin', 'true');
-          window.dispatchEvent(new Event('admin-auth-changed'));
-        }
+      if (currentSession && isAllowedAdmin(currentSession.user?.email)) {
+        setSession(currentSession);
+        localStorage.setItem('max-sushi-is-admin', 'true');
+        window.dispatchEvent(new Event('admin-auth-changed'));
       } else {
+        setSession(null);
         localStorage.removeItem('max-sushi-is-admin');
         window.dispatchEvent(new Event('admin-auth-changed'));
       }
@@ -1761,25 +1766,53 @@ export default function AdminPage() {
     }
   }, [session]);
 
-  // Обробник входу
+  // Обробник входу із захистом від перебору пароля (brute-force) та перевіркою прав
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (Date.now() < lockoutUntil) {
+      const secs = Math.ceil((lockoutUntil - Date.now()) / 1000);
+      setErrorMessage(`Забагато спроб входу. Спробуйте знову через ${secs} сек.`);
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMessage('');
 
     try {
+      const cleanEmail = email.trim().toLowerCase();
+      if (!isAllowedAdmin(cleanEmail)) {
+        const nextAttempts = failedAttempts + 1;
+        setFailedAttempts(nextAttempts);
+        if (nextAttempts >= 5) {
+          setLockoutUntil(Date.now() + 60000); // Блокування на 60 секунд
+        }
+        setErrorMessage('Невірний логін або пароль');
+        return;
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: cleanEmail,
         password: password,
       });
 
       if (error) {
+        const nextAttempts = failedAttempts + 1;
+        setFailedAttempts(nextAttempts);
+        if (nextAttempts >= 5) {
+          setLockoutUntil(Date.now() + 60000);
+        }
         if (error.message?.includes('Failed to fetch')) {
           setErrorMessage('Помилка з\'єднання (Failed to fetch). Перевірте правильність налаштувань бази.');
         } else {
-          setErrorMessage(error.message || 'Невірний логін або пароль');
+          setErrorMessage('Невірний логін або пароль');
         }
       } else if (data.session) {
+        if (!isAllowedAdmin(data.session.user?.email)) {
+          await supabase.auth.signOut();
+          setErrorMessage('Доступ заборонено.');
+          return;
+        }
+        setFailedAttempts(0);
         setSession(data.session);
       }
     } catch (err: any) {
