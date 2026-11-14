@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Order } from '@/types';
+import { products as defaultProducts } from '@/lib/mockData';
 
 function escapeHtml(text: string): string {
   return text
@@ -8,23 +9,43 @@ function escapeHtml(text: string): string {
     .replace(/>/g, '&gt;');
 }
 
+function resolveProductSku(prod: any): string {
+  if (!prod) return '';
+  if (prod.sku) return String(prod.sku);
+  if (prod.nutrition?.sku) return String(prod.nutrition.sku);
+
+  const matched = defaultProducts.find(
+    (p) =>
+      (prod.id && p.id === prod.id) ||
+      (typeof prod.name === 'object' &&
+        ((prod.name.pl && p.name.pl === prod.name.pl) ||
+          (prod.name.uk && p.name.uk === prod.name.uk))) ||
+      (typeof prod.name === 'string' &&
+        (p.name.pl === prod.name || p.name.uk === prod.name))
+  );
+
+  if (matched?.sku) return String(matched.sku);
+  if ((matched as any)?.nutrition?.sku) return String((matched as any).nutrition.sku);
+  return '';
+}
+
 function formatTelegramOrderMessage(order: Order): string {
   const isPickup = order.deliveryMethod === 'pickup';
   const rawPhone = (order.phone || '').replace(/\s+/g, '');
   const phoneFormatted = rawPhone.startsWith('+') ? rawPhone : `+48${rawPhone.replace(/^\+?48/, '')}`;
 
   const deliveryHeader = isPickup
-    ? '🏪 <b>Самовивіз / Odbiór osobisty</b> (ul. Parkowa 8)'
-    : '🚗 <b>Доставка / Dostawa</b>';
+    ? '🏪 <b>Самовивіз</b> (ul. Parkowa 8)'
+    : '🚗 <b>Доставка курʼєром</b>';
 
   let addressBlock = '';
   if (!isPickup && order.address) {
     const city = order.address.city || 'Świdnica';
     const street = order.address.street || '';
     const house = order.address.house || '';
-    const apt = order.address.apartment ? `, кв./m. ${order.address.apartment}` : '';
-    const floor = order.address.floor ? `, поверх/piętro ${order.address.floor}` : '';
-    const code = order.address.entryCode ? ` (домофон/kod: ${order.address.entryCode})` : '';
+    const apt = order.address.apartment ? `, кв. ${order.address.apartment}` : '';
+    const floor = order.address.floor ? `, поверх ${order.address.floor}` : '';
+    const code = order.address.entryCode ? ` (код: ${order.address.entryCode})` : '';
     const fullAddr = `${city}, ul. ${street} ${house}${apt}${floor}${code}`;
     const mapsQuery = encodeURIComponent(`${city}, ${street} ${house}`);
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`;
@@ -35,37 +56,46 @@ function formatTelegramOrderMessage(order: Order): string {
   // Час замовлення
   let timingText = '⚡ Якнайшвидше (ASAP)';
   if (order.timingType === 'scheduled' && order.scheduledTime) {
-    const dayLabel = order.scheduledDate === 'tomorrow' ? 'ЗАВТРА / JUTRO' : 'Сьогодні / Dzisiaj';
+    const dayLabel = order.scheduledDate === 'tomorrow' ? 'ЗАВТРА' : 'Сьогодні';
     timingText = `🕒 <b>На час: ${escapeHtml(order.scheduledTime)} (${dayLabel})</b>`;
   }
 
   // Спосіб оплати
-  let paymentLabel = '💵 Готівка / Gotówka';
+  let paymentLabel = '💵 Готівка';
   if (order.paymentMethod === 'blik_online' || order.paymentMethod === 'card_courier') {
-    paymentLabel = '💳 BLIK / Картка (Термінал)';
+    paymentLabel = '💳 BLIK / Картка';
   }
   if (order.changeFrom) {
-    paymentLabel += ` (Решта з / Reszta z: <b>${escapeHtml(order.changeFrom)} zł</b>)`;
+    paymentLabel += ` (Решта з: <b>${escapeHtml(order.changeFrom)} zł</b>)`;
   }
 
-  // Список позицій
+  // Список позицій (назва польською без дублювання + код терміналу #SKU як у чеку адмінки)
   const itemLines = (order.items || []).map((item, idx) => {
+    const prod: any = item.product || {};
     const prodName =
-      typeof item.product?.name === 'object'
-        ? `${item.product.name.pl}${item.product.name.uk && item.product.name.uk !== item.product.name.pl ? ` / ${item.product.name.uk}` : ''}`
-        : String(item.product?.name || 'Позиція');
+      typeof prod.name === 'object'
+        ? prod.name.pl || prod.name.uk || 'Pozycja'
+        : String(prod.name || 'Pozycja');
+
+    const sku = resolveProductSku(prod);
+    const skuBadge = sku ? ` <b>[#${escapeHtml(sku)}]</b>` : '';
+
+    const optBakedP = prod.bakedPrice ?? prod.nutrition?.bakedPrice ?? 1;
+    const optTempuraP = prod.tempuraPrice ?? prod.nutrition?.tempuraPrice ?? 2;
 
     const badges: string[] = [];
-    if (item.selectedOptions?.baked) badges.push('🔥 Печений / Pieczona (+4 zł)');
-    if (item.selectedOptions?.tempura) badges.push('🍤 Темпура / Tempura (+5 zł)');
-    if (item.isGift) badges.push('🎁 ПОДАРУНОК / PREZENT');
+    if (item.selectedOptions?.baked) badges.push(`🔥 Печена риба (+${optBakedP} zł)`);
+    if (item.selectedOptions?.tempura) badges.push(`🍤 У темпурі (+${optTempuraP} zł)`);
+    if (item.isGift) badges.push('🎁 ПОДАРУНОК (0 zł)');
 
-    const extraPrice = (item.selectedOptions?.baked ? 4 : 0) + (item.selectedOptions?.tempura ? 5 : 0);
-    const unitPrice = item.isGift ? 0 : (item.product?.price || 0) + extraPrice;
+    const extraPrice =
+      (item.selectedOptions?.baked ? Number(optBakedP) : 0) +
+      (item.selectedOptions?.tempura ? Number(optTempuraP) : 0);
+    const unitPrice = item.isGift ? 0 : Number(prod.price || 0) + extraPrice;
     const lineTotal = unitPrice * item.quantity;
 
-    const badgeStr = badges.length > 0 ? `\n   <i>${badges.join(', ')}</i>` : '';
-    return `${idx + 1}. <b>${item.quantity}x</b> ${escapeHtml(prodName)} — <b>${lineTotal} zł</b>${badgeStr}`;
+    const badgeStr = badges.length > 0 ? `\n   ➔ <i>${badges.join(', ')}</i>` : '';
+    return `${idx + 1}. <b>${item.quantity}×</b> ${escapeHtml(prodName)}${skuBadge} — <b>${lineTotal} zł</b>${badgeStr}`;
   });
 
   // Додаткові рядки суми
@@ -86,7 +116,7 @@ function formatTelegramOrderMessage(order: Order): string {
     .trim();
 
   const lines = [
-    `🍣 <b>НОВЕ ЗАМОВЛЕННЯ ${escapeHtml(order.id)}</b>`,
+    `🍣 <b>НОВЕ ЗАМОВЛЕННЯ #${escapeHtml(order.id)}</b>`,
     `━━━━━━━━━━━━━━━━━━`,
     `👤 <b>Клієнт:</b> ${escapeHtml(order.name || 'Гість')}`,
     `📞 <b>Телефон:</b> <a href="tel:${escapeHtml(phoneFormatted)}">${escapeHtml(phoneFormatted)}</a>`,
@@ -107,17 +137,7 @@ function formatTelegramOrderMessage(order: Order): string {
   return lines.join('\n');
 }
 
-async function resolveTargetChatIds(token: string): Promise<string[]> {
-  const envChatIds = (process.env.TELEGRAM_CHAT_ID || '')
-    .split(',')
-    .map((id) => id.trim())
-    .filter(Boolean);
-
-  if (envChatIds.length > 0) {
-    return envChatIds;
-  }
-
-  // Якщо TELEGRAM_CHAT_ID ще не заданий у .env, автоматично шукаємо активні групи/чати бота через getUpdates
+async function discoverChatIdsFromUpdates(token: string): Promise<string[]> {
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/getUpdates`, {
       cache: 'no-store',
@@ -135,12 +155,28 @@ async function resolveTargetChatIds(token: string): Promise<string[]> {
       if (chat?.id) {
         discovered.add(String(chat.id));
       }
+      if (update.message?.migrate_to_chat_id) {
+        discovered.add(String(update.message.migrate_to_chat_id));
+      }
     }
     return Array.from(discovered);
   } catch (err) {
     console.error('Telegram getUpdates discovery error:', err);
     return [];
   }
+}
+
+async function resolveTargetChatIds(token: string): Promise<string[]> {
+  const envChatIds = (process.env.TELEGRAM_CHAT_ID || '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean);
+
+  if (envChatIds.length > 0) {
+    return envChatIds;
+  }
+
+  return discoverChatIdsFromUpdates(token);
 }
 
 export async function POST(req: NextRequest) {
@@ -186,7 +222,8 @@ export async function POST(req: NextRequest) {
         });
         const data = await resp.json();
 
-        // Якщо група автоматично оновилась до супергрупи (migrate_to_chat_id), повторюємо відправку на новий ID
+        // Якщо група автоматично оновилась до супергрупи (наприклад, після видачі прав адміна),
+        // автоматично відправляємо на новий ID супергрупи
         const migratedId = data?.parameters?.migrate_to_chat_id;
         if (!data?.ok && migratedId) {
           const retryResp = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -200,6 +237,25 @@ export async function POST(req: NextRequest) {
             }),
           });
           return retryResp.json();
+        }
+
+        // Додатковий захист: якщо старий ID групи більше не дійсний, шукаємо актуальний ID через getUpdates
+        if (!data?.ok) {
+          const discoveredIds = await discoverChatIdsFromUpdates(token);
+          const fallbackId = discoveredIds.find((id) => id !== String(chatId) && id.startsWith('-100'));
+          if (fallbackId) {
+            const fallbackResp = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: fallbackId,
+                text,
+                parse_mode: 'HTML',
+                disable_web_page_preview: true,
+              }),
+            });
+            return fallbackResp.json();
+          }
         }
 
         return data;
