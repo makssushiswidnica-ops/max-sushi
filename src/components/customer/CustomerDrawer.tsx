@@ -31,6 +31,7 @@ import { useCustomerStore } from '@/store/useCustomerStore';
 import { supabase } from '@/lib/supabase';
 import { useCartStore } from '@/store/useCartStore';
 import { useI18n } from '@/lib/i18nContext';
+import { brandTheme } from '@/config/theme';
 import { formatPrice, cn } from '@/lib/utils';
 import { Order, OrderAddress } from '@/types';
 import { 
@@ -1075,8 +1076,8 @@ export function CustomerDrawer() {
                                       </span>
                                     </div>
 
-                                    {/* Кнопка "Переглянути та замовити повторно" */}
-                                    <div className="pt-1">
+                                    {/* Кнопки "Переглянути та замовити повторно" та "Залишити відгук" */}
+                                    <div className="pt-1 space-y-2">
                                       <button
                                         type="button"
                                         onClick={() => handleReviewAndReorder(order)}
@@ -1088,6 +1089,25 @@ export function CustomerDrawer() {
                                         <RotateCcw className="w-3.5 h-3.5" />
                                         <span>{t.customer.reviewAndReorder}</span>
                                       </button>
+
+                                      <a
+                                        href={brandTheme.contacts.googleReviewUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{
+                                          clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                                        }}
+                                        className="w-full py-2 px-3 bg-white/[0.08] hover:bg-white/[0.14] text-white text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer select-none"
+                                      >
+                                        <svg className="w-3.5 h-3.5 text-[#e50914] shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                                          <path d="M12 1.75l3.09 6.51 7.18.91-5.27 4.97 1.35 7.11L12 17.75l-6.35 3.5 1.35-7.11L1.73 9.17l7.18-.91L12 1.75z" />
+                                        </svg>
+                                        <span>
+                                          {locale === 'pl'
+                                            ? 'Smakowało? Oceń nas w Google (4.9)'
+                                            : 'Сподобалось? Залиште відгук у Google (4.9)'}
+                                        </span>
+                                      </a>
                                     </div>
                                   </div>
                                 )}

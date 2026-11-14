@@ -781,16 +781,16 @@ export function CheckoutModal() {
     >
       {createdOrder ? (
         /* Екран успіху після оформлення замовлення */
-        <div className="py-6 text-center space-y-6">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shadow-lg shadow-emerald-500/20 mx-auto animate-in zoom-in">
-            <Check className="w-10 h-10 stroke-[3] text-emerald-400" />
+        <div className="py-4 sm:py-5 text-center space-y-5">
+          <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shadow-lg shadow-emerald-500/20 mx-auto animate-in zoom-in">
+            <Check className="w-8 h-8 sm:w-10 sm:h-10 stroke-[3] text-emerald-400" />
           </div>
 
-          <div className="space-y-2">
-            <h3 className="text-2xl font-black text-white">
+          <div className="space-y-1.5">
+            <h3 className="text-xl sm:text-2xl font-black text-white">
               {t.checkout.successTitle}
             </h3>
-            <p className="text-sm text-zinc-300 max-w-md mx-auto leading-relaxed">
+            <p className="text-xs sm:text-sm text-zinc-300 max-w-md mx-auto leading-relaxed">
               {t.checkout.successMessage}
             </p>
           </div>
@@ -800,7 +800,7 @@ export function CheckoutModal() {
             style={{
               clipPath: 'polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)',
             }}
-            className="max-w-md mx-auto p-5 bg-[#171722] border border-white/10 text-left space-y-3"
+            className="max-w-md mx-auto p-4 sm:p-5 bg-[#171722] border border-white/10 text-left space-y-2.5"
           >
             <div className="flex justify-between items-center pb-2 border-b border-white/5">
               <span className="text-xs text-zinc-400">{t.checkout.orderNumber}</span>
@@ -871,13 +871,15 @@ export function CheckoutModal() {
               style={{
                 clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
               }}
-              className="w-full py-2.5 px-4 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 hover:text-amber-200 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer select-none"
+              className="w-full py-3 px-4 bg-white/[0.08] hover:bg-white/[0.14] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer select-none"
             >
-              <span>⭐</span>
+              <svg className="w-4 h-4 text-[#e50914] shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 1.75l3.09 6.51 7.18.91-5.27 4.97 1.35 7.11L12 17.75l-6.35 3.5 1.35-7.11L1.73 9.17l7.18-.91L12 1.75z" />
+              </svg>
               <span>
                 {locale === 'pl'
-                  ? 'Smakowało? Oceń nas w Google (4.9 ★)'
-                  : 'Сподобалось? Залиште відгук у Google (4.9 ★)'}
+                  ? 'Smakowało? Oceń nas w Google (4.9)'
+                  : 'Сподобалось? Залиште відгук у Google (4.9)'}
               </span>
             </a>
           </div>

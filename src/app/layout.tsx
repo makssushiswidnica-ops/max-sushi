@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Montserrat, Knewave, Unbounded, Dela_Gothic_One, Rubik_Wet_Paint } from 'next/font/google';
 import localFont from 'next/font/local';
+import Script from 'next/script';
 import './globals.css';
 import { BisSkinCleanup } from '@/components/common/BisSkinCleanup';
 
@@ -80,6 +81,19 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pl" suppressHydrationWarning className={`${montserrat.variable} ${knewave.variable} ${delaGothicOne.variable} ${unbounded.variable} ${edoSZ.variable} ${rubikWetPaint.variable} dark antialiased`}>
+      <head>
+        <Script
+          src="https://www.googletagmanager.com/gtm.js?id=GTM-TDK96T2F"
+          strategy="afterInteractive"
+        />
+        <Script id="google-tag-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+          `}
+        </Script>
+      </head>
       <body suppressHydrationWarning className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col font-sans selection:bg-[#e50914] selection:text-white">
         <BisSkinCleanup />
         {children}

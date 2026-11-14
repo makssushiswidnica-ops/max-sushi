@@ -3,7 +3,15 @@
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18nContext';
 import { brandTheme } from '@/config/theme';
-import { Phone, MapPin, Clock, Star, Navigation } from 'lucide-react';
+import { Phone, MapPin, Clock } from 'lucide-react';
+
+function SharpStarIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 1.75l3.09 6.51 7.18.91-5.27 4.97 1.35 7.11L12 17.75l-6.35 3.5 1.35-7.11L1.73 9.17l7.18-.91L12 1.75z" />
+    </svg>
+  );
+}
 
 function FacebookIcon({ className }: { className?: string }) {
   return (
@@ -92,30 +100,20 @@ export function Footer() {
               </div>
             </a>
 
-            {/* Бейдж рейтингу Google 4.9 ★ та кнопка маршруту */}
-            <div className="flex flex-wrap items-center gap-2 pt-1">
+            {/* Кнопка перегляду відгуків у Google (прямий перехід на вкладку відгуків) */}
+            <div className="pt-0.5">
               <a
-                href={brandTheme.contacts.googleMapsUrl}
+                href={brandTheme.contacts.googleReviewsListUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[11px] font-bold transition-all cursor-pointer"
-                title={locale === 'pl' ? 'Zobacz opinie w Google Maps' : 'Переглянути відгуки в Google Maps'}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-white text-[11px] font-semibold transition-all cursor-pointer group"
+                title={locale === 'pl' ? 'Zobacz opinie w Google' : 'Переглянути відгуки в Google'}
               >
-                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0" />
-                <span className="text-white font-black">4.9</span>
-                <span className="text-amber-300/90">
+                <SharpStarIcon className="w-3.5 h-3.5 text-[#e50914] shrink-0 group-hover:scale-110 transition-transform" />
+                <span className="font-black text-white">4.9</span>
+                <span className="text-white/90">
                   {locale === 'pl' ? '(162 opinie w Google)' : '(162 відгуки в Google)'}
                 </span>
-              </a>
-
-              <a
-                href={brandTheme.contacts.googleMapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-[11px] font-semibold transition-all cursor-pointer"
-              >
-                <Navigation className="w-3 h-3 text-[#e50914] shrink-0" />
-                <span>{locale === 'pl' ? 'Wyznacz trasę' : 'Маршрут на карті'}</span>
               </a>
             </div>
 

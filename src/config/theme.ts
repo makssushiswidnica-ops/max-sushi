@@ -62,6 +62,7 @@ export const brandTheme = {
     shortAddress: 'Parkowa 8, Świdnica',
     googlePlaceId: 'ChIJjzOJ3NRNDkcRbx97boEicW4',
     googleMapsUrl: 'https://www.google.com/maps/search/?api=1&query=MaksSushi+Świdnica&query_place_id=ChIJjzOJ3NRNDkcRbx97boEicW4',
+    googleReviewsListUrl: 'https://search.google.com/local/reviews?placeid=ChIJjzOJ3NRNDkcRbx97boEicW4',
     googleReviewUrl: 'https://search.google.com/local/writereview?placeid=ChIJjzOJ3NRNDkcRbx97boEicW4',
     workingHours: '12:00 - 21:00 / 22:00',
     schedule: [
