@@ -4070,9 +4070,11 @@ export default function AdminPage() {
                                 {product.price} zł
                               </span>
                             )}
-                            <span className="text-[11px] text-zinc-500">
-                              {product.weight}g {product.pieces ? `(${product.pieces} шт)` : ''}
-                            </span>
+                            {product.pieces && (
+                              <span className="text-[11px] text-zinc-500">
+                                {product.pieces} шт.
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -6077,9 +6079,9 @@ export default function AdminPage() {
                 )}
               </div>
 
-              {/* Блок параметрів страви (Ціна, вага, шматочки, бейдж) */}
+              {/* Блок параметрів страви (Ціна, шматочки, бейдж) */}
               <div className="bg-[#141420] border border-white/10 rounded-xl p-3 sm:p-4">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5 whitespace-nowrap">
                       Ціна (PLN) *
@@ -6091,18 +6093,6 @@ export default function AdminPage() {
                       value={formPrice}
                       onChange={(e) => setFormPrice(Number(e.target.value))}
                       className="w-full bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-3 py-2 text-sm text-white focus:outline-none font-bold"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5 whitespace-nowrap">
-                      Вага (грами)
-                    </label>
-                    <input
-                      type="number"
-                      value={formWeight}
-                      onChange={(e) => setFormWeight(Number(e.target.value))}
-                      className="w-full bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
                     />
                   </div>
 

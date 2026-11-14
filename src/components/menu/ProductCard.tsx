@@ -158,16 +158,12 @@ export function ProductCard({ product }: ProductCardProps) {
           {product.name[locale]}
         </h3>
 
-        {/* Характеристики (шматочки / вага) */}
-        <div className="flex items-center justify-start gap-2 text-xs font-semibold text-zinc-400 mb-2">
-          {product.pieces && (
+        {/* Характеристики (кількість шматочків) */}
+        {product.pieces && (
+          <div className="flex items-center justify-start gap-2 text-xs font-semibold text-zinc-400 mb-2">
             <span>{product.pieces} {locale === 'pl' ? 'szt.' : 'шт.'}</span>
-          )}
-          {product.pieces && product.weight && <span>•</span>}
-          {product.weight && (
-            <span>{product.weight} {isDodatki && product.id.includes('sos') ? 'ml' : 'g'}</span>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Склад ролу через крапочки або комки */}
         <p className="text-[11px] sm:text-xs text-zinc-400/90 font-normal leading-relaxed line-clamp-2 mb-2">

@@ -146,12 +146,13 @@ export default async function LocaleLayout({
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://maks-sushi.pl';
 
-  // Schema.org мікродані для Google (ресторан, гео-координати, адреса, телефон, години роботи)
+  // Schema.org мікродані для Google (ресторан, гео-координати, адреса, телефон, години роботи, рейтинг та точка на карті)
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Restaurant',
-    name: 'Maks Sushi Świdnica',
-    image: `${baseUrl}/images/hero_sushi_bg.jpg`,
+    name: 'MaksSushi Świdnica',
+    alternateName: 'Maks Sushi Świdnica',
+    image: `${baseUrl}/og-image.png`,
     url: `${baseUrl}/${locale}`,
     telephone: '+48 791 744 048',
     priceRange: '$$',
@@ -171,8 +172,32 @@ export default async function LocaleLayout({
     },
     geo: {
       '@type': 'GeoCoordinates',
-      latitude: 50.8438,
+      latitude: 50.8427,
       longitude: 16.4886,
+    },
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: '4.9',
+      reviewCount: '162',
+      bestRating: '5',
+      worstRating: '1',
+    },
+    sameAs: [
+      'https://www.facebook.com/MaksSushiSwidnicaPL',
+      'https://www.instagram.com/makssushi_swidnica',
+      'https://www.google.com/maps/place/?q=place_id:ChIJjzOJ3NRNDkcRbx97boEicW4',
+    ],
+    potentialAction: {
+      '@type': 'OrderAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${baseUrl}/pl`,
+        actionPlatform: [
+          'http://schema.org/DesktopWebPlatform',
+          'http://schema.org/MobileWebPlatform',
+        ],
+      },
+      deliveryMethod: ['http://purl.org/goodrelations/v1#DeliveryModeOwnFleet'],
     },
     areaServed: [
       { '@type': 'AdministrativeArea', name: 'Świdnica' },

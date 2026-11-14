@@ -141,3 +141,4 @@ CREATE POLICY "Admin delete menu images"
     bucket_id = 'menu-images'
     AND lower(auth.jwt() ->> 'email') = 'makssushiswidnica@gmail.com'
   );
+

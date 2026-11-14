@@ -29,6 +29,42 @@ export default function sitemap(): MetadataRoute.Sitemap {
         },
       },
     },
+    {
+      url: `${baseUrl}/pl/regulamin`,
+      lastModified,
+      changeFrequency: 'monthly',
+      priority: 0.4,
+      alternates: {
+        languages: {
+          pl: `${baseUrl}/pl/regulamin`,
+          uk: `${baseUrl}/uk/regulamin`,
+        },
+      },
+    },
+    {
+      url: `${baseUrl}/pl/polityka-prywatnosci`,
+      lastModified,
+      changeFrequency: 'monthly',
+      priority: 0.4,
+      alternates: {
+        languages: {
+          pl: `${baseUrl}/pl/polityka-prywatnosci`,
+          uk: `${baseUrl}/uk/polityka-prywatnosci`,
+        },
+      },
+    },
+    {
+      url: `${baseUrl}/pl/polityka-cookies`,
+      lastModified,
+      changeFrequency: 'monthly',
+      priority: 0.4,
+      alternates: {
+        languages: {
+          pl: `${baseUrl}/pl/polityka-cookies`,
+          uk: `${baseUrl}/uk/polityka-cookies`,
+        },
+      },
+    },
   ];
 }
 

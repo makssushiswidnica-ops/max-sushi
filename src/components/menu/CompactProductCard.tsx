@@ -65,12 +65,10 @@ export function CompactProductCard({ product }: CompactProductCardProps) {
             className="w-11 h-11 sm:w-13 sm:h-13"
           />
 
-          {/* Правий верхній кут: Кількість штук та вага БЕЗ рамки */}
-          {(product.pieces || product.weight) && (
+          {/* Правий верхній кут: Кількість штук БЕЗ рамки */}
+          {product.pieces && (
             <div className="absolute top-1.5 right-1.5 z-20 pointer-events-none px-1.5 py-0.5 rounded bg-black/50 text-[8.5px] sm:text-[9px] font-bold text-zinc-300 select-none tracking-tight">
-              {product.pieces ? `${product.pieces} ${locale === 'pl' ? 'szt.' : 'шт.'}` : ''}
-              {product.pieces && product.weight ? ' • ' : ''}
-              {product.weight ? `${product.weight}${isDodatki && product.id.includes('sos') ? 'ml' : 'g'}` : ''}
+              {product.pieces} {locale === 'pl' ? 'szt.' : 'шт.'}
             </div>
           )}
 

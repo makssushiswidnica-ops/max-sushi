@@ -62,15 +62,11 @@ export function CartItem({ item }: CartItemProps) {
         <h4 className="text-sm font-bold text-white truncate">
           {item.product.name[locale]}
         </h4>
-        <div className="flex items-center gap-2 mt-0.5 text-xs text-zinc-400">
-          <span>{item.product.weight} {locale === 'pl' ? 'g' : 'г'}</span>
-          {item.product.pieces && (
-            <>
-              <span>•</span>
-              <span>{item.product.pieces} {locale === 'pl' ? 'szt.' : 'шт.'}</span>
-            </>
-          )}
-        </div>
+        {item.product.pieces && (
+          <div className="flex items-center gap-2 mt-0.5 text-xs text-zinc-400">
+            <span>{item.product.pieces} {locale === 'pl' ? 'szt.' : 'шт.'}</span>
+          </div>
+        )}
 
         {/* Бейджі модифікаторів (печена риба / в темпурі) */}
         {(item.selectedOptions?.baked || item.selectedOptions?.tempura) && (

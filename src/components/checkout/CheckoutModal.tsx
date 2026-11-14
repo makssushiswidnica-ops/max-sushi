@@ -853,15 +853,34 @@ export function CheckoutModal() {
             </div>
           </div>
 
-          <button
-            onClick={handleClose}
-            style={{
-              clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
-            }}
-            className="w-full max-w-md py-3.5 px-6 bg-[#e50914] hover:bg-[#f4222d] text-white font-black text-sm shadow-lg shadow-[#e50914]/30 hover:shadow-[#e50914]/50 transition-all cursor-pointer select-none"
-          >
-            {t.checkout.backToMenu}
-          </button>
+          <div className="w-full max-w-md mx-auto space-y-2.5">
+            <button
+              onClick={handleClose}
+              style={{
+                clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
+              }}
+              className="w-full py-3.5 px-6 bg-[#e50914] hover:bg-[#f4222d] text-white font-black text-sm shadow-lg shadow-[#e50914]/30 hover:shadow-[#e50914]/50 transition-all cursor-pointer select-none"
+            >
+              {t.checkout.backToMenu}
+            </button>
+
+            <a
+              href={brandTheme.contacts.googleReviewUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
+              }}
+              className="w-full py-2.5 px-4 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 hover:text-amber-200 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer select-none"
+            >
+              <span>⭐</span>
+              <span>
+                {locale === 'pl'
+                  ? 'Smakowało? Oceń nas w Google (4.9 ★)'
+                  : 'Сподобалось? Залиште відгук у Google (4.9 ★)'}
+              </span>
+            </a>
+          </div>
         </div>
       ) : (
         /* Форма замовлення */

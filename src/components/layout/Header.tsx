@@ -499,7 +499,7 @@ export function Header() {
               href={`/${locale}`}
               onClick={(e) => {
                 window.dispatchEvent(new CustomEvent('reset-to-initial-catalog'));
-                if (window.location.pathname.startsWith(`/${locale}`)) {
+                if (window.location.pathname === `/${locale}` || window.location.pathname === `/${locale}/`) {
                   e.preventDefault();
                   window.scrollTo({ top: 0, behavior: 'instant' });
                 }

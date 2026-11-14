@@ -608,18 +608,11 @@ export function ProductModal() {
                     )}
                   </div>
 
-                  {(selectedProduct.weight || selectedProduct.pieces) && (
+                  {selectedProduct.pieces && (
                     <div className="flex items-center gap-1.5 text-xs text-zinc-300 font-bold shrink-0">
-                      {selectedProduct.pieces && (
-                        <span className="bg-white/5 border border-white/10 px-2.5 py-0.5 text-white">
-                          {selectedProduct.pieces} {locale === 'pl' ? 'szt.' : 'шт.'}
-                        </span>
-                      )}
-                      {selectedProduct.weight && (
-                        <span className="bg-white/5 border border-white/10 px-2.5 py-0.5 text-white">
-                          {selectedProduct.weight} {selectedProduct.categoryId === 'dodatki' && selectedProduct.id.includes('sos') ? 'ml' : 'g'}
-                        </span>
-                      )}
+                      <span className="bg-white/5 border border-white/10 px-2.5 py-0.5 text-white">
+                        {selectedProduct.pieces} {locale === 'pl' ? 'szt.' : 'шт.'}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -707,18 +700,11 @@ export function ProductModal() {
                 )}
               </div>
 
-              {(selectedProduct.weight || selectedProduct.pieces) && (
+              {selectedProduct.pieces && (
                 <div className="flex items-center gap-1.5 text-xs text-zinc-300 font-bold shrink-0">
-                  {selectedProduct.pieces && (
-                    <span className="bg-white/5 border border-white/10 px-2 py-0.5 text-white">
-                      {selectedProduct.pieces} {locale === 'pl' ? 'szt.' : 'шт.'}
-                    </span>
-                  )}
-                  {selectedProduct.weight && (
-                    <span className="bg-white/5 border border-white/10 px-2 py-0.5 text-white">
-                      {selectedProduct.weight} {selectedProduct.categoryId === 'dodatki' && selectedProduct.id.includes('sos') ? 'ml' : 'g'}
-                    </span>
-                  )}
+                  <span className="bg-white/5 border border-white/10 px-2 py-0.5 text-white">
+                    {selectedProduct.pieces} {locale === 'pl' ? 'szt.' : 'шт.'}
+                  </span>
                 </div>
               )}
             </div>
