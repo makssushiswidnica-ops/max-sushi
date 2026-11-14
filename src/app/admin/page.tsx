@@ -2,19 +2,19 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
-import { 
-  Lock, 
-  Mail, 
-  Eye, 
-  EyeOff, 
-  LogOut, 
-  ExternalLink, 
-  ShoppingBag, 
-  UtensilsCrossed, 
-  BarChart3, 
-  Settings, 
-  CheckCircle2, 
-  Clock, 
+import {
+  Lock,
+  Mail,
+  Eye,
+  EyeOff,
+  LogOut,
+  ExternalLink,
+  ShoppingBag,
+  UtensilsCrossed,
+  BarChart3,
+  Settings,
+  CheckCircle2,
+  Clock,
   AlertCircle,
   Database,
   RefreshCw,
@@ -75,15 +75,15 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { cn, formatPrice } from '@/lib/utils';
 import { supabase, isSupabaseConfigured, createOrder, saveStoreSettings, fetchStoreSettings } from '@/lib/supabase';
 import { brandTheme } from '@/config/theme';
-import { Category, Product, ProductBadge as ProductBadgeType, ALLERGENS, AllergenKey } from '@/types';
+import { Category, Product, ProductBadge as ProductBadgeType, ALLERGENS, AllergenKey, getSauceChoiceLabel } from '@/types';
 import { DEFAULT_PRODUCT_ALLERGENS } from '@/lib/allergenData';
 import { ProductBadge } from '@/components/menu/ProductBadge';
 import { getProductZoom, ZOOM_PRESETS } from '@/lib/imageZoom';
-import { 
-  fetchMenuData, 
-  updateProduct, 
-  createProduct, 
-  deleteProduct, 
+import {
+  fetchMenuData,
+  updateProduct,
+  createProduct,
+  deleteProduct,
   uploadProductImage,
   createCategory
 } from '@/lib/menuService';
@@ -189,7 +189,7 @@ export default function AdminPage() {
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
   const [collapsedHistoryDays, setCollapsedHistoryDays] = useState<Set<string>>(new Set());
   const [statsPeriod, setStatsPeriod] = useState<'today' | '7days' | '30days' | 'all'>('7days');
-  
+
   // Відстеження вже відомих замовлень, щоб перемикати на "Нові" ЛИШЕ один раз при надходженні нового
   const knownOrderIdsRef = useRef<Set<string>>(new Set());
   const isFirstOrdersLoadRef = useRef(true);
@@ -609,7 +609,7 @@ export default function AdminPage() {
     if (typeof window !== 'undefined') {
       try {
         localAcceptedMap = JSON.parse(localStorage.getItem('max-sushi-kitchen-accepted') || '{}');
-      } catch {}
+      } catch { }
     }
 
     try {
@@ -641,131 +641,69 @@ export default function AdminPage() {
                 setMktFirstOrderEnabled(parsed.firstOrderPromo.enabled ?? true);
                 setMktFirstOrderDiscount(parsed.firstOrderPromo.discountPercent ?? 10);
               }
-            } catch {}
+            } catch { }
           }
 
           loaded = data
             .filter((d: any) => d.id !== '__settings__')
             .map((d: any) => {
-            const rawComment = d.comment || '';
-            const matchScheduled = !d.scheduled_time && rawComment.match(/\[НА ЧАС:\s*([^\]]+)\]/i);
-            const scheduledTime = d.scheduled_time || d.scheduledTime || (matchScheduled ? matchScheduled[1].trim() : undefined);
-            const timingType = d.timing_type || d.timingType || (scheduledTime ? 'scheduled' : 'asap');
-            let cleanComment = matchScheduled ? rawComment.replace(/\[НА ЧАС:\s*[^\]]+\]\s*/i, '').trim() : rawComment;
-            const matchFirstOrder = cleanComment.match(/\[1\.\s*ZAMÓWIENIE:\s*-[0-9]+%\s*\(-([0-9]+)\s*zł\)\]/i);
-            const firstOrderDiscount = Number(d.first_order_discount ?? d.firstOrderDiscount ?? (matchFirstOrder ? matchFirstOrder[1] : 0)) || undefined;
-            if (matchFirstOrder) {
-              cleanComment = cleanComment.replace(/\[1\.\s*ZAMÓWIENIE:\s*-[0-9]+%\s*\(-[0-9]+\s*zł\)\]\s*/i, '').trim();
-            }
+              const rawComment = d.comment || '';
+              const matchScheduled = !d.scheduled_time && rawComment.match(/\[НА ЧАС:\s*([^\]]+)\]/i);
+              const scheduledTime = d.scheduled_time || d.scheduledTime || (matchScheduled ? matchScheduled[1].trim() : undefined);
+              const timingType = d.timing_type || d.timingType || (scheduledTime ? 'scheduled' : 'asap');
+              let cleanComment = matchScheduled ? rawComment.replace(/\[НА ЧАС:\s*[^\]]+\]\s*/i, '').trim() : rawComment;
+              const matchFirstOrder = cleanComment.match(/\[1\.\s*ZAMÓWIENIE:\s*-[0-9]+%\s*\(-([0-9]+)\s*zł\)\]/i);
+              const firstOrderDiscount = Number(d.first_order_discount ?? d.firstOrderDiscount ?? (matchFirstOrder ? matchFirstOrder[1] : 0)) || undefined;
+              if (matchFirstOrder) {
+                cleanComment = cleanComment.replace(/\[1\.\s*ZAMÓWIENIE:\s*-[0-9]+%\s*\(-[0-9]+\s*zł\)\]\s*/i, '').trim();
+              }
 
-            return {
-              id: String(d.id || ''),
-              customer_name: d.customer_name || d.name || 'Клієнт',
-              name: d.customer_name || d.name || 'Клієнт',
-              phone: d.phone || '',
-              delivery_method: d.delivery_method || d.deliveryMethod || 'delivery',
-              deliveryMethod: d.delivery_method || d.deliveryMethod || 'delivery',
-              address: d.address,
-              payment_method: d.payment_method || d.paymentMethod || 'blik_online',
-              paymentMethod: d.payment_method || d.paymentMethod || 'blik_online',
-              changeFrom: d.change_from || d.changeFrom,
-              comment: cleanComment,
-              firstOrderDiscount: firstOrderDiscount,
-              first_order_discount: firstOrderDiscount,
-              personsCount: d.persons_count || d.personsCount || 1,
-              timing_type: timingType,
-              timingType: timingType,
-              scheduled_time: scheduledTime,
-              scheduledTime: scheduledTime,
-              items: Array.isArray(d.items) ? d.items : [],
-              subtotal: Number(d.subtotal || 0),
-              delivery_fee: Number(d.delivery_fee ?? d.deliveryFee ?? 0),
-              deliveryFee: Number(d.delivery_fee ?? d.deliveryFee ?? 0),
-              total: Number(d.total || 0),
-              status: d.status || 'pending',
-              created_at: d.created_at || d.createdAt || new Date().toISOString(),
-              accepted_at: d.accepted_at || d.acceptedAt || localAcceptedMap[String(d.id)],
-              acceptedAt: d.accepted_at || d.acceptedAt || localAcceptedMap[String(d.id)],
-            };
-          });
+              return {
+                id: String(d.id || ''),
+                customer_name: d.customer_name || d.name || 'Клієнт',
+                name: d.customer_name || d.name || 'Клієнт',
+                phone: d.phone || '',
+                delivery_method: d.delivery_method || d.deliveryMethod || 'delivery',
+                deliveryMethod: d.delivery_method || d.deliveryMethod || 'delivery',
+                address: d.address,
+                payment_method: d.payment_method || d.paymentMethod || 'blik_online',
+                paymentMethod: d.payment_method || d.paymentMethod || 'blik_online',
+                changeFrom: d.change_from || d.changeFrom,
+                comment: cleanComment,
+                firstOrderDiscount: firstOrderDiscount,
+                first_order_discount: firstOrderDiscount,
+                personsCount: d.persons_count || d.personsCount || 1,
+                timing_type: timingType,
+                timingType: timingType,
+                scheduled_time: scheduledTime,
+                scheduledTime: scheduledTime,
+                items: Array.isArray(d.items) ? d.items : [],
+                subtotal: Number(d.subtotal || 0),
+                delivery_fee: Number(d.delivery_fee ?? d.deliveryFee ?? 0),
+                deliveryFee: Number(d.delivery_fee ?? d.deliveryFee ?? 0),
+                total: Number(d.total || 0),
+                status: d.status || 'pending',
+                created_at: d.created_at || d.createdAt || new Date().toISOString(),
+                accepted_at: d.accepted_at || d.acceptedAt || localAcceptedMap[String(d.id)],
+                acceptedAt: d.accepted_at || d.acceptedAt || localAcceptedMap[String(d.id)],
+              };
+            });
         }
       }
 
-      // Також завантажуємо локальні замовлення (якщо клієнт оформив їх у LocalStorage)
-      if (typeof window !== 'undefined') {
+      // Синхронізуємо LocalStorage: якщо замовлення було видалено з бази Supabase, прибираємо його і з локального кешу браузера
+      if (typeof window !== 'undefined' && isSupabaseConfigured && !rlsIssue) {
         try {
           const local = JSON.parse(localStorage.getItem('max-sushi-orders') || '[]');
           if (Array.isArray(local) && local.length > 0) {
             const existingIds = new Set(loaded.map((o) => o.id));
-            for (const item of local) {
-              if (item && item.id && !existingIds.has(item.id)) {
-                const rawItemComment = item.comment || '';
-                const matchFirstOrderLocal = rawItemComment.match(/\[1\.\s*ZAMÓWIENIE:\s*-[0-9]+%\s*\(-([0-9]+)\s*zł\)\]/i);
-                const firstOrderDiscount = Number(item.firstOrderDiscount ?? item.first_order_discount ?? (matchFirstOrderLocal ? matchFirstOrderLocal[1] : 0)) || undefined;
-                const cleanItemComment = matchFirstOrderLocal ? rawItemComment.replace(/\[1\.\s*ZAMÓWIENIE:\s*-[0-9]+%\s*\(-[0-9]+\s*zł\)\]\s*/i, '').trim() : rawItemComment;
-
-                // Автоматично вивантажуємо в Supabase локальні замовлення, які були збережені до додавання колонок
-                if (isSupabaseConfigured) {
-                  createOrder({
-                    id: String(item.id),
-                    name: item.name || item.customer_name || 'Клієнт',
-                    phone: item.phone || '',
-                    deliveryMethod: item.deliveryMethod || item.delivery_method || 'delivery',
-                    address: item.address,
-                    paymentMethod: item.paymentMethod || item.payment_method || 'blik_online',
-                    changeFrom: item.changeFrom || item.change_from,
-                    comment: item.comment || '',
-                    firstOrderDiscount: firstOrderDiscount,
-                    first_order_discount: firstOrderDiscount,
-                    personsCount: item.personsCount || item.persons_count || 1,
-                    timingType: item.timingType || item.timing_type || 'asap',
-                    scheduledDate: item.scheduledDate || item.scheduled_date,
-                    scheduledTime: item.scheduledTime || item.scheduled_time,
-                    items: Array.isArray(item.items) ? item.items : [],
-                    subtotal: Number(item.subtotal || 0),
-                    deliveryFee: Number(item.deliveryFee ?? item.delivery_fee ?? 0),
-                    total: Number(item.total || 0),
-                    status: item.status || 'pending',
-                    createdAt: item.createdAt || item.created_at || new Date().toISOString(),
-                    accepted_at: item.accepted_at || item.acceptedAt || localAcceptedMap[String(item.id)],
-                  } as any).catch((err: any) => console.warn('Auto-sync local order error:', err));
-                }
-
-                loaded.push({
-                  id: String(item.id),
-                  customer_name: item.name || item.customer_name || 'Клієнт',
-                  name: item.name || item.customer_name || 'Клієнт',
-                  phone: item.phone || '',
-                  delivery_method: item.deliveryMethod || item.delivery_method || 'delivery',
-                  deliveryMethod: item.deliveryMethod || item.delivery_method || 'delivery',
-                  address: item.address,
-                  payment_method: item.paymentMethod || item.payment_method || 'blik_online',
-                  paymentMethod: item.paymentMethod || item.paymentMethod || 'blik_online',
-                  changeFrom: item.changeFrom || item.change_from,
-                  comment: cleanItemComment,
-                  firstOrderDiscount: firstOrderDiscount,
-                  first_order_discount: firstOrderDiscount,
-                  personsCount: item.personsCount || item.persons_count || 1,
-                  timing_type: item.timingType || item.timing_type,
-                  timingType: item.timingType || item.timing_type,
-                  scheduled_time: item.scheduledTime || item.scheduled_time,
-                  scheduledTime: item.scheduledTime || item.scheduled_time,
-                  items: Array.isArray(item.items) ? item.items : [],
-                  subtotal: Number(item.subtotal || 0),
-                  delivery_fee: Number(item.deliveryFee ?? item.delivery_fee ?? 0),
-                  deliveryFee: Number(item.deliveryFee ?? item.delivery_fee ?? 0),
-                  total: Number(item.total || 0),
-                  status: item.status || 'pending',
-                  created_at: item.createdAt || item.created_at || new Date().toISOString(),
-                  accepted_at: item.accepted_at || item.acceptedAt || localAcceptedMap[String(item.id)],
-                  acceptedAt: item.accepted_at || item.acceptedAt || localAcceptedMap[String(item.id)],
-                });
-                existingIds.add(item.id);
-              }
+            const filteredLocal = local.filter((item: any) => item && item.id && existingIds.has(String(item.id)));
+            if (filteredLocal.length !== local.length) {
+              localStorage.setItem('max-sushi-orders', JSON.stringify(filteredLocal));
             }
           }
         } catch (e) {
-          console.warn('LocalStorage orders parsing error:', e);
+          console.warn('LocalStorage orders cleanup error:', e);
         }
       }
 
@@ -836,7 +774,7 @@ export default function AdminPage() {
           saved[orderId] = nowIso;
           localStorage.setItem('max-sushi-kitchen-accepted', JSON.stringify(saved));
         }
-      } catch {}
+      } catch { }
     }
 
     try {
@@ -866,16 +804,16 @@ export default function AdminPage() {
           const updated = local.map((o: any) =>
             o.id === orderId
               ? {
-                  ...o,
-                  status: newStatus,
-                  ...(isAcceptedToKitchen && !o.accepted_at && !o.acceptedAt
-                    ? { accepted_at: nowIso, acceptedAt: nowIso }
-                    : {}),
-                }
+                ...o,
+                status: newStatus,
+                ...(isAcceptedToKitchen && !o.accepted_at && !o.acceptedAt
+                  ? { accepted_at: nowIso, acceptedAt: nowIso }
+                  : {}),
+              }
               : o
           );
           localStorage.setItem('max-sushi-orders', JSON.stringify(updated));
-        } catch {}
+        } catch { }
       }
 
       if (typeof window !== 'undefined') {
@@ -901,7 +839,7 @@ export default function AdminPage() {
           const local = JSON.parse(localStorage.getItem('max-sushi-orders') || '[]');
           const updated = local.filter((o: any) => o.id !== orderId);
           localStorage.setItem('max-sushi-orders', JSON.stringify(updated));
-        } catch {}
+        } catch { }
       }
 
       if (typeof window !== 'undefined') {
@@ -1046,10 +984,11 @@ export default function AdminPage() {
         const opts: string[] = [];
         const optBakedP = prod.bakedPrice ?? (prod as any).nutrition?.bakedPrice ?? 1;
         const optTempuraP = prod.tempuraPrice ?? (prod as any).nutrition?.tempuraPrice ?? 2;
+        if (item.selectedOptions?.sauce) opts.push(getSauceChoiceLabel(item.selectedOptions.sauce, 'pl').toUpperCase());
         if (item.selectedOptions?.baked) opts.push(`PIECZONA RYBA (+${optBakedP} zł)`);
         if (item.selectedOptions?.tempura) opts.push(`W TEMPURZE (+${optTempuraP} zł)`);
-        const optsHtml = opts.length > 0 
-          ? `<div style="font-size: 11px; font-weight: 900; color: #000; margin-top: 2px;">➔ ${opts.join(', ')}</div>` 
+        const optsHtml = opts.length > 0
+          ? `<div style="font-size: 11px; font-weight: 900; color: #000; margin-top: 2px;">➔ ${opts.join(', ')}</div>`
           : '';
         const displayPrice = isGift ? '0 zł' : `${price * item.quantity} zł`;
         const giftLabel = isGift ? '<span style="font-size: 10px; font-weight: 900; background: #000; color: #fff; padding: 1px 4px; border-radius: 2px; margin-left: 4px;">GRATIS</span>' : '';
@@ -1085,7 +1024,7 @@ export default function AdminPage() {
         if (s.widthMm) savedWidthMm = Number(s.widthMm);
         if (typeof s.paddingMm === 'number') savedPaddingMm = Number(s.paddingMm);
         if (s.fontSizePx) savedFontSizePx = Number(s.fontSizePx);
-      } catch {}
+      } catch { }
     }
 
     const receiptHtml = `
@@ -1316,9 +1255,9 @@ export default function AdminPage() {
         const scheduled = o.scheduled_time || o.scheduledTime;
         const isScheduled = (o.timing_type === 'scheduled' || o.timingType === 'scheduled') && Boolean(scheduled);
         if (isScheduled && scheduled) {
-          const isTomorrow = scheduled.toLowerCase().includes('завтра') || 
-                             scheduled.toLowerCase().includes('jutro') || 
-                             scheduled.toLowerCase().includes('tomorrow');
+          const isTomorrow = scheduled.toLowerCase().includes('завтра') ||
+            scheduled.toLowerCase().includes('jutro') ||
+            scheduled.toLowerCase().includes('tomorrow');
           const timeMatch = scheduled.match(/(\d{1,2}):(\d{2})/);
           if (timeMatch) {
             const hours = parseInt(timeMatch[1], 10);
@@ -1486,10 +1425,10 @@ export default function AdminPage() {
     // 7 робочих днів для 'today' та '7days', 30 робочих днів для '30days', або всі робочі дні для 'all'.
     // Вихідні дні закладу (понеділки) пропускаються, рахуються виключно РЕАЛЬНІ РОБОЧІ ДНІ.
     const workingDaysList: Date[] = [];
-    const targetWorkingDays = 
-      statsPeriod === 'today' || statsPeriod === '7days' ? 7 : 
-      statsPeriod === '30days' ? 30 : 
-      0; // 'all'
+    const targetWorkingDays =
+      statsPeriod === 'today' || statsPeriod === '7days' ? 7 :
+        statsPeriod === '30days' ? 30 :
+          0; // 'all'
 
     if (targetWorkingDays > 0) {
       if (isDayClosed(now)) {
@@ -1516,8 +1455,8 @@ export default function AdminPage() {
         .map((o) => new Date(o.created_at).getTime())
         .filter((t) => !isNaN(t) && t > 0);
 
-      const earliestTime = validOrderTimestamps.length > 0 
-        ? Math.min(...validOrderTimestamps) 
+      const earliestTime = validOrderTimestamps.length > 0
+        ? Math.min(...validOrderTimestamps)
         : now.getTime() - 30 * 24 * 60 * 60 * 1000;
 
       const earliestDate = new Date(earliestTime);
@@ -1537,7 +1476,7 @@ export default function AdminPage() {
       }
     }
 
-    const startOfPeriod = workingDaysList.length > 0 
+    const startOfPeriod = workingDaysList.length > 0
       ? new Date(workingDaysList[0].getFullYear(), workingDaysList[0].getMonth(), workingDaysList[0].getDate()).getTime()
       : startOfToday;
 
@@ -1844,8 +1783,8 @@ export default function AdminPage() {
     const nextSku = Math.max(0, ...products.map((p) => Number(p.sku || (p as any).nutrition?.sku || 0)).filter((n) => !isNaN(n))) + 1;
     setFormSku(String(nextSku));
     // Враховуємо обраний зараз розділ меню або перший з наявних
-    const defaultCat = selectedCategoryFilter !== 'all' 
-      ? selectedCategoryFilter 
+    const defaultCat = selectedCategoryFilter !== 'all'
+      ? selectedCategoryFilter
       : (categories[0]?.id || 'mini-maki');
     setFormCategoryId(defaultCat);
     setIsFormCategoryDropdownOpen(false);
@@ -2245,8 +2184,8 @@ export default function AdminPage() {
   };
 
   // Ефективний зум для форми редагування
-  const effectiveModalZoom = formZoom 
-    ? Number(formZoom) 
+  const effectiveModalZoom = formZoom
+    ? Number(formZoom)
     : getProductZoom({ id: formId, categoryId: formCategoryId, nutrition: null });
 
   // Фільтрація страв для списку
@@ -2276,13 +2215,13 @@ export default function AdminPage() {
   if (!session) {
     return (
       <div className="min-h-screen bg-[#07070a] flex items-center justify-center p-4 selection:bg-[#e50914] selection:text-white">
-        <div 
+        <div
           style={{
             clipPath: 'polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px)',
           }}
           className="w-full max-w-md p-[1px] bg-gradient-to-b from-white/20 via-[#e50914]/40 to-white/10 shadow-2xl shadow-black/90"
         >
-          <div 
+          <div
             style={{
               clipPath: 'polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)',
             }}
@@ -2394,9 +2333,9 @@ export default function AdminPage() {
     const now = Date.now();
 
     if (isScheduled && scheduled) {
-      const isTomorrow = scheduled.toLowerCase().includes('завтра') || 
-                         scheduled.toLowerCase().includes('jutro') || 
-                         scheduled.toLowerCase().includes('tomorrow');
+      const isTomorrow = scheduled.toLowerCase().includes('завтра') ||
+        scheduled.toLowerCase().includes('jutro') ||
+        scheduled.toLowerCase().includes('tomorrow');
       const timeMatch = scheduled.match(/(\d{1,2}):(\d{2})/);
       if (timeMatch) {
         const hours = parseInt(timeMatch[1], 10);
@@ -2503,7 +2442,7 @@ export default function AdminPage() {
             {/* Бейдж бажаного часу / зворотній відлік для кухні */}
             <div className="flex flex-wrap items-center gap-1.5 shrink-0">
               {((order.timing_type === 'scheduled' || order.timingType === 'scheduled') && (order.scheduled_time || order.scheduledTime)) ? (
-                <span 
+                <span
                   style={{
                     clipPath: 'polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px)',
                   }}
@@ -2513,7 +2452,7 @@ export default function AdminPage() {
                   <span>НА ЧАС: {formatScheduledBadgeTime(order)}</span>
                 </span>
               ) : (!isKitchen && !isInDelivery && !isDelivered && orderStatusFilter !== 'in_progress' && orderStatusFilter !== 'in_delivery' && orderStatusFilter !== 'delivered') ? (
-                <span 
+                <span
                   style={{
                     clipPath: 'polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px)',
                   }}
@@ -2525,7 +2464,7 @@ export default function AdminPage() {
 
               {/* Бейдж знижки на 1-ше замовлення */}
               {(order.firstOrderDiscount || order.first_order_discount) ? (
-                <span 
+                <span
                   style={{
                     clipPath: 'polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px)',
                   }}
@@ -2829,8 +2768,13 @@ export default function AdminPage() {
                             </span>
                           )}
                         </div>
-                        {(item.selectedOptions?.baked || item.selectedOptions?.tempura) && (
+                        {(item.selectedOptions?.baked || item.selectedOptions?.tempura || item.selectedOptions?.sauce) && (
                           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                            {item.selectedOptions?.sauce && (
+                              <span className="px-1.5 py-0.5 rounded text-[10.5px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                {getSauceChoiceLabel(item.selectedOptions.sauce, 'uk')}
+                              </span>
+                            )}
                             {item.selectedOptions?.baked && (
                               <span className="px-1.5 py-0.5 rounded text-[10.5px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
                                 Печена риба (+{item.product.bakedPrice ?? (item.product as any)?.nutrition?.bakedPrice ?? 1} zł)
@@ -3037,7 +2981,7 @@ export default function AdminPage() {
       {/* Хедер адмінки */}
       <header className="sticky top-0 z-40 bg-[#0d0d14]/95 backdrop-blur-xl border-b border-white/10 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          <div 
+          <div
             onClick={() => setActiveTab('dashboard')}
             className="flex items-center gap-3 cursor-pointer group select-none"
             title="Головна панель керування"
@@ -3118,14 +3062,14 @@ export default function AdminPage() {
         {isMobileMenuOpen && (
           <>
             {/* Оверлей-підкладка на весь екран */}
-            <div 
+            <div
               onClick={() => setIsMobileMenuOpen(false)}
               className="sm:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-xs transition-opacity animate-in fade-in duration-150"
               aria-hidden="true"
             />
 
             {/* Меню у вигляді розділів та пунктів */}
-            <div 
+            <div
               ref={mobileMenuRef}
               className="sm:hidden fixed inset-x-0 top-16 z-50 bg-[#0e0e16] border-b border-white/15 shadow-2xl max-h-[calc(100vh-4rem)] overflow-y-auto animate-in slide-in-from-top-2 duration-150"
             >
@@ -3999,7 +3943,7 @@ export default function AdminPage() {
 
                           {/* Швидке регулювання масштабу прямо на картці списку: дві компактні кнопки + та - з кроком 20% без показу відсотків */}
                           {product.image && (
-                            <div 
+                            <div
                               onClick={(e) => e.stopPropagation()}
                               className="flex items-center justify-between w-full mt-1.5 px-0.5 py-0.5 bg-black/70 border border-white/10 rounded-md"
                             >
@@ -4088,8 +4032,8 @@ export default function AdminPage() {
                     {/* Нижня панель дій */}
                     <div className="pt-3 border-t border-white/5 flex items-center justify-between gap-2">
                       {/* Акуратний компактний тумблер наявності + напис "В меню" */}
-                      <div 
-                        onClick={(e) => e.stopPropagation()} 
+                      <div
+                        onClick={(e) => e.stopPropagation()}
                         className="flex items-center gap-2"
                       >
                         <button
@@ -4124,8 +4068,8 @@ export default function AdminPage() {
                       </div>
 
                       {/* Швидкі кнопки знижки 0% / 10% / 15% */}
-                      <div 
-                        onClick={(e) => e.stopPropagation()} 
+                      <div
+                        onClick={(e) => e.stopPropagation()}
                         className="flex items-center gap-0.5 bg-[#14141e] border border-white/10 p-0.5 rounded-lg select-none"
                       >
                         <button
@@ -4897,10 +4841,10 @@ export default function AdminPage() {
                         {statsPeriod === 'today'
                           ? 'Динаміка за 7 останніх робочих днів (сьогодні виділено бурштиновим)'
                           : statsPeriod === '7days'
-                          ? 'Динаміка за 7 останніх робочих днів (сьогодні виділено бурштиновим)'
-                          : statsPeriod === '30days'
-                          ? 'Динаміка за 30 останніх робочих днів (сьогодні виділено бурштиновим)'
-                          : 'Динаміка за всі робочі дні закладу (сьогодні виділено бурштиновим)'}
+                            ? 'Динаміка за 7 останніх робочих днів (сьогодні виділено бурштиновим)'
+                            : statsPeriod === '30days'
+                              ? 'Динаміка за 30 останніх робочих днів (сьогодні виділено бурштиновим)'
+                              : 'Динаміка за всі робочі дні закладу (сьогодні виділено бурштиновим)'}
                       </p>
                     </div>
                     <span className="text-xs font-mono text-zinc-500 whitespace-nowrap">
@@ -4915,8 +4859,8 @@ export default function AdminPage() {
                       statsData.chartBars.length <= 8
                         ? 'justify-center gap-2 sm:gap-4 max-w-lg mx-auto'
                         : statsData.chartBars.length <= 32
-                        ? 'justify-center gap-1 sm:gap-1.5 w-full'
-                        : 'justify-center gap-0.5 sm:gap-1 w-full'
+                          ? 'justify-center gap-1 sm:gap-1.5 w-full'
+                          : 'justify-center gap-0.5 sm:gap-1 w-full'
                     )}>
                       {statsData.chartBars.map((bar, idx) => {
                         const heightPercent = Math.max(
@@ -4937,8 +4881,8 @@ export default function AdminPage() {
                               totalBars <= 8
                                 ? 'flex-1 max-w-[48px]'
                                 : totalBars <= 32
-                                ? 'flex-1 max-w-[16px] sm:max-w-[22px]'
-                                : 'flex-1 max-w-[6px] sm:max-w-[10px]'
+                                  ? 'flex-1 max-w-[16px] sm:max-w-[22px]'
+                                  : 'flex-1 max-w-[6px] sm:max-w-[10px]'
                             )}
                           >
                             {/* Спливаюча підказка (Tooltip) при наведенні */}
@@ -4968,8 +4912,8 @@ export default function AdminPage() {
                                       ? 'bg-gradient-to-t from-amber-500 via-amber-400 to-yellow-300 shadow-md shadow-amber-500/50'
                                       : 'bg-gradient-to-t from-amber-500/30 to-amber-400/60 border-t-2 border-amber-400'
                                     : bar.revenue > 0
-                                    ? 'bg-gradient-to-t from-[#8b1419] to-[#e50914] group-hover/bar:brightness-125'
-                                    : 'bg-white/10'
+                                      ? 'bg-gradient-to-t from-[#8b1419] to-[#e50914] group-hover/bar:brightness-125'
+                                      : 'bg-white/10'
                                 )}
                               />
                             </div>
@@ -5068,9 +5012,9 @@ export default function AdminPage() {
                                   <span className={cn(
                                     'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0',
                                     rank === 0 ? 'bg-amber-400 text-black' :
-                                    rank === 1 ? 'bg-zinc-300 text-black' :
-                                    rank === 2 ? 'bg-amber-700 text-white' :
-                                    'bg-white/10 text-zinc-400'
+                                      rank === 1 ? 'bg-zinc-300 text-black' :
+                                        rank === 2 ? 'bg-amber-700 text-white' :
+                                          'bg-white/10 text-zinc-400'
                                   )}>
                                     {rank + 1}
                                   </span>
@@ -5692,7 +5636,7 @@ export default function AdminPage() {
 
       {/* МОДАЛЬНЕ ВІКНО: СТВОРЕННЯ / РЕДАГУВАННЯ СТРАВИ */}
       {isModalOpen && (
-        <div 
+        <div
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsModalOpen(false);
@@ -5700,7 +5644,7 @@ export default function AdminPage() {
           }}
           className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md overflow-hidden overscroll-contain"
         >
-          <div 
+          <div
             onClick={(e) => e.stopPropagation()}
             style={{
               clipPath: 'polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px)',
@@ -5774,8 +5718,8 @@ export default function AdminPage() {
                         isModalDragOver
                           ? 'border-[#e50914] bg-[#e50914]/20 shadow-xl shadow-[#e50914]/25 scale-105'
                           : formImagePreview
-                          ? 'border-white/20 hover:border-[#e50914] bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.08)_0%,_#07070b_70%)]'
-                          : 'border-white/20 hover:border-[#e50914] bg-[#1a1a28] hover:bg-[#202032]'
+                            ? 'border-white/20 hover:border-[#e50914] bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.08)_0%,_#07070b_70%)]'
+                            : 'border-white/20 hover:border-[#e50914] bg-[#1a1a28] hover:bg-[#202032]'
                       )}
                       title="Натисніть для вибору або перетягніть нове фото"
                     >
@@ -6318,7 +6262,7 @@ export default function AdminPage() {
 
       {/* МОДАЛЬНЕ ВІКНО: СТВОРЕННЯ НОВОЇ КАТЕГОРІЇ */}
       {isAddCategoryModalOpen && (
-        <div 
+        <div
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsAddCategoryModalOpen(false);

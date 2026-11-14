@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Minus, Plus, Trash2, UtensilsCrossed, Gift } from 'lucide-react';
-import { CartItem as CartItemType } from '@/types';
+import { CartItem as CartItemType, getSauceChoiceLabel } from '@/types';
 import { useCartStore } from '@/store/useCartStore';
 import { useI18n } from '@/lib/i18nContext';
 import { formatPrice, getItemUnitPrice } from '@/lib/utils';
@@ -68,9 +68,14 @@ export function CartItem({ item }: CartItemProps) {
           </div>
         )}
 
-        {/* Бейджі модифікаторів (печена риба / в темпурі) */}
-        {(item.selectedOptions?.baked || item.selectedOptions?.tempura) && (
+        {/* Бейджі модифікаторів (печена риба / в темпурі / обраний соус) */}
+        {(item.selectedOptions?.baked || item.selectedOptions?.tempura || item.selectedOptions?.sauce) && (
           <div className="flex flex-wrap gap-1 mt-1">
+            {item.selectedOptions?.sauce && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                {getSauceChoiceLabel(item.selectedOptions.sauce, locale)}
+              </span>
+            )}
             {item.selectedOptions?.baked && (
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
                 {locale === 'pl'

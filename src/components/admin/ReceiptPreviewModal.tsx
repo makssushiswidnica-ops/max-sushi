@@ -12,7 +12,7 @@ import {
   Maximize2
 } from 'lucide-react';
 import { AdminOrder } from '@/app/admin/page';
-import { Product } from '@/types';
+import { Product, getSauceChoiceLabel } from '@/types';
 import { products as defaultProducts } from '@/lib/mockData';
 
 interface ReceiptSettings {
@@ -431,6 +431,7 @@ export function ReceiptPreviewModal({
                   const opts: string[] = [];
                   const optBakedP = prod.bakedPrice ?? (prod as any).nutrition?.bakedPrice ?? 1;
                   const optTempuraP = prod.tempuraPrice ?? (prod as any).nutrition?.tempuraPrice ?? 2;
+                  if (item.selectedOptions?.sauce) opts.push(getSauceChoiceLabel(item.selectedOptions.sauce, 'pl').toUpperCase());
                   if (item.selectedOptions?.baked) opts.push(`PIECZONA RYBA (+${optBakedP} zł)`);
                   if (item.selectedOptions?.tempura) opts.push(`W TEMPURZE (+${optTempuraP} zł)`);
                   const displayPrice = isGift ? '0 zł' : `${price * item.quantity} zł`;

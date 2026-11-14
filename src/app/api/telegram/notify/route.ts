@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Order } from '@/types';
+import { Order, getSauceChoiceLabel } from '@/types';
 import { products as defaultProducts } from '@/lib/mockData';
 
 function escapeHtml(text: string): string {
@@ -84,6 +84,9 @@ function formatTelegramOrderMessage(order: Order): string {
     const optTempuraP = prod.tempuraPrice ?? prod.nutrition?.tempuraPrice ?? 2;
 
     const badges: string[] = [];
+    if (item.selectedOptions?.sauce) {
+      badges.push(`🥣 ${getSauceChoiceLabel(item.selectedOptions.sauce, 'pl')}`);
+    }
     if (item.selectedOptions?.baked) badges.push(`🔥 Печена риба (+${optBakedP} zł)`);
     if (item.selectedOptions?.tempura) badges.push(`🍤 У темпурі (+${optTempuraP} zł)`);
     if (item.isGift) badges.push('🎁 ПОДАРУНОК (0 zł)');

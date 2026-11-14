@@ -7,7 +7,11 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { products as defaultProducts } from '@/lib/mockData';
 
 export function isSameProductOptions(a?: SelectedProductOptions, b?: SelectedProductOptions): boolean {
-  return Boolean(a?.baked) === Boolean(b?.baked) && Boolean(a?.tempura) === Boolean(b?.tempura);
+  return (
+    Boolean(a?.baked) === Boolean(b?.baked) &&
+    Boolean(a?.tempura) === Boolean(b?.tempura) &&
+    (a?.sauce || '') === (b?.sauce || '')
+  );
 }
 
 function syncGiftItem(items: CartItem[], menuProducts: Product[]): CartItem[] {

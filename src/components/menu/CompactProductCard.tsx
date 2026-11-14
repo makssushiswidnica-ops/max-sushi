@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Plus, Minus, UtensilsCrossed } from 'lucide-react';
-import { Product } from '@/types';
+import { Product, requiresSauceSelection } from '@/types';
 import { CornerRibbon } from '@/components/menu/CornerRibbon';
 import { getProductZoom } from '@/lib/imageZoom';
 import { useCartStore } from '@/store/useCartStore';
@@ -29,8 +29,10 @@ export function CompactProductCard({ product }: CompactProductCardProps) {
   const giftPromo = useSettingsStore((s) => s.giftPromo);
   const isGiftProduct = mounted && giftPromo?.enabled && giftPromo.productId === product.id;
 
-  const cartItem = mounted ? items.find((item) => item.product.id === product.id && !item.isGift) : undefined;
-  const quantity = cartItem?.quantity || 0;
+  const cartItemsForProduct = mounted ? items.filter((item) => item.product.id === product.id && !item.isGift) : [];
+  const cartItem = cartItemsForProduct[0];
+  const quantity = cartItemsForProduct.reduce((sum, item) => sum + item.quantity, 0);
+  const needsSauce = requiresSauceSelection(product);
   const isDodatki = product.categoryId === 'dodatki';
 
   const effectivePrice = getEffectivePrice(product);
@@ -129,6 +131,10 @@ export function CompactProductCard({ product }: CompactProductCardProps) {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (needsSauce) {
+                    setSelectedProduct(product);
+                    return;
+                  }
                   addItem(product);
                 }}
                 aria-label="Додати до кошика"
@@ -149,7 +155,7 @@ export function CompactProductCard({ product }: CompactProductCardProps) {
               >
                 <button
                   type="button"
-                  onClick={() => updateQuantity(product.id, quantity - 1)}
+                  onClick={() => updateQuantity(product.id, (cartItem?.quantity || quantity) - 1, cartItem?.selectedOptions)}
                   aria-label="Зменшити"
                   className="w-4 h-4 sm:w-4.5 sm:h-4.5 flex items-center justify-center text-zinc-300 hover:text-white bg-white/5 hover:bg-white/15 transition-colors cursor-pointer"
                 >
@@ -160,7 +166,13 @@ export function CompactProductCard({ product }: CompactProductCardProps) {
                 </span>
                 <button
                   type="button"
-                  onClick={() => updateQuantity(product.id, quantity + 1)}
+                  onClick={() => {
+                    if (needsSauce) {
+                      setSelectedProduct(product);
+                      return;
+                    }
+                    updateQuantity(product.id, (cartItem?.quantity || quantity) + 1, cartItem?.selectedOptions);
+                  }}
                   aria-label="Збільшити"
                   className="w-4 h-4 sm:w-4.5 sm:h-4.5 flex items-center justify-center text-white bg-[#e50914] hover:bg-[#f4222d] transition-colors cursor-pointer shadow-sm shadow-[#e50914]/30"
                 >

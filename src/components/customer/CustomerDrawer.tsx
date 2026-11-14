@@ -33,7 +33,7 @@ import { useCartStore } from '@/store/useCartStore';
 import { useI18n } from '@/lib/i18nContext';
 import { brandTheme } from '@/config/theme';
 import { formatPrice, cn } from '@/lib/utils';
-import { Order, OrderAddress } from '@/types';
+import { Order, OrderAddress, getSauceChoiceLabel } from '@/types';
 import { 
   maskName, 
   maskPhone, 
@@ -1050,6 +1050,11 @@ export function CustomerDrawer() {
                                               {item.selectedOptions?.tempura && (
                                                 <span className="text-[10px] text-[#ff4d58] ml-1.5 font-semibold">
                                                   ({locale === 'pl' ? 'tempura' : 'темпура'})
+                                                </span>
+                                              )}
+                                              {item.selectedOptions?.sauce && (
+                                                <span className="text-[10px] text-emerald-300 ml-1.5 font-semibold">
+                                                  ({getSauceChoiceLabel(item.selectedOptions.sauce, locale as 'pl' | 'uk')})
                                                 </span>
                                               )}
                                             </span>

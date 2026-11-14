@@ -92,9 +92,47 @@ export interface Category {
   sort_order?: number;
 }
 
+export type SauceChoiceKey =
+  | 'unagi'
+  | 'teriyaki'
+  | 'mango-jalapeno'
+  | 'sweet-chili'
+  | 'sriracha-mayo';
+
+export const TEMPURA_SAUCE_CHOICES: {
+  key: SauceChoiceKey;
+  name: { pl: string; uk: string };
+}[] = [
+  { key: 'unagi', name: { pl: 'Sos Unagi', uk: 'Соус Унагі' } },
+  { key: 'teriyaki', name: { pl: 'Sos Teriyaki', uk: 'Соус Теріякі' } },
+  { key: 'sriracha-mayo', name: { pl: 'Sos Sriracha Mayo', uk: 'Соус Шрірача Майо' } },
+  { key: 'sweet-chili', name: { pl: 'Sos Słodkie Chili', uk: 'Соус Солодкий Чилі' } },
+  { key: 'mango-jalapeno', name: { pl: 'Sos Mango Jalapeño', uk: 'Соус Манго Халапеньйо' } },
+];
+
+export function requiresSauceSelection(
+  product?: { id?: string; name?: { pl?: string; uk?: string } | string } | null
+): boolean {
+  if (!product) return false;
+  if (product.id === 'krewetki-tempurze' || product.id === 'kalmar-tempurze') return true;
+  const plName = typeof product.name === 'object' ? product.name.pl || '' : String(product.name || '');
+  const ukName = typeof product.name === 'object' ? product.name.uk || '' : '';
+  return (
+    /krewetki w tempurze|kalmar w tempurze/i.test(plName) ||
+    /креветки в темпурі|кальмар у темпурі/i.test(ukName)
+  );
+}
+
+export function getSauceChoiceLabel(key?: SauceChoiceKey, locale: 'pl' | 'uk' = 'pl'): string {
+  if (!key) return '';
+  const found = TEMPURA_SAUCE_CHOICES.find((s) => s.key === key);
+  return found ? found.name[locale] : key;
+}
+
 export interface SelectedProductOptions {
   baked?: boolean;
   tempura?: boolean;
+  sauce?: SauceChoiceKey;
 }
 
 export interface CartItem {

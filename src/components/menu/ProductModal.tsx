@@ -23,7 +23,7 @@ import { ProductBadge } from '@/components/menu/ProductBadge';
 import { CornerRibbon } from '@/components/menu/CornerRibbon';
 import { getProductZoom } from '@/lib/imageZoom';
 import { useSettingsStore } from '@/store/useSettingsStore';
-import { ALLERGENS, AllergenKey } from '@/types';
+import { ALLERGENS, AllergenKey, SauceChoiceKey, TEMPURA_SAUCE_CHOICES, requiresSauceSelection } from '@/types';
 import { DEFAULT_PRODUCT_ALLERGENS } from '@/lib/allergenData';
 
 export function ProductModal() {
@@ -43,12 +43,17 @@ export function ProductModal() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isBakedSelected, setIsBakedSelected] = useState(false);
   const [isTempuraSelected, setIsTempuraSelected] = useState(false);
+  const [selectedSauce, setSelectedSauce] = useState<SauceChoiceKey | null>(null);
+  const [sauceError, setSauceError] = useState(false);
   const [isAllergensOpen, setIsAllergensOpen] = useState(false);
+  const sauceSectionRef = useRef<HTMLDivElement | null>(null);
 
   // Скидання вибору модифікаторів та алергенів при зміні страви
   useEffect(() => {
     setIsBakedSelected(false);
     setIsTempuraSelected(false);
+    setSelectedSauce(null);
+    setSauceError(false);
     setIsAllergensOpen(false);
   }, [selectedProduct?.id]);
 
@@ -173,11 +178,19 @@ export function ProductModal() {
     DEFAULT_PRODUCT_ALLERGENS[selectedProduct.id] ||
     [];
 
+  const needsSauce = requiresSauceSelection(selectedProduct);
+
   // Додавання до кошика (не закриваємо модалку, залишаємо користувача в картці)
   const handleAddToCart = () => {
+    if (needsSauce && !selectedSauce) {
+      setSauceError(true);
+      sauceSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     addItem(selectedProduct, modalQuantity, {
       baked: isBakedSelected,
       tempura: isTempuraSelected,
+      sauce: needsSauce && selectedSauce ? selectedSauce : undefined,
     });
     setIsAdded(true);
     setTimeout(() => {
@@ -519,6 +532,75 @@ export function ProductModal() {
                   </div>
                 )}
 
+                {/* Обовʼязковий вибір безкоштовного соусу для креветок та кальмарів у темпурі */}
+                {needsSauce && (
+                  <div
+                    ref={sauceSectionRef}
+                    className={cn(
+                      'pt-3 border-t space-y-2 transition-colors',
+                      sauceError && !selectedSauce ? 'border-red-500/50' : 'border-white/10'
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10.5px] font-bold text-zinc-300 uppercase tracking-wider">
+                        {locale === 'pl' ? 'Wybierz 1 sos (wymagane):' : 'Оберіть 1 соус (обовʼязково):'}
+                      </span>
+                      {sauceError && !selectedSauce && (
+                        <span className="text-[10.5px] font-black text-[#ff4d58] animate-pulse">
+                          {locale === 'pl' ? 'Wymagany wybór!' : 'Обовʼязковий вибір!'}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                      {TEMPURA_SAUCE_CHOICES.map((sauce, idx) => {
+                        const isChosen = selectedSauce === sauce.key;
+                        const isLastFullWidth = idx === TEMPURA_SAUCE_CHOICES.length - 1;
+                        return (
+                          <button
+                            key={sauce.key}
+                            type="button"
+                            onClick={() => {
+                              setSelectedSauce(sauce.key);
+                              setSauceError(false);
+                            }}
+                            style={{
+                              clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                            }}
+                            className={cn(
+                              'flex items-center justify-between p-2 rounded-none border transition-all cursor-pointer text-left select-none',
+                              isLastFullWidth && 'sm:col-span-2',
+                              isChosen
+                                ? 'bg-[#e50914]/15 border-[#e50914]/70 text-white shadow-sm shadow-red-500/20'
+                                : sauceError && !selectedSauce
+                                ? 'bg-red-500/10 border-red-500/50 text-zinc-200 hover:border-red-400'
+                                : 'bg-white/5 border-white/10 text-zinc-300 hover:border-white/20 hover:bg-white/10'
+                            )}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span
+                                className={cn(
+                                  'w-4 h-4 rounded-xs border flex items-center justify-center transition-colors shrink-0',
+                                  isChosen
+                                    ? 'bg-[#e50914] border-red-400 text-white'
+                                    : sauceError && !selectedSauce
+                                    ? 'border-red-400/70 bg-transparent'
+                                    : 'border-white/30 bg-transparent'
+                                )}
+                              >
+                                {isChosen && <Check className="w-3 h-3 stroke-[3]" />}
+                              </span>
+                              <span className="text-xs font-bold leading-tight truncate">
+                                {sauce.name[locale]}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* Блок вибору додаткових модифікаторів: печена риба / рол у темпурі */}
                 {(selectedProduct.canBeBaked || selectedProduct.canBeTempura) && (
                   <div className="pt-3 border-t border-white/10 space-y-2">
@@ -660,6 +742,8 @@ export function ProductModal() {
                     className={`flex-1 h-11 flex items-center justify-center gap-2 px-4 font-black text-xs sm:text-sm shadow-lg transition-all cursor-pointer select-none ${
                       isAdded
                         ? 'bg-emerald-600 text-white shadow-emerald-500/30'
+                        : needsSauce && !selectedSauce
+                        ? 'bg-zinc-800/90 text-zinc-400 border border-white/10 shadow-none hover:border-red-500/40 hover:text-zinc-200'
                         : 'bg-gradient-to-r from-[#e50914] via-[#f4222d] to-[#b80710] hover:brightness-110 text-white shadow-[#e50914]/30 hover:shadow-[#e50914]/50 active:scale-[0.98]'
                     }`}
                   >
@@ -668,6 +752,8 @@ export function ProductModal() {
                         <Check className="w-4 h-4 stroke-[3] animate-in zoom-in" />
                         <span>{locale === 'pl' ? 'Dodano!' : 'Додано!'}</span>
                       </>
+                    ) : needsSauce && !selectedSauce ? (
+                      <span>{locale === 'pl' ? 'Wybierz sos powyżej' : 'Оберіть соус вище'}</span>
                     ) : (
                       <>
                         <ShoppingBag className="w-4 h-4 shrink-0" />
@@ -752,6 +838,8 @@ export function ProductModal() {
                 className={`flex-1 h-11 flex items-center justify-center gap-2 px-4 font-black text-xs shadow-lg transition-all cursor-pointer select-none ${
                   isAdded
                     ? 'bg-emerald-600 text-white shadow-emerald-500/30'
+                    : needsSauce && !selectedSauce
+                    ? 'bg-zinc-800/90 text-zinc-400 border border-white/10 shadow-none'
                     : 'bg-gradient-to-r from-[#e50914] via-[#f4222d] to-[#b80710] hover:brightness-110 text-white shadow-[#e50914]/30 active:scale-[0.98]'
                 }`}
               >
@@ -760,6 +848,8 @@ export function ProductModal() {
                     <Check className="w-4 h-4 stroke-[3] animate-in zoom-in" />
                     <span>{locale === 'pl' ? 'Dodano!' : 'Додано!'}</span>
                   </>
+                ) : needsSauce && !selectedSauce ? (
+                  <span>{locale === 'pl' ? 'Wybierz sos powyżej' : 'Оберіть соус вище'}</span>
                 ) : (
                   <>
                     <ShoppingBag className="w-4 h-4 shrink-0" />

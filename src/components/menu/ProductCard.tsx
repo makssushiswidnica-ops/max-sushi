@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Minus, Check, UtensilsCrossed, Gift } from 'lucide-react';
-import { Product } from '@/types';
+import { Product, requiresSauceSelection } from '@/types';
 import { ProductBadge } from '@/components/menu/ProductBadge';
 import { CornerRibbon } from '@/components/menu/CornerRibbon';
 import { getProductZoom } from '@/lib/imageZoom';
@@ -33,9 +33,11 @@ export function ProductCard({ product }: ProductCardProps) {
   const giftPromo = useSettingsStore((s) => s.giftPromo);
   const isGiftProduct = mounted && giftPromo?.enabled && giftPromo.productId === product.id;
 
-  const cartItem = mounted ? items.find((item) => item.product.id === product.id && !item.isGift) : undefined;
-  const quantity = cartItem?.quantity || 0;
-  const isEditing = activeCardId === product.id && quantity > 0;
+  const cartItemsForProduct = mounted ? items.filter((item) => item.product.id === product.id && !item.isGift) : [];
+  const cartItem = cartItemsForProduct[0];
+  const quantity = cartItemsForProduct.reduce((sum, item) => sum + item.quantity, 0);
+  const needsSauce = requiresSauceSelection(product);
+  const isEditing = activeCardId === product.id && quantity > 0 && !needsSauce;
 
   // Автоматичне повернення кнопки до компактного стану після 3.5 секунд бездіяльності
   useEffect(() => {
@@ -202,6 +204,10 @@ export function ProductCard({ product }: ProductCardProps) {
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
+                if (needsSauce) {
+                  setSelectedProduct(product);
+                  return;
+                }
                 addItem(product);
                 setActiveCardId(product.id);
               }}
@@ -225,8 +231,8 @@ export function ProductCard({ product }: ProductCardProps) {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  const next = quantity - 1;
-                  updateQuantity(product.id, next);
+                  const next = (cartItem?.quantity || quantity) - 1;
+                  updateQuantity(product.id, next, cartItem?.selectedOptions);
                   if (next <= 0) setActiveCardId(null);
                 }}
                 aria-label="Зменшити"
@@ -241,7 +247,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  updateQuantity(product.id, quantity + 1);
+                  updateQuantity(product.id, (cartItem?.quantity || quantity) + 1, cartItem?.selectedOptions);
                 }}
                 aria-label="Збільшити"
                 className="flex items-center justify-center w-7 h-7 bg-[#e50914] hover:bg-[#f4222d] text-white transition-colors cursor-pointer shadow-sm shadow-[#e50914]/30"
@@ -255,6 +261,10 @@ export function ProductCard({ product }: ProductCardProps) {
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
+                if (needsSauce) {
+                  setSelectedProduct(product);
+                  return;
+                }
                 setActiveCardId(product.id);
               }}
               style={{
