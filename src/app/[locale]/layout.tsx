@@ -227,14 +227,77 @@ export default async function LocaleLayout({
       '@type': 'Menu',
       name: 'Maks Sushi Menu',
       url: `${baseUrl}/${locale}#catalog`,
-      hasMenuItemSection: [
-        { '@type': 'MenuSection', name: 'Mini Maki' },
-        { '@type': 'MenuSection', name: 'Futomaki' },
-        { '@type': 'MenuSection', name: 'Rolki' },
-        { '@type': 'MenuSection', name: 'Lux Rolki' },
-        { '@type': 'MenuSection', name: 'Zestawy' },
+      hasMenuSection: [
+        { '@type': 'MenuSection', name: locale === 'pl' ? 'Mini Maki' : 'Міні Макі' },
+        { '@type': 'MenuSection', name: locale === 'pl' ? 'Futomaki' : 'Футомакі' },
+        { '@type': 'MenuSection', name: locale === 'pl' ? 'Rolki (Kalifornia, Filadelfia)' : 'Роли (Каліфорнія, Філадельфія)' },
+        { '@type': 'MenuSection', name: locale === 'pl' ? 'Lux Rolki' : 'Люкс Роли' },
+        { '@type': 'MenuSection', name: locale === 'pl' ? 'Pieczone Rolki' : 'Запечені Роли' },
+        { '@type': 'MenuSection', name: locale === 'pl' ? 'Rolki w Tempurze' : 'Роли в Темпурі' },
+        { '@type': 'MenuSection', name: locale === 'pl' ? 'Zupy Japońskie (Ramen, Tom Yum, Miso)' : 'Японські Супи (Рамен, Том Ям, Місо)' },
+        { '@type': 'MenuSection', name: locale === 'pl' ? 'Poke Bowl' : 'Поке Боул' },
+        { '@type': 'MenuSection', name: locale === 'pl' ? 'Przekąski (Krewetki w Tempurze, Gyoza)' : 'Закуски (Креветки в Темпурі, Гьодза)' },
+        { '@type': 'MenuSection', name: locale === 'pl' ? 'Zestawy Sushi' : 'Сети Суші' },
       ],
     },
+  };
+
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: locale === 'pl'
+      ? [
+          {
+            '@type': 'Question',
+            name: 'Gdzie znajduje się Maks Sushi w Świdnicy i jakie są godziny otwarcia?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Restauracja Maks Sushi znajduje się przy ul. Parkowej 8 w Świdnicy (58-100). Jesteśmy otwarci od wtorku do czwartku oraz w niedziele w godz. 12:00–21:00, a w piątki i soboty w godz. 12:00–22:00.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Ile kosztuje dostawa sushi na terenie Świdnicy i okolic?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Dostawa na terenie Świdnicy kosztuje 5 zł, a przy zamówieniach od 150 zł jest całkowicie darmowa (0 zł). Realizujemy również dostawy poza Świdnicę (m.in. Pszenno, Witoszów, Bystrzyca, Marcinowice, Jaworzyna Śląska, Świebodzice).',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Czy przysługuje zniżka na odbiór osobisty lub pierwsze zamówienie?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Tak! Przy odbiorze osobistym w lokalu przy ul. Parkowej 8 otrzymujesz -10% rabatu na rolki i zestawy (z wyłączeniem pozycji już objętych promocją). Nowi klienci otrzymują także -10% zniżki powitalnej na pierwsze zamówienie online.',
+            },
+          },
+        ]
+      : [
+          {
+            '@type': 'Question',
+            name: 'Де знаходиться Maks Sushi у Свідниці та який графік роботи?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Заклад Maks Sushi розташований за адресою ul. Parkowa 8, 58-100 Świdnica. Ми працюємо з вівторка по четвер та в неділю з 12:00 до 21:00, а в пʼятницю та суботу — з 12:00 до 22:00.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Скільки коштує доставка суші по Свідниці та за місто?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Доставка по Свідниці коштує 5 zł, а при замовленні від 150 zł — безкоштовна (0 zł). Також доставляємо у передмістя Свідниці (Pszenno, Witoszów, Bystrzyca, Marcinowice, Jaworzyna Śląska, Świebodzice).',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Чи є знижка на самовивіз або на перше замовлення?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Так! При самовивозі з нашого закладу на ul. Parkowa 8 діє знижка -10%, а для нових клієнтів на сайті діє вітальна знижка -10% на перше замовлення.',
+            },
+          },
+        ],
   };
 
   return (
@@ -242,6 +305,10 @@ export default async function LocaleLayout({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
       <div suppressHydrationWarning className="flex flex-col min-h-screen">
         <Header />

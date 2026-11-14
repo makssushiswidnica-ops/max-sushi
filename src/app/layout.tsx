@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from 'next';
-import { Montserrat, Knewave, Unbounded, Dela_Gothic_One, Rubik_Wet_Paint } from 'next/font/google';
+import { Montserrat, Knewave, Rubik_Wet_Paint } from 'next/font/google';
 import localFont from 'next/font/local';
-import Script from 'next/script';
 import './globals.css';
 import { BisSkinCleanup } from '@/components/common/BisSkinCleanup';
+import { Analytics } from '@/components/common/Analytics';
 
 const montserrat = Montserrat({
   subsets: ['latin', 'cyrillic'],
@@ -16,20 +16,6 @@ const knewave = Knewave({
   subsets: ['latin'],
   weight: ['400'],
   variable: '--font-knewave',
-  display: 'swap',
-});
-
-const delaGothicOne = Dela_Gothic_One({
-  subsets: ['latin', 'cyrillic'],
-  weight: ['400'],
-  variable: '--font-dela-gothic',
-  display: 'swap',
-});
-
-const unbounded = Unbounded({
-  subsets: ['latin', 'cyrillic'],
-  weight: ['700', '800', '900'],
-  variable: '--font-unbounded',
   display: 'swap',
 });
 
@@ -82,22 +68,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pl" suppressHydrationWarning className={`${montserrat.variable} ${knewave.variable} ${delaGothicOne.variable} ${unbounded.variable} ${edoSZ.variable} ${rubikWetPaint.variable} dark antialiased`}>
-      <head>
-        <Script
-          src={`https://www.googletagmanager.com/gtm.js?id=${gtmId}`}
-          strategy="afterInteractive"
-        />
-        <Script id="google-tag-init" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', '${gaId}');
-          `}
-        </Script>
-      </head>
+    <html lang="pl" suppressHydrationWarning className={`${montserrat.variable} ${knewave.variable} ${edoSZ.variable} ${rubikWetPaint.variable} dark antialiased`}>
       <body suppressHydrationWarning className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col font-sans selection:bg-[#e50914] selection:text-white">
+        <Analytics gtmId={gtmId} gaId={gaId} />
         <BisSkinCleanup />
         {children}
       </body>

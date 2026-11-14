@@ -62,19 +62,18 @@ export function ProductModal() {
   const cardTouchStartY = useRef<number | null>(null);
   const photoTouchStartX = useRef<number | null>(null);
 
-  // Синхронізація актуальних страв та категорій напряму з бази даних Supabase
+  // Синхронізація актуальних страв та категорій лише якщо модалка відкрита, а стор ще порожній
   useEffect(() => {
-    if (menuProducts.length === 0) {
-      fetchMenuData().then((data) => {
-        if (data.products?.length > 0) {
-          setMenuProducts(data.products.filter((p) => p.isAvailable !== false));
-        }
-        if (data.categories?.length > 0) {
-          setMenuCategories(data.categories);
-        }
-      });
-    }
-  }, [menuProducts.length, setMenuProducts, setMenuCategories]);
+    if (!selectedProduct || menuProducts.length > 0) return;
+    fetchMenuData().then((data) => {
+      if (data.products?.length > 0) {
+        setMenuProducts(data.products.filter((p) => p.isAvailable !== false));
+      }
+      if (data.categories?.length > 0) {
+        setMenuCategories(data.categories);
+      }
+    });
+  }, [selectedProduct, menuProducts.length, setMenuProducts, setMenuCategories]);
 
   // Список доступних страв з БД для гортання
   const activeProducts = menuProducts;

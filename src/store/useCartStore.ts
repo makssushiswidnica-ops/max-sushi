@@ -130,7 +130,7 @@ export const useCartStore = create<CartState>()(
       setIsMenuOpen: (open: boolean) => set({ isMenuOpen: open }),
       prepWaitTimeMinutes: 40,
       setPrepWaitTimeMinutes: (minutes: number) => set({ prepWaitTimeMinutes: Math.max(10, Math.min(minutes, 240)) }),
-      isCompactView: false,
+      isCompactView: true,
       setIsCompactView: (compact: boolean) => set({ isCompactView: compact }),
       toggleCompactView: () => set((state) => ({ isCompactView: !state.isCompactView })),
 
@@ -280,6 +280,14 @@ export const useCartStore = create<CartState>()(
         personsCount: state.personsCount,
         prepWaitTimeMinutes: state.prepWaitTimeMinutes,
         isCompactView: state.isCompactView,
+        compactGridDefaultV2: true,
+      }),
+      merge: (persistedState: any, currentState) => ({
+        ...currentState,
+        ...(persistedState || {}),
+        isCompactView: persistedState?.compactGridDefaultV2
+          ? persistedState.isCompactView
+          : true,
       }),
     }
   )

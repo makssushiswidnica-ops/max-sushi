@@ -586,6 +586,28 @@ export function MenuCatalog() {
             </div>
           </div>
         )}
+
+        {/* Повний семантичний каталог страв для індексації пошуковими роботами Google */}
+        <div className="sr-only" aria-hidden="true">
+          {categoriesList.map((cat) => {
+            const catItems = productsList.filter((p) => p.categoryId === cat.id && p.isAvailable !== false);
+            if (catItems.length === 0) return null;
+            return (
+              <section key={`seo-${cat.id}`}>
+                <h2>{cat.name[locale]} — Maks Sushi Świdnica</h2>
+                <ul>
+                  {catItems.map((prod) => (
+                    <li key={`seo-prod-${prod.id}`}>
+                      <h3>{prod.name[locale]}</h3>
+                      <p>{prod.description[locale]}</p>
+                      <span>{prod.price} PLN</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

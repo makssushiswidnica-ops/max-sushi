@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useI18n } from '@/lib/i18nContext';
 import { useSettingsStore } from '@/store/useSettingsStore';
 
@@ -41,14 +42,16 @@ export function HeroBanner() {
 
   return (
     <div className="hero-banner-container relative overflow-hidden min-h-[500px] sm:min-h-[560px] flex flex-col justify-between border-b border-white/10 pt-10 sm:pt-16 pb-8 sm:pb-10">
-      {/* Фонове атмосферне зображення зі свіжими суші-ролами */}
+      {/* Фонове атмосферне зображення зі свіжими суші-ролами (оптимізоване через next/image для LCP) */}
       <div className="absolute inset-0 z-0">
-        <img
+        <Image
           src="/images/hero_sushi_bg.jpg"
           alt={locale === 'pl' ? 'Najlepsze Sushi w Świdnicy — Maks Sushi dostawa i odbiór' : 'Найкращі Суші у Свідниці — Maks Sushi доставка та самовивіз'}
-          fetchPriority="high"
-          decoding="async"
-          className="w-full h-full object-cover object-left sm:object-center"
+          fill
+          priority
+          sizes="100vw"
+          quality={80}
+          className="object-cover object-left sm:object-center"
         />
         {/* Збалансоване затемнення: м'яка радіальна та вертикальна віньєтка, що забезпечує ідеальну контрастність тексту по центру */}
         <div className="absolute inset-0 bg-[#09090b]/55" />
@@ -72,19 +75,21 @@ export function HeroBanner() {
           >
             {locale === 'pl' ? (
               <>
-                Najlepsze Sushi w{' '}
-                <span className="whitespace-nowrap inline-block">
-                  <span className="inline-block relative">
-                    <span className="inline-block">S</span>
-                    <span 
-                      aria-hidden="true" 
-                      className="absolute -top-[0.22em] left-[0.28em] text-[0.65em] font-black pointer-events-none select-none text-[#fdf8f4]"
-                      style={{ transform: 'rotate(18deg)' }}
-                    >
-                      ˊ
+                <span className="sr-only">Najlepsze Sushi w Świdnicy</span>
+                <span aria-hidden="true">
+                  Najlepsze Sushi w{' '}
+                  <span className="whitespace-nowrap inline-block">
+                    <span className="inline-block relative">
+                      <span className="inline-block">S</span>
+                      <span 
+                        className="absolute -top-[0.22em] left-[0.28em] text-[0.65em] font-black pointer-events-none select-none text-[#fdf8f4]"
+                        style={{ transform: 'rotate(18deg)' }}
+                      >
+                        ˊ
+                      </span>
                     </span>
+                    widnicy
                   </span>
-                  widnicy
                 </span>
               </>
             ) : (
