@@ -55,6 +55,8 @@ export const viewport: Viewport = {
 };
 
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://maks-sushi.pl';
+const gtmId = process.env.NEXT_PUBLIC_GTM_ID || 'GTM-TDK96T2F';
+const gaId = process.env.NEXT_PUBLIC_GA_ID || 'G-VNTVG0MNHN';
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
@@ -83,7 +85,7 @@ export default function RootLayout({
     <html lang="pl" suppressHydrationWarning className={`${montserrat.variable} ${knewave.variable} ${delaGothicOne.variable} ${unbounded.variable} ${edoSZ.variable} ${rubikWetPaint.variable} dark antialiased`}>
       <head>
         <Script
-          src="https://www.googletagmanager.com/gtm.js?id=GTM-TDK96T2F"
+          src={`https://www.googletagmanager.com/gtm.js?id=${gtmId}`}
           strategy="afterInteractive"
         />
         <Script id="google-tag-init" strategy="afterInteractive">
@@ -91,6 +93,7 @@ export default function RootLayout({
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
+            gtag('config', '${gaId}');
           `}
         </Script>
       </head>
