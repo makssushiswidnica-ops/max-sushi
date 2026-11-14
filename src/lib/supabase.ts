@@ -19,6 +19,20 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 /**
+ * Відправляє миттєве сповіщення про нове замовлення в Telegram-групу (через серверний роут)
+ */
+function notifyTelegramOrder(order: Order): void {
+  if (typeof window === 'undefined') return;
+  fetch('/api/telegram/notify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ order }),
+  }).catch((err) => {
+    console.warn('Telegram notification notice:', err);
+  });
+}
+
+/**
  * Зберігає оформлене замовлення в базу даних Supabase або в локальну історію
  */
 export async function createOrder(order: Order): Promise<{ success: boolean; orderId: string; error?: string }> {
@@ -86,9 +100,11 @@ export async function createOrder(order: Order): Promise<{ success: boolean; ord
         if (fallbackError) {
           console.warn('Supabase fallback insert error:', fallbackError.message);
         } else if (fallbackData) {
+          notifyTelegramOrder(order);
           return { success: true, orderId: fallbackData.id };
         }
       } else if (data) {
+        notifyTelegramOrder(order);
         return { success: true, orderId: data.id };
       }
     }
@@ -101,6 +117,7 @@ export async function createOrder(order: Order): Promise<{ success: boolean; ord
       window.dispatchEvent(new CustomEvent('max-sushi-new-order', { detail: order }));
     }
 
+    notifyTelegramOrder(order);
     return { success: true, orderId: order.id };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown order error';
