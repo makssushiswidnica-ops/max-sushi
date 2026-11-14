@@ -75,7 +75,7 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { cn, formatPrice } from '@/lib/utils';
 import { supabase, isSupabaseConfigured, createOrder, saveStoreSettings, fetchStoreSettings } from '@/lib/supabase';
 import { brandTheme } from '@/config/theme';
-import { Category, Product, ProductBadge as ProductBadgeType, ALLERGENS, AllergenKey, getSauceChoiceLabel } from '@/types';
+import { Category, Product, ProductBadge as ProductBadgeType, ALLERGENS, AllergenKey, SauceChoiceKey, getSauceChoiceLabel } from '@/types';
 import { DEFAULT_PRODUCT_ALLERGENS } from '@/lib/allergenData';
 import { ProductBadge } from '@/components/menu/ProductBadge';
 import { getProductZoom, ZOOM_PRESETS } from '@/lib/imageZoom';
@@ -140,6 +140,7 @@ export interface AdminOrder {
     selectedOptions?: {
       baked?: boolean;
       tempura?: boolean;
+      sauce?: SauceChoiceKey;
     };
   }>;
   subtotal: number;
