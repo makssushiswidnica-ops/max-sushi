@@ -169,7 +169,13 @@ function formatTelegramOrderMessage(order: Order): string {
   const cleanComment = (order.comment || '')
     .replace(/\[НА ЗАВТРА[^\]]*\]/gi, '')
     .replace(/\[НА ЧАС[^\]]*\]/gi, '')
+    .replace(/\[ПАЛИЧКИ[^\]]*\]/gi, '')
     .trim();
+
+  const chopsticksLabel =
+    order.personsCount === 0
+      ? 'Без паличок (Bez pałeczek)'
+      : `${order.personsCount ?? 1} компл.`;
 
   const lines = [
     `🍣 <b>НОВЕ ЗАМОВЛЕННЯ #${escapeHtml(order.id)}</b>`,
@@ -179,7 +185,7 @@ function formatTelegramOrderMessage(order: Order): string {
     deliveryHeader,
     addressBlock ? addressBlock.trimEnd() : null,
     timingText,
-    `🥢 <b>Палички (персон):</b> ${order.personsCount || 1}`,
+    `🥢 <b>Палички:</b> ${chopsticksLabel}`,
     cleanComment ? `💬 <b>Коментар:</b> <i>${escapeHtml(cleanComment)}</i>` : null,
     `━━━━━━━━━━━━━━━━━━`,
     `🍱 <b>СКЛАД ЗАМОВЛЕННЯ:</b>`,

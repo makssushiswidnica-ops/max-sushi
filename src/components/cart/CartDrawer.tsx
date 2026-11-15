@@ -20,8 +20,23 @@ export function CartDrawer() {
   const items = useCartStore((s) => s.items);
   const clearCart = useCartStore((s) => s.clearCart);
   const personsCount = useCartStore((s) => s.personsCount);
+  const isChopsticksSelected = useCartStore((s) => s.isChopsticksSelected);
   const setPersonsCount = useCartStore((s) => s.setPersonsCount);
   const setIsCheckoutOpen = useCartStore((s) => s.setIsCheckoutOpen);
+  const [chopsticksError, setChopsticksError] = React.useState(false);
+  const chopsticksSectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isChopsticksSelected) {
+      setChopsticksError(false);
+    }
+  }, [isChopsticksSelected]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setChopsticksError(false);
+    }
+  }, [isOpen]);
   const menuProducts = useCartStore((s) => s.menuProducts);
   const addItem = useCartStore((s) => s.addItem);
   const updateQuantity = useCartStore((s) => s.updateQuantity);
@@ -77,6 +92,11 @@ export function CartDrawer() {
   ) : null;
 
   const handleProceedToCheckout = () => {
+    if (!isChopsticksSelected) {
+      setChopsticksError(true);
+      chopsticksSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     setOpen(false);
     setIsCheckoutOpen(true);
   };
@@ -412,8 +432,18 @@ export function CartDrawer() {
             </div>
           )}
 
-            {/* Вибір кількості приборів та паличок */}
-            <div className="p-4 rounded-xl bg-[#14141c] border border-white/5 space-y-2">
+            {/* Вибір кількості приборів та паличок (обов'язкова опція) */}
+            <div
+              ref={chopsticksSectionRef}
+              className={cn(
+                'p-4 rounded-xl border space-y-3 transition-all duration-200',
+                chopsticksError
+                  ? 'bg-red-950/30 border-[#e50914] ring-1 ring-[#e50914]/60 shadow-lg shadow-red-950/40'
+                  : isChopsticksSelected
+                    ? 'bg-[#14141c] border-emerald-500/35'
+                    : 'bg-[#14141c] border-amber-500/35'
+              )}
+            >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <Utensils className="w-4 h-4 text-[#e50914] shrink-0" />
@@ -421,30 +451,96 @@ export function CartDrawer() {
                     {t.cart.chopsticks}
                   </span>
                 </div>
+
+                {isChopsticksSelected ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
+                    <CheckCircle2 className="w-3 h-3" />
+                    <span>
+                      {personsCount === 0
+                        ? (locale === 'pl' ? 'Bez pałeczek' : 'Без паличок')
+                        : `${personsCount} ${locale === 'pl' ? 'zest.' : 'компл.'}`}
+                    </span>
+                  </span>
+                ) : (
+                  <span
+                    className={cn(
+                      'px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shrink-0 border',
+                      chopsticksError
+                        ? 'bg-[#e50914] text-white border-[#e50914] animate-pulse'
+                        : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                    )}
+                  >
+                    {locale === 'pl' ? 'Wymagane' : 'Обовʼязково'}
+                  </span>
+                )}
+              </div>
+
+              {/* Кнопки вибору: "Без паличок" (0) або лічильник кількості */}
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPersonsCount(0)}
+                  style={{
+                    clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                  }}
+                  className={cn(
+                    'px-3 py-1.5 text-xs font-bold transition-all cursor-pointer select-none border shrink-0',
+                    isChopsticksSelected && personsCount === 0
+                      ? 'bg-[#e50914] text-white border-[#e50914] shadow-md shadow-[#e50914]/30'
+                      : 'bg-[#1b1b24] hover:bg-white/10 text-zinc-300 hover:text-white border-white/10'
+                  )}
+                >
+                  {locale === 'pl' ? 'Bez pałeczek' : 'Без паличок'}
+                </button>
+
+                {/* Лічильник - / + для вибору кількості паличок */}
                 <div
                   style={{
                     clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
                   }}
-                  className="flex items-center gap-1 bg-[#1b1b24] border border-white/10 p-1 shrink-0"
+                  className={cn(
+                    'flex items-center gap-1 bg-[#1b1b24] border p-1 shrink-0',
+                    isChopsticksSelected && personsCount > 0
+                      ? 'border-[#e50914]'
+                      : 'border-white/10'
+                  )}
                 >
                   <button
-                    onClick={() => setPersonsCount(personsCount - 1)}
+                    type="button"
+                    onClick={() => setPersonsCount(Math.max(0, (isChopsticksSelected ? personsCount : 1) - 1))}
                     className="w-6 h-6 flex items-center justify-center bg-white/5 hover:bg-white/15 text-zinc-300 text-xs font-bold cursor-pointer transition-colors shrink-0"
                   >
                     -
                   </button>
                   <span className="text-xs font-bold text-white px-2 whitespace-nowrap text-center select-none shrink-0">
-                    {personsCount} {t.cart.persons}
+                    {!isChopsticksSelected
+                      ? `? ${t.cart.persons}`
+                      : personsCount === 0
+                        ? `0 ${t.cart.persons}`
+                        : `${personsCount} ${t.cart.persons}`}
                   </span>
                   <button
-                    onClick={() => setPersonsCount(personsCount + 1)}
+                    type="button"
+                    onClick={() => setPersonsCount(!isChopsticksSelected ? 1 : personsCount + 1)}
                     className="w-6 h-6 flex items-center justify-center bg-[#e50914] hover:bg-[#f4222d] text-white text-xs font-bold cursor-pointer transition-colors shrink-0"
                   >
                     +
                   </button>
                 </div>
               </div>
-              <p className="text-[11px] text-zinc-400">
+
+              {chopsticksError && (
+                <p className="text-[11px] font-bold text-[#ff4d58] flex items-center gap-1 animate-in fade-in duration-150">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    {locale === 'pl'
+                      ? 'Proszę wybrać liczbę pałeczek lub zaznaczyć „Bez pałeczek” przed przejściem do kasy.'
+                      : 'Будь ласка, оберіть кількість паличок або натисніть «Без паличок» перед оформленням.'}
+                  </span>
+                </p>
+              )}
+
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
                 {t.cart.chopsticksHelp}
               </p>
             </div>
@@ -490,6 +586,11 @@ export function CartDrawer() {
                   <button
                     type="button"
                     onClick={() => {
+                      if (!isChopsticksSelected) {
+                        setChopsticksError(true);
+                        chopsticksSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        return;
+                      }
                       setOpen(false);
                       setIsCheckoutOpen(true);
                       setTimeout(() => {

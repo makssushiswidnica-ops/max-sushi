@@ -74,7 +74,8 @@ export function LegalDocumentView({ locale, activeDoc }: LegalDocumentViewProps)
                   '1. Zamówienia za pośrednictwem strony https://maks-sushi.pl można składać w godzinach otwarcia restauracji wskazanych w stopce oraz nagłówku serwisu (lub z wyprzedzeniem na kolejny dzień roboczy w przypadku wstrzymania bieżących zamówień).',
                   '2. W celu prawidłowej realizacji zamówienia Klient zobowiązany jest do podania prawdziwych danych kontaktowych: imienia, aktywnego numeru telefonu oraz — w przypadku dostawy kurierem — dokładnego adresu dostawy.',
                   '3. Wszystkie dania przygotowywane są na bieżąco ze świeżych składników bezpośrednio po przyjęciu zamówienia przez kuchnię.',
-                  '4. W przypadku uzasadnionych wątpliwości co do autentyczności zamówienia lub błędnie podanego adresu, obsługa lokalu ma prawo skontaktować się z Klientem telefonicznie w celu weryfikacji zamówienia.',
+                  '4. Sos sojowy, marynowany imbir oraz wasabi dołączane są do zamówień sushi bezpłatnie w ilości zależnej od wielkości zamówienia — orientacyjnie 1 standardowy zestaw na każde 2 zamówione rolki. Dodatkowe porcje sosów i dodatków Klient może dokupić w sekcji „Dodatki”. Liczbę zestawów pałeczek (lub rezygnację z pałeczek) Klient wskazuje obowiązkowo w koszyku przed przejściem do kasy.',
+                  '5. W przypadku uzasadnionych wątpliwości co do autentyczności zamówienia lub błędnie podanego adresu, obsługa lokalu ma prawo skontaktować się z Klientem telefonicznie w celu weryfikacji zamówienia.',
                 ],
               },
               {
@@ -141,7 +142,8 @@ export function LegalDocumentView({ locale, activeDoc }: LegalDocumentViewProps)
                   '1. Замовлення через сайт https://maks-sushi.pl приймаються у робочі години закладу, вказані в шапці та футері сайту (або попередньо на наступний робочий день у разі перевантаження кухні).',
                   '2. Для коректного виконання замовлення Клієнт вказує дійсні контактні дані: імʼя, активний номер телефону та — у разі курʼєрської доставки — точну адресу доставки.',
                   '3. Усі роли та страви готуються виключно зі свіжих інгредієнтів безпосередньо після прийняття замовлення кухнею.',
-                  '4. У разі необхідності уточнення деталей замовлення або адреси адміністратор закладу може звʼязатися з Клієнтом за вказаним номером телефону.',
+                  '4. Соєвий соус, маринований імбир та васабі додаються до замовлень суші безкоштовно залежно від обсягу замовлення — орієнтовно 1 стандартний комплект на кожні 2 замовлені роли. Додаткові порції соусів та імбиру/васабі можна придбати в розділі «Додатки». Кількість комплектів паличок (або опцію «Без паличок») Клієнт обовʼязково обирає в кошику перед переходом до оформлення.',
+                  '5. У разі необхідності уточнення деталей замовлення або адреси адміністратор закладу може звʼязатися з Клієнтом за вказаним номером телефону.',
                 ],
               },
               {

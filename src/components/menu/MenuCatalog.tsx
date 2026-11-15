@@ -82,6 +82,26 @@ export function MenuCatalog() {
 
   const hasPromos = promoProducts.length > 0;
 
+  // Страви зі статусом NEW для вкладки "Новинки / Nowości"
+  const newProducts = useMemo(() => {
+    return productsList.filter((p) => p.badge === 'new');
+  }, [productsList]);
+
+  const hasNewProducts = newProducts.length > 0;
+
+  const newCategory: Category = useMemo(
+    () => ({
+      id: 'nowosci',
+      name: {
+        pl: 'Nowości',
+        uk: 'Новинки',
+      },
+      icon: 'Sparkles',
+      image: '',
+    }),
+    []
+  );
+
   const promoCategory: Category = useMemo(
     () => ({
       id: 'promocje',
@@ -95,25 +115,31 @@ export function MenuCatalog() {
     []
   );
 
-  // Об'єднаний список категорій: якщо є активні промоції, додаємо категорію в кінець списку
+  // Об'єднаний список категорій: якщо є новинки або промоції, додаємо ці вкладки в кінець списку
   const categoriesWithPromo = useMemo(() => {
-    if (hasPromos) {
-      return [...categoriesList, promoCategory];
+    const result = [...categoriesList];
+    if (hasNewProducts) {
+      result.push(newCategory);
     }
-    return categoriesList;
-  }, [hasPromos, promoCategory, categoriesList]);
+    if (hasPromos) {
+      result.push(promoCategory);
+    }
+    return result;
+  }, [hasNewProducts, newCategory, hasPromos, promoCategory, categoriesList]);
 
   // За замовчуванням завжди відкривається перша звичайна категорія з каталогу
   const [selectedCategory, setSelectedCategory] = useState<string>(
     categoriesList[0]?.id || 'mini-maki'
   );
 
-  // Якщо обрано промоції, але акції закінчилися — автоматично перемикаємо на першу звичайну категорію
+  // Якщо обрано промоції або новинки, але вони закінчилися — автоматично перемикаємо на першу звичайну категорію
   useEffect(() => {
     if (selectedCategory === 'promocje' && !hasPromos) {
       setSelectedCategory(categoriesList[0]?.id || 'mini-maki');
+    } else if (selectedCategory === 'nowosci' && !hasNewProducts) {
+      setSelectedCategory(categoriesList[0]?.id || 'mini-maki');
     }
-  }, [selectedCategory, hasPromos, categoriesList]);
+  }, [selectedCategory, hasPromos, hasNewProducts, categoriesList]);
 
   // Відновлюємо збережену користувачем категорію виключно після завершення гідрації на клієнті
   useEffect(() => {
@@ -150,8 +176,11 @@ export function MenuCatalog() {
     if (selectedCategory === 'promocje') {
       return promoProducts;
     }
+    if (selectedCategory === 'nowosci') {
+      return newProducts;
+    }
     return productsList.filter((p) => p.categoryId === selectedCategory);
-  }, [selectedCategory, promoProducts, productsList]);
+  }, [selectedCategory, promoProducts, newProducts, productsList]);
 
   // Обробка жестів свайпу вліво/вправо на екрані для перемикання категорій
   const touchStartX = useRef<number | null>(null);
@@ -346,6 +375,7 @@ export function MenuCatalog() {
         onSelectCategory={handleSelectCategory}
         categoriesList={categoriesWithPromo}
         promoCount={promoProducts.length}
+        newCount={newProducts.length}
       />
 
       <div
@@ -429,7 +459,9 @@ export function MenuCatalog() {
             {categoriesWithPromo.map((category) => {
               const categoryProducts = category.id === 'promocje'
                 ? promoProducts
-                : productsList.filter((p) => p.categoryId === category.id);
+                : category.id === 'nowosci'
+                  ? newProducts
+                  : productsList.filter((p) => p.categoryId === category.id);
               return (
                 <div key={category.id} id={`category-${category.id}`}>
                   <CategorySection

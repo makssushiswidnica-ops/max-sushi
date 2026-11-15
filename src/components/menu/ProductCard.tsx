@@ -100,7 +100,7 @@ export function ProductCard({ product }: ProductCardProps) {
       {/* Верхня частина: Прямокутне зображення майже на всю ширину картки, назва, грамовка та склад */}
       <div className="flex flex-col text-left">
         {/* Просте прямокутне зображення страви з гострими кутами та м'яким студійним світлом */}
-        {!isDodatki ? (
+        {!isDodatki || Boolean(product.image) ? (
           <div className="relative w-full aspect-[4/3] overflow-hidden bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.08)_0%,_#07070b_70%)] border border-white/10 group-hover:border-[#e50914]/50 flex items-center justify-center mb-3 transition-colors duration-300 shadow-md shadow-black/80 rounded-none">
             {/* Єдиний кутовий самурайський бейдж-стрічка з відкритим кутом і пріоритетом знижки / подарунка */}
             <CornerRibbon

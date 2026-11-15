@@ -658,6 +658,18 @@ export default function AdminPage() {
               if (matchFirstOrder) {
                 cleanComment = cleanComment.replace(/\[1\.\s*ZAMÓWIENIE:\s*-[0-9]+%\s*\(-[0-9]+\s*zł\)\]\s*/i, '').trim();
               }
+              const matchChopsticks = cleanComment.match(/\[ПАЛИЧКИ:\s*([0-9]+)\]/i);
+              if (matchChopsticks) {
+                cleanComment = cleanComment.replace(/\[ПАЛИЧКИ:\s*[0-9]+\]\s*/i, '').trim();
+              }
+              const parsedPersonsCount =
+                typeof d.persons_count === 'number'
+                  ? d.persons_count
+                  : typeof d.personsCount === 'number'
+                    ? d.personsCount
+                    : matchChopsticks
+                      ? Number(matchChopsticks[1])
+                      : 1;
 
               return {
                 id: String(d.id || ''),
@@ -673,7 +685,7 @@ export default function AdminPage() {
                 comment: cleanComment,
                 firstOrderDiscount: firstOrderDiscount,
                 first_order_discount: firstOrderDiscount,
-                personsCount: d.persons_count || d.personsCount || 1,
+                personsCount: parsedPersonsCount,
                 timing_type: timingType,
                 timingType: timingType,
                 scheduled_time: scheduledTime,
@@ -1145,8 +1157,8 @@ export default function AdminPage() {
             <span class="bold">${order.phone}</span>
           </div>
           <div class="info-row">
-            <span>Liczba osób / pałeczek:</span>
-            <span class="bold">${order.personsCount || 1} szt.</span>
+            <span>Pałeczki:</span>
+            <span class="bold">${order.personsCount === 0 ? 'Bez pałeczek (0)' : `${order.personsCount ?? 1} szt.`}</span>
           </div>
 
           ${order.comment ? `
@@ -2589,6 +2601,12 @@ export default function AdminPage() {
               >
                 {copiedPhoneId === order.id ? 'Скопійовано' : 'Копіювати'}
               </button>
+            </div>
+            <div className="pt-1 border-t border-white/5 flex items-center justify-between text-[11px]">
+              <span className="text-zinc-400">🥢 Палички:</span>
+              <span className={cn('font-bold', order.personsCount === 0 ? 'text-amber-300' : 'text-white')}>
+                {order.personsCount === 0 ? 'Без паличок (0)' : `${order.personsCount ?? 1} компл.`}
+              </span>
             </div>
           </div>
 

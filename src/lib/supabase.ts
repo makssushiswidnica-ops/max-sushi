@@ -56,7 +56,7 @@ export async function createOrder(order: Order): Promise<{ success: boolean; ord
             timing_type: order.timingType,
             scheduled_time: order.scheduledTime,
             scheduled_date: order.scheduledDate,
-            persons_count: order.personsCount || 1,
+            persons_count: order.personsCount ?? 1,
             change_from: order.changeFrom,
             status: order.status,
             created_at: order.createdAt,
@@ -73,7 +73,10 @@ export async function createOrder(order: Order): Promise<{ success: boolean; ord
         const timingNote = order.timingType === 'scheduled' && order.scheduledTime 
           ? `[НА ЧАС: ${order.scheduledTime}] ` 
           : '';
-        const combinedComment = `${timingNote}${order.comment || ''}`.trim();
+        const chopsticksNote = typeof order.personsCount === 'number'
+          ? `[ПАЛИЧКИ: ${order.personsCount}] `
+          : '';
+        const combinedComment = `${timingNote}${chopsticksNote}${order.comment || ''}`.trim();
 
         const { data: fallbackData, error: fallbackError } = await supabase
           .from('orders')

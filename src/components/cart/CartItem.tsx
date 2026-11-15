@@ -15,9 +15,12 @@ export function CartItem({ item }: CartItemProps) {
   const { locale } = useI18n();
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const removeItem = useCartStore((s) => s.removeItem);
+  const menuProducts = useCartStore((s) => s.menuProducts);
 
   const effectiveUnit = getItemUnitPrice(item.product, item.selectedOptions);
   const isGift = Boolean(item.isGift);
+  const resolvedImage =
+    item.product.image || menuProducts.find((p) => p.id === item.product.id)?.image;
 
   return (
     <div className={`flex items-center gap-3.5 p-3 rounded-xl border transition-colors ${
@@ -28,9 +31,9 @@ export function CartItem({ item }: CartItemProps) {
       {/* Фото або стильна іконка для додатків / страв без фото */}
       {isGift ? (
         <div className="relative w-16 h-16 sm:w-18 sm:h-18 rounded-lg overflow-hidden shrink-0 bg-zinc-900 border border-red-500/40 flex items-center justify-center">
-          {item.product.image ? (
+          {resolvedImage ? (
             <img
-              src={item.product.image}
+              src={resolvedImage}
               alt={item.product.name[locale]}
               className="w-full h-full object-cover"
             />
@@ -41,16 +44,16 @@ export function CartItem({ item }: CartItemProps) {
             GRATIS
           </span>
         </div>
+      ) : resolvedImage ? (
+        <img
+          src={resolvedImage}
+          alt={item.product.name[locale]}
+          className="w-16 h-16 sm:w-18 sm:h-18 rounded-lg object-cover bg-zinc-900 shrink-0 border border-white/5"
+        />
       ) : item.product.categoryId === 'dodatki' ? (
         <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-[#1a1a24] border border-white/10 flex items-center justify-center text-[#e50914] shrink-0 font-bold text-xs uppercase tracking-wider">
           +
         </div>
-      ) : item.product.image ? (
-        <img
-          src={item.product.image}
-          alt={item.product.name[locale]}
-          className="w-16 h-16 sm:w-18 sm:h-18 rounded-lg object-cover bg-zinc-900 shrink-0"
-        />
       ) : (
         <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-lg bg-zinc-900 border border-white/10 flex items-center justify-center text-zinc-600 shrink-0">
           <UtensilsCrossed className="w-6 h-6" />

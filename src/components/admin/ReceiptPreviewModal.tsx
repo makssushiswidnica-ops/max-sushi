@@ -382,8 +382,10 @@ export function ReceiptPreviewModal({
               <span style={{ fontWeight: 'bold' }}>{order.phone}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', margin: '1px 0', fontSize: `${Math.max(9.5, settings.fontSizePx - 1.5)}px` }}>
-              <span>Osoby:</span>
-              <span style={{ fontWeight: 'bold' }}>{order.personsCount || 1} szt.</span>
+              <span>Pałeczki:</span>
+              <span style={{ fontWeight: 'bold' }}>
+                {order.personsCount === 0 ? 'Bez pałeczek (0)' : `${order.personsCount ?? 1} szt.`}
+              </span>
             </div>
 
             {/* Коментар / Uwagi */}

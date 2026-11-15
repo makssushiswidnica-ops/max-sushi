@@ -295,7 +295,7 @@ export function ProductModal() {
           </div>
 
           {/* Мобільна верхня панель тільки для додатків без фото з урахуванням Safari Notch */}
-          {selectedProduct.categoryId === 'dodatki' && (
+          {selectedProduct.categoryId === 'dodatki' && productImages.length === 0 && (
             <div className="sm:hidden flex items-center justify-between px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] border-b border-white/5 bg-[#16161e] shrink-0">
               <div className="flex items-center gap-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]">
                 <button onClick={handlePrevCard} className="text-zinc-300 hover:text-white active:scale-90 p-1 cursor-pointer">
@@ -320,7 +320,7 @@ export function ProductModal() {
           {/* Внутрішній вміст: на мобільному фото зверху, опис по центру, кнопки знизу. На десктопі 2 рівні колонки */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 flex flex-col sm:flex-row sm:p-5 gap-0 sm:gap-6 items-stretch scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             {/* Колонка з фотографією: на мобільному зверху з плаваючими лічильником у верхньому лівому куті без фону і хрестиком справа. На десктопі строго 50% з overflow-hidden */}
-            {selectedProduct.categoryId !== 'dodatki' && (
+            {(selectedProduct.categoryId !== 'dodatki' || productImages.length > 0) && (
               <div
                 onTouchStart={handlePhotoTouchStart}
                 onTouchEnd={handlePhotoTouchEnd}

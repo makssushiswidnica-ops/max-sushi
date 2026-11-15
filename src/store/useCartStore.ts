@@ -65,6 +65,7 @@ interface CartState {
   selectedProduct: Product | null;
   isCheckoutOpen: boolean;
   personsCount: number;
+  isChopsticksSelected: boolean;
 
   // Меню страв з бази даних Supabase для швидкого доступу та навігації в модалці
   menuProducts: Product[];
@@ -124,6 +125,7 @@ export const useCartStore = create<CartState>()(
       setMenuCategories: (categories: Category[]) => set({ menuCategories: categories }),
       isCheckoutOpen: false,
       personsCount: 1,
+      isChopsticksSelected: false,
       activeCardId: null,
       setActiveCardId: (id: string | null) => set({ activeCardId: id }),
       isMenuOpen: false,
@@ -162,7 +164,11 @@ export const useCartStore = create<CartState>()(
           const updated = rawItems.filter(
             (item) => !(item.product.id === productId && (selectedOptions === undefined || isSameProductOptions(item.selectedOptions, selectedOptions)))
           );
-          return { items: syncGiftItem(updated, state.menuProducts) };
+          const synced = syncGiftItem(updated, state.menuProducts);
+          return {
+            items: synced,
+            ...(synced.length === 0 ? { isChopsticksSelected: false, personsCount: 1 } : {}),
+          };
         });
       },
 
@@ -194,12 +200,16 @@ export const useCartStore = create<CartState>()(
               }
             }
           }
-          return { items: syncGiftItem(updated, state.menuProducts) };
+          const synced = syncGiftItem(updated, state.menuProducts);
+          return {
+            items: synced,
+            ...(synced.length === 0 ? { isChopsticksSelected: false, personsCount: 1 } : {}),
+          };
         });
       },
 
       clearCart: () => {
-        set({ items: [] });
+        set({ items: [], isChopsticksSelected: false, personsCount: 1 });
       },
 
       setOpen: (open: boolean) => {
@@ -219,7 +229,10 @@ export const useCartStore = create<CartState>()(
       },
 
       setPersonsCount: (count: number) => {
-        set({ personsCount: Math.max(1, Math.min(count, 20)) });
+        set({
+          personsCount: Math.max(0, Math.min(count, 20)),
+          isChopsticksSelected: true,
+        });
       },
 
       getTotalCount: () => {
@@ -278,6 +291,7 @@ export const useCartStore = create<CartState>()(
       partialize: (state) => ({
         items: state.items,
         personsCount: state.personsCount,
+        isChopsticksSelected: state.isChopsticksSelected,
         prepWaitTimeMinutes: state.prepWaitTimeMinutes,
         isCompactView: state.isCompactView,
         compactGridDefaultV2: true,

@@ -16,6 +16,7 @@ interface StickyNavProps {
   onSelectCategory?: (categoryId: string) => void;
   categoriesList?: Category[];
   promoCount?: number;
+  newCount?: number;
 }
 
 export function StickyNav({
@@ -25,6 +26,7 @@ export function StickyNav({
   onSelectCategory,
   categoriesList,
   promoCount,
+  newCount,
 }: StickyNavProps) {
   const categoriesData = categoriesList && categoriesList.length > 0 ? categoriesList : categories;
   const { locale } = useI18n();
@@ -74,12 +76,14 @@ export function StickyNav({
     for (const cat of categoriesData) {
       if (cat.id === 'promocje') {
         counts[cat.id] = promoCount ?? 0;
+      } else if (cat.id === 'nowosci') {
+        counts[cat.id] = newCount ?? productsData.filter((p) => p.badge === 'new').length;
       } else {
         counts[cat.id] = productsData.filter((p) => p.categoryId === cat.id).length;
       }
     }
     return counts;
-  }, [categoriesData, productsData, promoCount]);
+  }, [categoriesData, productsData, promoCount, newCount]);
 
   // Відкриття та фокус на інпуті
   const toggleSearch = () => {
@@ -360,7 +364,7 @@ export function StickyNav({
                 <div className="flex flex-col gap-1">
                   {categoriesData.map((cat) => {
                     const isActive = cat.id === activeCategory;
-                    const isPromo = cat.id === 'promocje';
+                    const isSpecial = cat.id === 'promocje' || cat.id === 'nowosci';
                     const count = categoryCounts[cat.id] || 0;
                     return (
                       <button
@@ -373,7 +377,7 @@ export function StickyNav({
                           'w-full flex items-center justify-between gap-2 px-3 py-2 text-left transition-all cursor-pointer group select-none',
                           isActive
                             ? 'bg-gradient-to-r from-[#e50914]/25 to-[#e50914]/10 border-l-2 border-[#e50914] text-white font-extrabold shadow-sm'
-                            : isPromo
+                            : isSpecial
                               ? 'bg-gradient-to-r from-red-950/40 to-transparent border-l-2 border-[#e50914] text-red-200 hover:text-white hover:from-red-900/50'
                               : 'text-zinc-300 hover:text-white hover:bg-white/10'
                         )}
@@ -383,7 +387,7 @@ export function StickyNav({
                             'truncate shrink-0 transition-all flex items-center gap-1.5',
                             isActive 
                               ? 'text-sm sm:text-base font-extrabold text-white' 
-                              : isPromo
+                              : isSpecial
                                 ? 'text-xs sm:text-sm font-black text-[#ff4d58]'
                                 : 'text-xs sm:text-sm font-semibold'
                           )}
@@ -405,7 +409,7 @@ export function StickyNav({
                             'text-xs sm:text-sm font-bold tracking-tight shrink-0 transition-colors',
                             isActive 
                               ? 'text-red-300 font-extrabold' 
-                              : isPromo
+                              : isSpecial
                                 ? 'text-[#ff4d58] font-black'
                                 : 'text-zinc-400 group-hover:text-zinc-200'
                           )}
@@ -428,7 +432,7 @@ export function StickyNav({
         <div className="hidden lg:flex flex-1 flex-wrap items-center justify-center gap-x-2 lg:gap-x-3.5 gap-y-1 sm:gap-y-1.5 py-1 px-1 min-w-0">
           {categoriesData.map((category) => {
             const isActive = category.id === activeCategory;
-            const isPromo = category.id === 'promocje';
+            const isSpecial = category.id === 'promocje' || category.id === 'nowosci';
             return (
               <button
                 key={category.id}
@@ -438,7 +442,7 @@ export function StickyNav({
                   'relative px-2.5 lg:px-3 py-1 text-xs lg:text-[13px] font-bold tracking-wide uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none flex items-center gap-1',
                   isActive
                     ? 'text-white font-black scale-105'
-                    : isPromo
+                    : isSpecial
                       ? 'text-[#ff4d58] hover:text-[#ff7880] font-black hover:scale-105 drop-shadow-[0_0_8px_rgba(229,9,20,0.4)]'
                       : 'text-zinc-400 hover:text-white hover:scale-102'
                 )}
@@ -452,7 +456,7 @@ export function StickyNav({
           })}
         </div>
 
-        {/* МОБІЛЬНИЙ ТА ПЛАНШЕТНИЙ ВИГЛЯД: Циклічна горизонтальна стрічка (flex lg:hidden) */}
+        {/* МОБІЛЬНИЙ ТА ПЛАНШЕТНИЙ ВИГЛЯД: Циклічна горизонтальна стрічка без ручного скролу (flex lg:hidden) */}
         <div className={cn(
           "relative flex-1 min-w-0 items-center transition-all flex lg:hidden",
           isSearchOpen ? "hidden" : "flex"
@@ -461,15 +465,15 @@ export function StickyNav({
           <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-[#07070a] to-transparent z-10" />
           <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[#07070a] to-transparent z-10" />
 
-          {/* Циклічна стрічка категорій на мобільному */}
+          {/* Циклічна стрічка категорій на мобільному (ручний скрол вимкнено, керується перемиканням категорій) */}
           <div
             ref={navRef}
-            className="flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth py-2 w-full px-2 touch-pan-x select-none"
+            className="flex items-center gap-1 overflow-x-hidden no-scrollbar scroll-smooth py-2 w-full px-2 touch-pan-y select-none"
             aria-label="Категорії меню"
           >
             {cyclicItems.map(({ category, offset }) => {
               const isCenter = offset === 0;
-              const isPromo = category.id === 'promocje';
+              const isSpecial = category.id === 'promocje' || category.id === 'nowosci';
               return (
                 <button
                   key={`${category.id}-${offset}`}
@@ -479,7 +483,7 @@ export function StickyNav({
                     'relative px-3 py-1.5 text-sm font-bold whitespace-nowrap transition-all duration-300 ease-out cursor-pointer shrink-0 select-none active:scale-95',
                     isCenter
                       ? 'text-white scale-105'
-                      : isPromo
+                      : isSpecial
                         ? 'text-[#ff4d58] opacity-95 scale-100 font-black'
                         : 'text-zinc-500 opacity-60 scale-100'
                   )}
