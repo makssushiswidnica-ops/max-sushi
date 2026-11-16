@@ -69,20 +69,33 @@ export function Header() {
   useEffect(() => {
     setMounted(true);
 
-    // Синхронізація глобальних налаштувань магазину (стоп-кран замовлень, час приготування)
+    // Синхронізація глобальних налаштувань магазину (стоп-кран замовлень, час приготування, тарифи доставки)
     fetchStoreSettings().then((synced) => {
       if (synced) {
+        const settingsUpdates: Record<string, any> = {};
         if (typeof synced.isOrdersPaused === 'boolean') {
-          useSettingsStore.getState().updateSettings({ isOrdersPaused: synced.isOrdersPaused });
+          settingsUpdates.isOrdersPaused = synced.isOrdersPaused;
+        }
+        if (typeof synced.cityFreeThreshold === 'number') {
+          settingsUpdates.cityFreeThreshold = synced.cityFreeThreshold;
+        }
+        if (typeof synced.cityStandardFee === 'number') {
+          settingsUpdates.cityStandardFee = synced.cityStandardFee;
+        }
+        if (typeof synced.suburb10kmFee === 'number') {
+          settingsUpdates.suburb10kmFee = synced.suburb10kmFee;
+        }
+        if (synced.firstOrderPromo) {
+          settingsUpdates.firstOrderPromo = synced.firstOrderPromo;
+        }
+        if (synced.giftPromo) {
+          settingsUpdates.giftPromo = synced.giftPromo;
+        }
+        if (Object.keys(settingsUpdates).length > 0) {
+          useSettingsStore.getState().updateSettings(settingsUpdates);
         }
         if (typeof synced.prepWaitTimeMinutes === 'number') {
           useCartStore.getState().setPrepWaitTimeMinutes(synced.prepWaitTimeMinutes);
-        }
-        if (synced.firstOrderPromo) {
-          useSettingsStore.getState().updateSettings({ firstOrderPromo: synced.firstOrderPromo });
-        }
-        if (synced.giftPromo) {
-          useSettingsStore.getState().updateSettings({ giftPromo: synced.giftPromo });
         }
       }
     });
@@ -98,17 +111,30 @@ export function Header() {
             if (rawComment) {
               try {
                 const parsed = JSON.parse(rawComment);
+                const settingsUpdates: Record<string, any> = {};
                 if (typeof parsed.isOrdersPaused === 'boolean') {
-                  useSettingsStore.getState().updateSettings({ isOrdersPaused: parsed.isOrdersPaused });
+                  settingsUpdates.isOrdersPaused = parsed.isOrdersPaused;
+                }
+                if (typeof parsed.cityFreeThreshold === 'number') {
+                  settingsUpdates.cityFreeThreshold = parsed.cityFreeThreshold;
+                }
+                if (typeof parsed.cityStandardFee === 'number') {
+                  settingsUpdates.cityStandardFee = parsed.cityStandardFee;
+                }
+                if (typeof parsed.suburb10kmFee === 'number') {
+                  settingsUpdates.suburb10kmFee = parsed.suburb10kmFee;
+                }
+                if (parsed.firstOrderPromo) {
+                  settingsUpdates.firstOrderPromo = parsed.firstOrderPromo;
+                }
+                if (parsed.giftPromo) {
+                  settingsUpdates.giftPromo = parsed.giftPromo;
+                }
+                if (Object.keys(settingsUpdates).length > 0) {
+                  useSettingsStore.getState().updateSettings(settingsUpdates);
                 }
                 if (typeof parsed.prepWaitTimeMinutes === 'number') {
                   useCartStore.getState().setPrepWaitTimeMinutes(parsed.prepWaitTimeMinutes);
-                }
-                if (parsed.firstOrderPromo) {
-                  useSettingsStore.getState().updateSettings({ firstOrderPromo: parsed.firstOrderPromo });
-                }
-                if (parsed.giftPromo) {
-                  useSettingsStore.getState().updateSettings({ giftPromo: parsed.giftPromo });
                 }
               } catch { }
             }

@@ -634,6 +634,18 @@ export default function AdminPage() {
               if (typeof parsed.isOrdersPaused === 'boolean') {
                 updateSettings({ isOrdersPaused: parsed.isOrdersPaused });
               }
+              if (typeof parsed.cityFreeThreshold === 'number') {
+                updateSettings({ cityFreeThreshold: parsed.cityFreeThreshold });
+                setMktCityThreshold(parsed.cityFreeThreshold);
+              }
+              if (typeof parsed.cityStandardFee === 'number') {
+                updateSettings({ cityStandardFee: parsed.cityStandardFee });
+                setMktCityFee(parsed.cityStandardFee);
+              }
+              if (typeof parsed.suburb10kmFee === 'number') {
+                updateSettings({ suburb10kmFee: parsed.suburb10kmFee });
+                setMktSuburb10kmFee(parsed.suburb10kmFee);
+              }
               if (typeof parsed.prepWaitTimeMinutes === 'number') {
                 setPrepWaitTimeMinutes(parsed.prepWaitTimeMinutes);
               }
@@ -5299,13 +5311,19 @@ export default function AdminPage() {
                 <div className="pt-3 border-t border-white/5 flex justify-end">
                   <button
                     type="button"
-                    onClick={() => {
-                      updateSettings({
+                    onClick={async () => {
+                      const nextDelivery = {
                         cityFreeThreshold: Number(mktCityThreshold),
                         cityStandardFee: Number(mktCityFee),
                         suburb10kmFee: Number(mktSuburb10kmFee),
-                      });
-                      showToast('Тарифи доставки успішно збережено!');
+                      };
+                      updateSettings(nextDelivery);
+                      const ok = await saveStoreSettings(nextDelivery);
+                      showToast(
+                        ok
+                          ? 'Тарифи доставки успішно збережено для всіх клієнтів!'
+                          : 'Збережено локально (помилка синхронізації з базою)'
+                      );
                     }}
                     style={{
                       clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',

@@ -133,6 +133,9 @@ export interface SyncedStoreSettings {
   isOrdersPaused?: boolean;
   prepWaitTimeMinutes?: number;
   pausedAtDate?: string; // YYYY-MM-DD
+  cityFreeThreshold?: number;
+  cityStandardFee?: number;
+  suburb10kmFee?: number;
   firstOrderPromo?: FirstOrderPromo;
   giftPromo?: {
     enabled: boolean;

@@ -109,19 +109,21 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
   registerCustomer: async ({ phone, name, password, email }) => {
     const cleanPhone = phone.trim();
     const cleanName = name.trim();
-    const cleanEmail = email?.trim() || undefined;
+    const cleanEmail = email?.trim().toLowerCase() || undefined;
 
     if (!cleanPhone) throw new Error('phoneRequired');
     if (!cleanName) throw new Error('nameRequired');
     if (!password || password.length < 4) throw new Error('passwordTooShort');
 
     const db = getStoredCustomersDb();
+    const cleanDigits = normalizePhone(cleanPhone).replace(/\D/g, '');
+    const last9 = cleanDigits.slice(-9);
 
     // Перевірка на вже існуючий номер або e-mail у локальній базі
     const existing = db.find(
       (c) =>
-        normalizePhone(c.phone) === normalizePhone(cleanPhone) ||
-        (cleanEmail && c.email && c.email.toLowerCase() === cleanEmail.toLowerCase())
+        normalizePhone(c.phone).replace(/\D/g, '').slice(-9) === last9 ||
+        (cleanEmail && c.email && c.email.trim().toLowerCase() === cleanEmail)
     );
 
     if (existing) {
@@ -131,11 +133,14 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     // Перевірка на вже існуючого користувача у Supabase
     if (isSupabaseConfigured) {
       try {
-        const last9 = normalizePhone(cleanPhone).slice(-9);
+        const orFilters = [`phone.ilike.%${last9}%`];
+        if (cleanEmail) {
+          orFilters.push(`email.ilike.${cleanEmail}`);
+        }
         const { data: remoteExisting } = await supabase
           .from('customers')
           .select('id, phone, email')
-          .or(`phone.ilike.%${last9}%,email.eq.${cleanEmail || '___'}`)
+          .or(orFilters.join(','))
           .limit(1);
 
         if (remoteExisting && remoteExisting.length > 0) {
@@ -238,10 +243,18 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     }
 
     // Перевірка 2: ВХІД КЛІЄНТА
+    const isEmailLogin = rawId.includes('@');
+    const cleanDigits = cleanPhone.replace(/\D/g, '');
+    const last9 = cleanDigits.length >= 9 ? cleanDigits.slice(-9) : '';
+
     const db = getStoredCustomersDb();
     const customerMatch = db.find((c) => {
-      const phoneMatches = cleanPhone.length >= 7 && normalizePhone(c.phone) === cleanPhone;
-      const emailMatches = c.email && c.email.toLowerCase() === cleanEmail;
+      const cDigits = normalizePhone(c.phone).replace(/\D/g, '');
+      const phoneMatches =
+        !isEmailLogin &&
+        ((cleanDigits.length >= 7 && cDigits === cleanDigits) ||
+          (last9.length === 9 && cDigits.slice(-9) === last9));
+      const emailMatches = Boolean(isEmailLogin && c.email && c.email.trim().toLowerCase() === cleanEmail);
       return phoneMatches || emailMatches;
     });
 
@@ -262,19 +275,27 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     // Перевірка 3: Пошук у базі даних Supabase (якщо користувач заходить з нового пристрою або іншого браузера)
     if (isSupabaseConfigured) {
       try {
-        const last9 = cleanPhone.length >= 7 ? cleanPhone.slice(-9) : '';
-        const filterParts = [];
-        if (last9) filterParts.push(`phone.ilike.%${last9}%`);
-        if (cleanEmail && cleanEmail.includes('@')) filterParts.push(`email.eq.${cleanEmail}`);
-
-        if (filterParts.length > 0) {
-          const { data: remoteUsers } = await supabase
+        let remoteUsers: any[] | null = null;
+        if (isEmailLogin && cleanEmail) {
+          const { data } = await supabase
             .from('customers')
             .select('*')
-            .or(filterParts.join(','))
+            .ilike('email', cleanEmail)
             .limit(1);
+          remoteUsers = data;
+        } else {
+          const phoneNeedle = last9 || (cleanDigits.length >= 7 ? cleanDigits : '');
+          if (phoneNeedle) {
+            const { data } = await supabase
+              .from('customers')
+              .select('*')
+              .ilike('phone', `%${phoneNeedle}%`)
+              .limit(1);
+            remoteUsers = data;
+          }
+        }
 
-          if (remoteUsers && remoteUsers.length > 0) {
+        if (remoteUsers && remoteUsers.length > 0) {
             const remoteUser = remoteUsers[0];
             if (remoteUser.password && remoteUser.password !== password) {
               throw new Error('invalidPassword');
@@ -301,7 +322,6 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
             get().checkEligibility(restoredProfile.phone);
             return { type: 'customer', profile: restoredProfile };
           }
-        }
       } catch (e: any) {
         if (e?.message === 'invalidPassword') throw e;
       }

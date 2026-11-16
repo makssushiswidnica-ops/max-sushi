@@ -611,6 +611,9 @@ export function CustomerDrawer() {
                   type="email"
                   value={regEmail}
                   onChange={(e) => setRegEmail(e.target.value)}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   placeholder="twoj@email.com"
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[#14141c] border border-white/10 focus:border-[#e50914] focus:ring-1 focus:ring-[#e50914] text-white text-sm placeholder:text-zinc-600 outline-hidden transition-all"
                 />
@@ -680,6 +683,9 @@ export function CustomerDrawer() {
                   type="text"
                   value={loginIdentifier}
                   onChange={(e) => setLoginIdentifier(e.target.value)}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   placeholder={t.customer.identifierPlaceholder}
                   required
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[#14141c] border border-white/10 focus:border-[#e50914] focus:ring-1 focus:ring-[#e50914] text-white text-sm placeholder:text-zinc-600 outline-hidden transition-all"
