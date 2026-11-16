@@ -5,16 +5,21 @@ import Image from 'next/image';
 import { useI18n } from '@/lib/i18nContext';
 import { useSettingsStore } from '@/store/useSettingsStore';
 
-export function HeroBanner() {
+export function HeroBanner({ initialFreeThreshold }: { initialFreeThreshold?: number }) {
   const { locale } = useI18n();
   const [mounted, setMounted] = useState(false);
-  const cityFreeThreshold = useSettingsStore((s) => s.cityFreeThreshold) || 150;
+  const cityFreeThreshold = useSettingsStore((s) => s.cityFreeThreshold);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    if (typeof initialFreeThreshold === 'number') {
+      useSettingsStore.getState().updateSettings({ cityFreeThreshold: initialFreeThreshold });
+    }
+  }, [initialFreeThreshold]);
 
-  const displayThreshold = mounted ? cityFreeThreshold : 150;
+  const displayThreshold = mounted
+    ? (cityFreeThreshold || initialFreeThreshold || 150)
+    : (initialFreeThreshold ?? 150);
 
   const scrollToMenu = () => {
     // Скидаємо каталог до початкової першої категорії (Міні Макі)
