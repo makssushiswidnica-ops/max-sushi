@@ -47,6 +47,15 @@ export const normalizePhone = (phone: string): string => {
   return phone.replace(/[^\d+]/g, '').trim();
 };
 
+const buildPhoneIlikePattern = (digits: string): string => {
+  const clean = digits.replace(/\D/g, '');
+  if (clean.length >= 9) {
+    const last9 = clean.slice(-9);
+    return `%${last9.slice(0, 3)}%${last9.slice(3, 6)}%${last9.slice(6, 9)}%`;
+  }
+  return `%${clean}%`;
+};
+
 // Перевірка чи має номер телефону попередні замовлення (для акції 10% на перше замовлення)
 export const checkPhoneHasOrders = async (phone: string): Promise<boolean> => {
   if (!phone) return false;
@@ -130,20 +139,18 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
       throw new Error('userAlreadyExists');
     }
 
-    // Перевірка на вже існуючого користувача у Supabase
+    // Перевірка на вже існуючого користувача у Supabase (окремо телефон з урахуванням пробілів та e-mail без урахування регістру)
     if (isSupabaseConfigured) {
       try {
-        const orFilters = [`phone.ilike.%${last9}%`];
-        if (cleanEmail) {
-          orFilters.push(`email.ilike.${cleanEmail}`);
-        }
-        const { data: remoteExisting } = await supabase
-          .from('customers')
-          .select('id, phone, email')
-          .or(orFilters.join(','))
-          .limit(1);
+        const phonePattern = buildPhoneIlikePattern(last9);
+        const [phoneRes, emailRes] = await Promise.all([
+          supabase.from('customers').select('id').ilike('phone', phonePattern).limit(1),
+          cleanEmail
+            ? supabase.from('customers').select('id').ilike('email', cleanEmail).limit(1)
+            : Promise.resolve({ data: null }),
+        ]);
 
-        if (remoteExisting && remoteExisting.length > 0) {
+        if ((phoneRes.data && phoneRes.data.length > 0) || (emailRes.data && emailRes.data.length > 0)) {
           throw new Error('userAlreadyExists');
         }
       } catch (err: any) {
@@ -248,7 +255,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     const last9 = cleanDigits.length >= 9 ? cleanDigits.slice(-9) : '';
 
     const db = getStoredCustomersDb();
-    const customerMatch = db.find((c) => {
+    const localMatches = db.filter((c) => {
       const cDigits = normalizePhone(c.phone).replace(/\D/g, '');
       const phoneMatches =
         !isEmailLogin &&
@@ -258,7 +265,9 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
       return phoneMatches || emailMatches;
     });
 
-    if (customerMatch) {
+    if (localMatches.length > 0) {
+      const customerMatch =
+        localMatches.find((c) => !c.password || c.password === password) || localMatches[0];
       if (customerMatch.password && customerMatch.password !== password) {
         throw new Error('invalidPassword');
       }
@@ -281,7 +290,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
             .from('customers')
             .select('*')
             .ilike('email', cleanEmail)
-            .limit(1);
+            .limit(10);
           remoteUsers = data;
         } else {
           const phoneNeedle = last9 || (cleanDigits.length >= 7 ? cleanDigits : '');
@@ -289,14 +298,15 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
             const { data } = await supabase
               .from('customers')
               .select('*')
-              .ilike('phone', `%${phoneNeedle}%`)
-              .limit(1);
+              .ilike('phone', buildPhoneIlikePattern(phoneNeedle))
+              .limit(10);
             remoteUsers = data;
           }
         }
 
         if (remoteUsers && remoteUsers.length > 0) {
-            const remoteUser = remoteUsers[0];
+            const remoteUser =
+              remoteUsers.find((u) => !u.password || u.password === password) || remoteUsers[0];
             if (remoteUser.password && remoteUser.password !== password) {
               throw new Error('invalidPassword');
             }
