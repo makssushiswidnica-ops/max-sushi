@@ -88,6 +88,9 @@ export function Header() {
         if (synced.firstOrderPromo) {
           settingsUpdates.firstOrderPromo = synced.firstOrderPromo;
         }
+        if (synced.birthdayPromo) {
+          settingsUpdates.birthdayPromo = synced.birthdayPromo;
+        }
         if (synced.giftPromo) {
           settingsUpdates.giftPromo = synced.giftPromo;
         }
@@ -126,6 +129,9 @@ export function Header() {
                 }
                 if (parsed.firstOrderPromo) {
                   settingsUpdates.firstOrderPromo = parsed.firstOrderPromo;
+                }
+                if (parsed.birthdayPromo) {
+                  settingsUpdates.birthdayPromo = parsed.birthdayPromo;
                 }
                 if (parsed.giftPromo) {
                   settingsUpdates.giftPromo = parsed.giftPromo;

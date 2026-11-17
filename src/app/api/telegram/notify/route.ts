@@ -156,6 +156,10 @@ function formatTelegramOrderMessage(order: Order): string {
       `🚚 Доставка: <b>${order.deliveryFee && order.deliveryFee > 0 ? `${order.deliveryFee} zł` : 'Безкоштовно (0 zł)'}</b>`
     );
   }
+  const isBirthday = Boolean(order.isBirthday || order.birthdayDiscount || /URODZINY/i.test(order.comment || ''));
+  if (order.birthdayDiscount && order.birthdayDiscount > 0) {
+    summaryExtras.push(`🎂 <b>Знижка День народження (-10%): -${order.birthdayDiscount} zł</b>`);
+  }
   if (order.firstOrderDiscount && order.firstOrderDiscount > 0) {
     summaryExtras.push(`🎉 Вітальна знижка (-10%): <b>-${order.firstOrderDiscount} zł</b>`);
   }
@@ -167,6 +171,7 @@ function formatTelegramOrderMessage(order: Order): string {
 
   // Очищуємо коментар від службових тегів, якщо вони вже виведені вище
   const cleanComment = (order.comment || '')
+    .replace(/\[🎂\s*URODZINY[^\]]*\]/gi, '')
     .replace(/\[НА ЗАВТРА[^\]]*\]/gi, '')
     .replace(/\[НА ЧАС[^\]]*\]/gi, '')
     .replace(/\[ПАЛИЧКИ[^\]]*\]/gi, '')
@@ -180,6 +185,7 @@ function formatTelegramOrderMessage(order: Order): string {
   const lines = [
     `🍣 <b>НОВЕ ЗАМОВЛЕННЯ #${escapeHtml(order.id)}</b>`,
     `━━━━━━━━━━━━━━━━━━`,
+    isBirthday ? `🎂 <b>ДЕНЬ НАРОДЖЕННЯ (-10%) — ПЕРЕВІРИТИ ДОКУМЕНТ!</b>` : null,
     `👤 <b>Клієнт:</b> ${escapeHtml(order.name || 'Гість')}`,
     `📞 <b>Телефон:</b> <a href="tel:${escapeHtml(phoneFormatted)}">${escapeHtml(phoneFormatted)}</a>`,
     deliveryHeader,

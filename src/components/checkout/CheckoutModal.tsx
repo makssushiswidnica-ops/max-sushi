@@ -23,6 +23,7 @@ import {
   Navigation,
   Loader2,
   Percent,
+  Cake,
 } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
@@ -31,7 +32,7 @@ import { useCustomerStore } from '@/store/useCustomerStore';
 import { useI18n } from '@/lib/i18nContext';
 import { createOrder } from '@/lib/supabase';
 import { brandTheme } from '@/config/theme';
-import { formatPrice, cn } from '@/lib/utils';
+import { formatPrice, getItemUnitPrice, cn } from '@/lib/utils';
 import { DeliveryMethod, PaymentMethod, Order, OrderAddress, DeliveryZoneId } from '@/types';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import {
@@ -336,6 +337,7 @@ export function CheckoutModal() {
 
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('delivery');
   const [selectedZone, setSelectedZone] = useState<DeliveryZoneId>('city');
+  const [isBirthdayChecked, setIsBirthdayChecked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
 
@@ -368,13 +370,31 @@ export function CheckoutModal() {
   const deliveryFee = useCartStore((s) => s.getDeliveryFee)(isPickup, selectedZone, customFee);
   const rawTotal = useCartStore((s) => s.getTotal)(isPickup, selectedZone, customFee);
 
-  // Знижка на 1-ше замовлення (10%) для зареєстрованих клієнтів
+  // Знижка на День народження (10% — не сумується із самовивозом -5% та іншими знижками)
+  const birthdayPromo = storeSettings.birthdayPromo ?? { enabled: true, discountPercent: 10 };
+  const isBirthdayApplied = Boolean(birthdayPromo.enabled && isBirthdayChecked);
+  const birthdayDiscountRate = (birthdayPromo.discountPercent || 10) / 100;
+  const birthdayEligibleSubtotal = items.reduce(
+    (sum, item) =>
+      item.isGift || (item.product.discountPercent || 0) > 0
+        ? sum
+        : sum + getItemUnitPrice(item.product, item.selectedOptions) * item.quantity,
+    0
+  );
+  const birthdayDiscount = isBirthdayApplied
+    ? Math.round(birthdayEligibleSubtotal * birthdayDiscountRate)
+    : 0;
+
+  // Знижка на 1-ше замовлення (10%) для зареєстрованих клієнтів (не сумується зі знижкою ДР)
   const isFirstOrderEligible = useCustomerStore((s) => s.isFirstOrderEligible);
   const firstOrderPromo = storeSettings.firstOrderPromo;
-  const isFirstOrderApplied = Boolean(customer && firstOrderPromo?.enabled && isFirstOrderEligible);
+  const isFirstOrderApplied = Boolean(!isBirthdayApplied && customer && firstOrderPromo?.enabled && isFirstOrderEligible);
   const firstOrderDiscountRate = (firstOrderPromo?.discountPercent || 10) / 100;
   const firstOrderDiscount = isFirstOrderApplied ? Math.round(subtotal * firstOrderDiscountRate) : 0;
-  const total = Math.max(0, rawTotal - firstOrderDiscount);
+
+  // Якщо активована знижка на ДР, то при самовивозі знижка -5% не застосовується — діє тільки -10% за ДР
+  const baseTotalBeforePromo = isBirthdayApplied ? subtotal + deliveryFee : rawTotal;
+  const total = Math.max(0, baseTotalBeforePromo - birthdayDiscount - firstOrderDiscount);
 
   // Розрахунок обмежень для вибору часу:
   // - Понеділок: вихідний день (ресторан зачинено весь день).
@@ -672,9 +692,18 @@ export function CheckoutModal() {
             : undefined,
         paymentMethod: values.paymentMethod,
         changeFrom: values.changeFrom ? maskChangeFrom(values.changeFrom) : undefined,
-        comment: firstOrderDiscount > 0
-          ? `[1. ZAMÓWIENIE: -${firstOrderPromo?.discountPercent || 10}% (-${firstOrderDiscount} zł)] ${values.comment || ''}`.trim()
-          : values.comment,
+        comment: [
+          isBirthdayApplied
+            ? `[🎂 URODZINY -${birthdayPromo.discountPercent || 10}% (-${birthdayDiscount} zł) | SPRAWDZIĆ DOKUMENT!]`
+            : '',
+          firstOrderDiscount > 0
+            ? `[1. ZAMÓWIENIE: -${firstOrderPromo?.discountPercent || 10}% (-${firstOrderDiscount} zł)]`
+            : '',
+          values.comment || '',
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .trim() || undefined,
         personsCount,
         timingType: values.timingType,
         scheduledDate: values.timingType === 'scheduled' ? scheduledDate : undefined,
@@ -683,6 +712,8 @@ export function CheckoutModal() {
         subtotal,
         deliveryFee,
         firstOrderDiscount: firstOrderDiscount > 0 ? firstOrderDiscount : undefined,
+        isBirthday: isBirthdayApplied || undefined,
+        birthdayDiscount: birthdayDiscount > 0 ? birthdayDiscount : undefined,
         total,
         status: 'pending',
         createdAt: new Date().toISOString(),
@@ -756,6 +787,7 @@ export function CheckoutModal() {
     setIsCheckoutOpen(false);
     if (createdOrder) {
       setCreatedOrder(null);
+      setIsBirthdayChecked(false);
       reset();
     }
   };
@@ -812,7 +844,7 @@ export function CheckoutModal() {
               <span className="text-xs font-bold text-white">
                 {createdOrder.deliveryMethod === 'delivery'
                   ? t.checkout.delivery
-                  : hasDiscountedItem
+                  : (hasDiscountedItem || createdOrder.isBirthday)
                   ? t.checkout.pickup
                   : `${t.checkout.pickup} (-${brandTheme.delivery.pickupDiscountPercent}%)`}
               </span>
@@ -837,6 +869,16 @@ export function CheckoutModal() {
                     : `~${prepWaitTimeMinutes} ${locale === 'pl' ? 'min' : 'хв'}`)}
               </span>
             </div>
+
+            {createdOrder.birthdayDiscount && createdOrder.birthdayDiscount > 0 ? (
+              <div className="flex justify-between items-center pb-2 border-b border-white/5 text-rose-400">
+                <span className="text-xs font-medium flex items-center gap-1">
+                  <Cake className="w-3.5 h-3.5 shrink-0" />
+                  <span>{locale === 'pl' ? 'Rabat urodzinowy (-10%)' : 'Знижка до Дня народження (-10%)'}</span>
+                </span>
+                <span className="text-xs font-bold">-{createdOrder.birthdayDiscount} zł</span>
+              </div>
+            ) : null}
 
             {createdOrder.firstOrderDiscount && createdOrder.firstOrderDiscount > 0 ? (
               <div className="flex justify-between items-center pb-2 border-b border-white/5 text-emerald-400">
@@ -969,7 +1011,7 @@ export function CheckoutModal() {
                 <div className="text-left">
                   <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm leading-none">
                     <span>{t.checkout.pickup}</span>
-                    {!hasDiscountedItem && (
+                    {!hasDiscountedItem && !isBirthdayApplied && (
                       <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1 py-0.2 rounded font-black">-{brandTheme.delivery.pickupDiscountPercent}%</span>
                     )}
                   </div>
@@ -1013,6 +1055,42 @@ export function CheckoutModal() {
               })}
             />
           </div>
+
+          {/* Чекбокс знижки на День народження (за замовчуванням неактивний) */}
+          {birthdayPromo.enabled !== false && (
+            <label
+              htmlFor="birthday-discount-checkbox"
+              className={cn(
+                'flex items-start gap-2.5 p-2.5 sm:p-3 rounded-xl border transition-all cursor-pointer select-none',
+                isBirthdayChecked
+                  ? 'bg-[#e50914]/15 border-[#e50914] shadow-sm shadow-[#e50914]/15'
+                  : 'bg-[#14141c] border-white/10 hover:border-white/20'
+              )}
+            >
+              <input
+                id="birthday-discount-checkbox"
+                type="checkbox"
+                checked={isBirthdayChecked}
+                onChange={(e) => setIsBirthdayChecked(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-white/20 bg-[#0d0d12] text-[#e50914] accent-[#e50914] cursor-pointer shrink-0"
+              />
+              <div className="min-w-0 flex-1 space-y-0.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <Cake className={cn('w-3.5 h-3.5 shrink-0', isBirthdayChecked ? 'text-[#ff4d58]' : 'text-zinc-400')} />
+                  <span className="text-xs sm:text-sm font-bold text-white leading-tight">
+                    {locale === 'pl'
+                      ? `Mam dziś urodziny (-${birthdayPromo.discountPercent || 10}%)`
+                      : `У мене сьогодні день народження (-${birthdayPromo.discountPercent || 10}%)`}
+                  </span>
+                </div>
+                <p className="text-[10.5px] sm:text-[11px] text-zinc-400 leading-snug">
+                  {locale === 'pl'
+                    ? 'Rabat obowiązuje po okazaniu dokumentu potwierdzającego datę urodzenia przy odbiorze / u kuriera. Nie łączy się z innymi rabatami (np. -5% za odbiór osobisty).'
+                    : 'Знижка діє за наявності документа, що підтверджує дату народження, при отриманні / у курʼєра. Не сумується з іншими знижками (зокрема -5% за самовивіз).'}
+                </p>
+              </div>
+            </label>
+          )}
 
           {/* Адреса доставки (тільки при доставці) */}
           {deliveryMethod === 'delivery' && (
@@ -1733,9 +1811,14 @@ export function CheckoutModal() {
               <div className="flex items-baseline gap-2 flex-wrap">
                 <span className="text-xs text-zinc-400 font-medium">{t.cart.total}:</span>
                 <span className="text-lg sm:text-xl font-black text-[#e50914]">{formatPrice(total, locale)}</span>
-                {isPickup && !hasDiscountedItem && (
+                {isPickup && !hasDiscountedItem && !isBirthdayApplied && (
                   <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">
                     {t.checkout.pickupDiscount}
+                  </span>
+                )}
+                {isBirthdayApplied && (
+                  <span className="text-[10px] text-rose-300 font-bold bg-[#e50914]/20 border border-[#e50914]/40 px-1.5 py-0.5 rounded">
+                    🎂 -{birthdayPromo.discountPercent || 10}%
                   </span>
                 )}
                 {firstOrderDiscount > 0 && (
@@ -1744,6 +1827,13 @@ export function CheckoutModal() {
                   </span>
                 )}
               </div>
+
+              {birthdayDiscount > 0 && (
+                <div className="text-[11px] text-rose-300 font-medium flex items-center gap-1.5">
+                  <span>{locale === 'pl' ? 'Rabat urodzinowy:' : 'Знижка до Дня народження:'}</span>
+                  <span className="font-bold">-{birthdayDiscount} zł</span>
+                </div>
+              )}
 
               {firstOrderDiscount > 0 && (
                 <div className="text-[11px] text-emerald-400 font-medium flex items-center gap-1.5">

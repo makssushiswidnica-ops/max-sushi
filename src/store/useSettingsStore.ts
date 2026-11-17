@@ -16,6 +16,10 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
     enabled: true,
     discountPercent: 10,  // Знижка 10% на перше замовлення для зареєстрованих
   },
+  birthdayPromo: {
+    enabled: true,
+    discountPercent: 10,  // Знижка 10% у день народження (за наявності документа)
+  },
   soundNotificationsEnabled: true,
 };
 

@@ -389,6 +389,11 @@ export function ReceiptPreviewModal({
             </div>
 
             {/* Коментар / Uwagi */}
+            {(order as any).isBirthday && (
+              <div style={{ border: '2px solid #000', padding: '3px 5px', margin: '5px 0', fontSize: `${Math.max(9.5, settings.fontSizePx - 1)}px`, borderRadius: '3px', fontWeight: 900, textAlign: 'center', textTransform: 'uppercase' }}>
+                🎂 URODZINY (-10%) • SPRAWDZIĆ DOKUMENT!
+              </div>
+            )}
             {order.comment && (
               <div style={{ border: '2px solid #000', padding: '3px 5px', margin: '5px 0', fontSize: `${Math.max(9, settings.fontSizePx - 1.5)}px`, borderRadius: '3px' }}>
                 <strong style={{ textTransform: 'uppercase' }}>Uwagi:</strong> {order.comment}
@@ -468,6 +473,12 @@ export function ReceiptPreviewModal({
             </table>
 
             {/* Знижка якщо є */}
+            {(order as any).birthdayDiscount ? (
+              <div style={{ display: 'flex', justifyContent: 'space-between', margin: '3px 0 1px 0', fontWeight: 'bold', fontSize: `${Math.max(9.5, settings.fontSizePx - 1)}px` }}>
+                <span>Rabat urodzinowy (-10%):</span>
+                <span>-{(order as any).birthdayDiscount} zł</span>
+              </div>
+            ) : null}
             {(order.firstOrderDiscount || order.first_order_discount) ? (
               <div style={{ display: 'flex', justifyContent: 'space-between', margin: '3px 0 1px 0', fontWeight: 'bold', fontSize: `${Math.max(9.5, settings.fontSizePx - 1)}px` }}>
                 <span>Zniżka na 1. zamówienie:</span>

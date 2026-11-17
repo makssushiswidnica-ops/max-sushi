@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Order, FirstOrderPromo } from '@/types';
+import { Order, FirstOrderPromo, BirthdayPromo } from '@/types';
 
 // Отримуємо змінні оточення для проєкту Maks Sushi на Supabase
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://czjqvocewhucknsrnese.supabase.co';
@@ -137,6 +137,7 @@ export interface SyncedStoreSettings {
   cityStandardFee?: number;
   suburb10kmFee?: number;
   firstOrderPromo?: FirstOrderPromo;
+  birthdayPromo?: BirthdayPromo;
   giftPromo?: {
     enabled: boolean;
     minAmount: number;

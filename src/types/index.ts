@@ -149,6 +149,11 @@ export interface FirstOrderPromo {
   discountPercent: number; // Наприклад 10%
 }
 
+export interface BirthdayPromo {
+  enabled: boolean;
+  discountPercent: number; // Наприклад 10%
+}
+
 export interface StoreSettings {
   cityFreeThreshold: number;
   cityStandardFee: number;
@@ -161,6 +166,7 @@ export interface StoreSettings {
     productId: string;
   };
   firstOrderPromo?: FirstOrderPromo;
+  birthdayPromo?: BirthdayPromo;
   soundNotificationsEnabled: boolean;
 }
 
@@ -198,6 +204,8 @@ export interface Order extends CheckoutFormData {
   subtotal: number;
   deliveryFee: number;
   firstOrderDiscount?: number;
+  isBirthday?: boolean;
+  birthdayDiscount?: number;
   total: number;
   status: 'pending' | 'confirmed' | 'preparing' | 'in_delivery' | 'delivered' | 'cancelled';
   createdAt: string;

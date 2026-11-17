@@ -295,6 +295,9 @@ export default function AdminPage() {
   const [mktFirstOrderEnabled, setMktFirstOrderEnabled] = useState<boolean>(storeSettings.firstOrderPromo?.enabled ?? true);
   const [mktFirstOrderDiscount, setMktFirstOrderDiscount] = useState<number>(storeSettings.firstOrderPromo?.discountPercent ?? 10);
 
+  const [mktBirthdayEnabled, setMktBirthdayEnabled] = useState<boolean>(storeSettings.birthdayPromo?.enabled ?? true);
+  const [mktBirthdayDiscount, setMktBirthdayDiscount] = useState<number>(storeSettings.birthdayPromo?.discountPercent ?? 10);
+
   const [mktSoundEnabled, setMktSoundEnabled] = useState<boolean>(storeSettings.soundNotificationsEnabled);
   const [pushStatus, setPushStatus] = useState<string>('default');
   const [unreadOrderCount, setUnreadOrderCount] = useState<number>(0);
@@ -654,6 +657,11 @@ export default function AdminPage() {
                 setMktFirstOrderEnabled(parsed.firstOrderPromo.enabled ?? true);
                 setMktFirstOrderDiscount(parsed.firstOrderPromo.discountPercent ?? 10);
               }
+              if (parsed.birthdayPromo) {
+                updateSettings({ birthdayPromo: parsed.birthdayPromo });
+                setMktBirthdayEnabled(parsed.birthdayPromo.enabled ?? true);
+                setMktBirthdayDiscount(parsed.birthdayPromo.discountPercent ?? 10);
+              }
             } catch { }
           }
 
@@ -669,6 +677,12 @@ export default function AdminPage() {
               const firstOrderDiscount = Number(d.first_order_discount ?? d.firstOrderDiscount ?? (matchFirstOrder ? matchFirstOrder[1] : 0)) || undefined;
               if (matchFirstOrder) {
                 cleanComment = cleanComment.replace(/\[1\.\s*ZAMÓWIENIE:\s*-[0-9]+%\s*\(-[0-9]+\s*zł\)\]\s*/i, '').trim();
+              }
+              const matchBirthday = cleanComment.match(/\[🎂\s*URODZINY\s*-[0-9]+%\s*\(-([0-9]+)\s*zł\)[^\]]*\]/i);
+              const birthdayDiscount = Number(d.birthday_discount ?? d.birthdayDiscount ?? (matchBirthday ? matchBirthday[1] : 0)) || undefined;
+              const isBirthday = Boolean(d.is_birthday || d.isBirthday || matchBirthday || /URODZINY/i.test(rawComment));
+              if (matchBirthday) {
+                cleanComment = cleanComment.replace(/\[🎂\s*URODZINY[^\]]*\]\s*/i, '').trim();
               }
               const matchChopsticks = cleanComment.match(/\[ПАЛИЧКИ:\s*([0-9]+)\]/i);
               if (matchChopsticks) {
@@ -697,6 +711,8 @@ export default function AdminPage() {
                 comment: cleanComment,
                 firstOrderDiscount: firstOrderDiscount,
                 first_order_discount: firstOrderDiscount,
+                isBirthday: isBirthday || undefined,
+                birthdayDiscount: birthdayDiscount,
                 personsCount: parsedPersonsCount,
                 timing_type: timingType,
                 timingType: timingType,
@@ -1173,6 +1189,11 @@ export default function AdminPage() {
             <span class="bold">${order.personsCount === 0 ? 'Bez pałeczek (0)' : `${order.personsCount ?? 1} szt.`}</span>
           </div>
 
+          ${(order as any).isBirthday ? `
+            <div class="comment-box" style="text-align: center; font-weight: 900; text-transform: uppercase;">
+              🎂 URODZINY (-10%) • SPRAWDZIĆ DOKUMENT!
+            </div>
+          ` : ''}
           ${order.comment ? `
             <div class="comment-box">
               <strong style="text-transform: uppercase;">Uwagi:</strong> ${order.comment}
@@ -1190,6 +1211,12 @@ export default function AdminPage() {
             </tbody>
           </table>
 
+          ${(order as any).birthdayDiscount ? `
+          <div class="info-row" style="margin-top: 4px; font-weight: bold;">
+            <span>Rabat urodzinowy (-10%):</span>
+            <span>-${(order as any).birthdayDiscount} zł</span>
+          </div>
+          ` : ''}
           ${(order.firstOrderDiscount || order.first_order_discount) ? `
           <div class="info-row" style="margin-top: 4px; font-weight: bold;">
             <span>Zniżka na 1. zamówienie:</span>
@@ -2487,8 +2514,26 @@ export default function AdminPage() {
                 </span>
               ) : null}
 
+              {/* Бейдж знижки на День народження */}
+              {(order as any).isBirthday ? (
+                <span
+                  style={{
+                    clipPath: 'polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px)',
+                  }}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-500/20 border border-rose-500/50 text-rose-300 font-black text-[11px]"
+                  title="День народження — перевірити документ!"
+                >
+                  <span>🎂 ДР (-10%) • ПЕРЕВІРИТИ ДОКУМЕНТ</span>
+                </span>
+              ) : null}
+
               {/* Бейдж знижки на 1-ше замовлення */}
-              {(order.firstOrderDiscount || order.first_order_discount) ? (
+              {(order as any).birthdayDiscount ? (
+              <span className="text-rose-400 font-bold">
+                ДР: -{formatPrice((order as any).birthdayDiscount)}
+              </span>
+            ) : null}
+            {(order.firstOrderDiscount || order.first_order_discount) ? (
                 <span
                   style={{
                     clipPath: 'polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px)',
@@ -2851,6 +2896,11 @@ export default function AdminPage() {
             <span className="text-zinc-400">
               Страви: <strong className="text-white">{formatPrice(order.subtotal)}</strong>
             </span>
+            {(order as any).birthdayDiscount ? (
+              <span className="text-rose-400 font-bold">
+                ДР: -{formatPrice((order as any).birthdayDiscount)}
+              </span>
+            ) : null}
             {(order.firstOrderDiscount || order.first_order_discount) ? (
               <span className="text-emerald-400 font-bold">
                 Знижка: -{formatPrice(order.firstOrderDiscount || order.first_order_discount || 0)}
@@ -5537,6 +5587,92 @@ export default function AdminPage() {
                   >
                     <Check className="w-4 h-4" />
                     <span>Зберегти знижку на 1-ше замовлення</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 3б. Блок Знижка на День народження (-10%) */}
+              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between pb-2.5 border-b border-white/10">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-lg">🎂</span>
+                      <h3 className="text-sm sm:text-base font-black text-white uppercase tracking-wider">
+                        Знижка на День народження
+                      </h3>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={mktBirthdayEnabled}
+                        onClick={() => setMktBirthdayEnabled(!mktBirthdayEnabled)}
+                        className={cn(
+                          'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-none border border-white/15',
+                          mktBirthdayEnabled
+                            ? 'bg-emerald-500 shadow-sm shadow-emerald-500/40'
+                            : 'bg-zinc-700'
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform duration-200 ease-in-out',
+                            mktBirthdayEnabled ? 'translate-x-4' : 'translate-x-0'
+                          )}
+                        />
+                      </button>
+                      <span className="text-xs font-bold text-zinc-300 select-none">
+                        {mktBirthdayEnabled ? 'Увімкнено' : 'Вимкнено'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <div className="p-3 bg-[#141420] border border-white/5 rounded-xl flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs sm:text-sm font-bold text-white block">
+                          Розмір знижки імениннику
+                        </span>
+                        <p className="text-[11px] text-zinc-400 mt-0.5 leading-tight">
+                          Чекбокс у кошику замовлення (не сумується із самовивозом -5%)
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <input
+                          type="number"
+                          min="1"
+                          max="50"
+                          step="1"
+                          value={mktBirthdayDiscount}
+                          onChange={(e) => setMktBirthdayDiscount(Number(e.target.value))}
+                          className="w-20 sm:w-24 bg-[#1b1b2a] border border-white/10 focus:border-[#e50914] rounded-lg px-2.5 py-1.5 text-right text-sm text-white font-black focus:outline-none"
+                        />
+                        <span className="text-xs font-bold text-zinc-400">%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-white/5 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const promo = {
+                        enabled: mktBirthdayEnabled,
+                        discountPercent: Number(mktBirthdayDiscount) || 10,
+                      };
+                      updateSettings({ birthdayPromo: promo });
+                      await saveStoreSettings({ birthdayPromo: promo });
+                      showToast('Налаштування знижки до Дня народження збережено!');
+                    }}
+                    style={{
+                      clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
+                    }}
+                    className="w-full sm:w-auto px-5 py-2 bg-[#e50914] hover:bg-[#f4222d] text-white font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-[#e50914]/25 active:scale-98 flex items-center justify-center gap-2"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Зберегти знижку ДР</span>
                   </button>
                 </div>
               </div>
