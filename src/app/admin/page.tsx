@@ -659,7 +659,7 @@ export default function AdminPage() {
     }
   };
 
-  // Відновлення категорій та страв меню з JSON-бекапу
+  // Відновлення меню або повної бази даних (categories, products, orders, customers) з JSON-бекапу
   const handleRestoreMenuFromFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -670,17 +670,27 @@ export default function AdminPage() {
       const parsed = JSON.parse(text);
       const backupCategories = Array.isArray(parsed?.categories) ? parsed.categories : [];
       const backupProducts = Array.isArray(parsed?.products) ? parsed.products : [];
+      const backupOrders = Array.isArray(parsed?.orders) ? parsed.orders : [];
+      const backupCustomers = Array.isArray(parsed?.customers) ? parsed.customers : [];
 
-      if (backupCategories.length === 0 && backupProducts.length === 0) {
-        showToast('Файл не містить категорій або страв меню');
+      if (
+        backupCategories.length === 0 &&
+        backupProducts.length === 0 &&
+        backupOrders.length === 0 &&
+        backupCustomers.length === 0
+      ) {
+        showToast('Файл не містить даних для відновлення');
         return;
       }
 
-      if (
-        !window.confirm(
-          `Відновити меню з бекапу? Буде відновлено ${backupCategories.length} категорій та ${backupProducts.length} страв.`
-        )
-      ) {
+      const parts = [
+        backupCategories.length ? `${backupCategories.length} категорій` : null,
+        backupProducts.length ? `${backupProducts.length} страв` : null,
+        backupOrders.length ? `${backupOrders.length} замовлень` : null,
+        backupCustomers.length ? `${backupCustomers.length} клієнтів` : null,
+      ].filter(Boolean);
+
+      if (!window.confirm(`Відновити з бекапу: ${parts.join(', ')}?`)) {
         return;
       }
 
@@ -721,10 +731,20 @@ export default function AdminPage() {
           const { error: prodErr } = await supabase.from('products').upsert(prodRows, { onConflict: 'id' });
           if (prodErr) throw new Error(prodErr.message);
         }
+
+        if (backupCustomers.length > 0) {
+          const { error: custErr } = await supabase.from('customers').upsert(backupCustomers, { onConflict: 'phone' });
+          if (custErr) throw new Error(custErr.message);
+        }
+
+        if (backupOrders.length > 0) {
+          const { error: ordErr } = await supabase.from('orders').upsert(backupOrders, { onConflict: 'id' });
+          if (ordErr) throw new Error(ordErr.message);
+        }
       }
 
-      await loadMenu();
-      showToast(`Відновлено ${backupCategories.length} категорій і ${backupProducts.length} страв!`);
+      await Promise.all([loadMenu(), loadOrders(false)]);
+      showToast(`Відновлено: ${parts.join(', ')}!`);
     } catch (err: any) {
       console.error('Restore backup error:', err);
       showToast(`Помилка відновлення: ${err?.message || 'некоректний файл'}`);
@@ -5900,25 +5920,25 @@ export default function AdminPage() {
               </div>
 
               {/* 5. Резервне копіювання та відновлення (Supabase Бекап) */}
-              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4 lg:col-span-2">
+              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-white/10 flex-wrap">
                     <div className="flex items-center gap-2.5">
                       <Database className="w-5 h-5 text-sky-400" />
                       <h3 className="text-sm sm:text-base font-black text-white uppercase tracking-wider">
-                        Резервне копіювання та відновлення бази
+                        Резервне копіювання бази
                       </h3>
                     </div>
                     <span className="text-[11px] text-zinc-400">
-                      Страв у базі: <strong className="text-white">{products.length}</strong> • Категорій: <strong className="text-white">{categories.length}</strong>
+                      Страв: <strong className="text-white">{products.length}</strong> • Категорій: <strong className="text-white">{categories.length}</strong>
                     </span>
                   </div>
 
                   <p className="text-xs text-zinc-400 leading-relaxed">
-                    Збережіть локальну резервну копію меню або всієї бази даних (разом із замовленнями та клієнтами) у JSON-файл. У разі потреби меню можна миттєво відновити з файлу.
+                    Збережіть бекап меню або всієї бази (разом із замовленнями та клієнтами) у JSON. За потреби всі таблиці можна відновити з файлу.
                   </p>
 
-                  <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
                     <button
                       type="button"
                       disabled={isBackupBusy}
@@ -5926,10 +5946,10 @@ export default function AdminPage() {
                       style={{
                         clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
                       }}
-                      className="px-4 py-2 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shadow-sm"
+                      className="px-3.5 py-2 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
                     >
                       <Download className="w-3.5 h-3.5" />
-                      <span>Завантажити бекап меню (JSON)</span>
+                      <span>Бекап меню</span>
                     </button>
 
                     <button
@@ -5939,10 +5959,10 @@ export default function AdminPage() {
                       style={{
                         clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
                       }}
-                      className="px-4 py-2 bg-[#1b1b2a] hover:bg-[#252538] border border-white/15 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2"
+                      className="px-3.5 py-2 bg-[#1b1b2a] hover:bg-[#252538] border border-white/15 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5"
                     >
                       <Database className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Повний бекап усієї бази (JSON)</span>
+                      <span>Уся база (JSON)</span>
                     </button>
 
                     <input
@@ -5959,10 +5979,10 @@ export default function AdminPage() {
                       style={{
                         clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
                       }}
-                      className="px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 disabled:opacity-50 text-emerald-300 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 ml-auto"
+                      className="px-3.5 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 disabled:opacity-50 text-emerald-300 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ml-auto"
                     >
                       <Upload className="w-3.5 h-3.5" />
-                      <span>Відновити меню з файлу</span>
+                      <span>Відновити з файлу</span>
                     </button>
                   </div>
                 </div>
