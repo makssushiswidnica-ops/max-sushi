@@ -54,7 +54,11 @@ const TOWN_COORDINATES: Record<string, { lat: number; lon: number }> = {
   'strzegom': { lat: 50.9600, lon: 16.3500 },
   'dzierżoniów': { lat: 50.7300, lon: 16.6500 },
   'dzierzoniow': { lat: 50.7300, lon: 16.6500 },
+  'wałbrzych': { lat: 50.7714, lon: 16.2843 },
+  'walbrzych': { lat: 50.7714, lon: 16.2843 },
 };
+
+const MAX_DELIVERY_KM = 10;
 
 function haversineDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371; // km
@@ -99,43 +103,48 @@ export async function POST(req: Request) {
       });
     }
 
-    // 1. Формуємо пошуковий запит для геокодингу
-    const addressParts: string[] = [];
-    if (fullStreet) {
-      addressParts.push(fullHouse ? `${fullStreet} ${fullHouse}` : fullStreet);
-    }
-    addressParts.push(rawCity || 'Świdnica');
-    addressParts.push('powiat świdnicki');
-    addressParts.push('Dolnośląskie');
-    addressParts.push('Polska');
-
-    const query = encodeURIComponent(addressParts.join(', '));
-    const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1&countrycodes=pl`;
-
-    let clientLat: number | null = null;
-    let clientLon: number | null = null;
-    let displayName = '';
-
-    try {
-      const geoRes = await fetch(nominatimUrl, {
-        headers: {
-          'User-Agent': 'MaksSushiDeliveryCalc/1.0 (contact@maks-sushi.pl)',
-          'Accept-Language': 'pl,uk,en',
-        },
-        signal: AbortSignal.timeout(4000), // таймаут 4 сек
-      });
-
-      if (geoRes.ok) {
-        const geoData = await geoRes.json();
-        if (Array.isArray(geoData) && geoData.length > 0) {
-          clientLat = parseFloat(geoData[0].lat);
-          clientLon = parseFloat(geoData[0].lon);
-          displayName = geoData[0].display_name || '';
+    // 1. Формуємо пошуковий запит для геокодингу (спочатку в powiat świdnicki, потім ширше по Dolnośląskie)
+    const runGeocode = async (parts: string[]) => {
+      const query = encodeURIComponent(parts.join(', '));
+      const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1&countrycodes=pl`;
+      try {
+        const geoRes = await fetch(nominatimUrl, {
+          headers: {
+            'User-Agent': 'MaksSushiDeliveryCalc/1.0 (contact@maks-sushi.pl)',
+            'Accept-Language': 'pl,uk,en',
+          },
+          signal: AbortSignal.timeout(4000),
+        });
+        if (geoRes.ok) {
+          const geoData = await geoRes.json();
+          if (Array.isArray(geoData) && geoData.length > 0) {
+            return {
+              lat: parseFloat(geoData[0].lat),
+              lon: parseFloat(geoData[0].lon),
+              displayName: String(geoData[0].display_name || ''),
+            };
+          }
         }
+      } catch (e) {
+        console.warn('Nominatim geocode timeout or error:', e);
       }
-    } catch (e) {
-      console.warn('Nominatim geocode timeout or error:', e);
+      return null;
+    };
+
+    const streetPart = fullStreet ? (fullHouse ? `${fullStreet} ${fullHouse}` : fullStreet) : null;
+    const baseParts = [
+      ...(streetPart ? [streetPart] : []),
+      rawCity || 'Świdnica',
+    ];
+
+    let geoResult = await runGeocode([...baseParts, 'powiat świdnicki', 'Dolnośląskie', 'Polska']);
+    if (!geoResult && rawCity) {
+      geoResult = await runGeocode([...baseParts, 'Dolnośląskie', 'Polska']);
     }
+
+    let clientLat: number | null = geoResult?.lat ?? null;
+    let clientLon: number | null = geoResult?.lon ?? null;
+    let displayName = geoResult?.displayName ?? '';
 
     // Якщо геокодинг нічого не дав, перевіряємо координати центру міста з нашої бази
     const cityKey = (rawCity || 'świdnica').toLowerCase();
@@ -189,10 +198,14 @@ export async function POST(req: Request) {
       }
     }
 
+    const isOutOfRange = distanceKm !== null && distanceKm > MAX_DELIVERY_KM;
+
     return NextResponse.json({
       distanceKm: distanceKm ?? 5.0,
       deliveryPrice,
       isOutTown,
+      isOutOfRange,
+      maxDeliveryKm: MAX_DELIVERY_KM,
       precisionLevel,
       cityName: rawCity || 'Świdnica',
       streetName: fullStreet || undefined,

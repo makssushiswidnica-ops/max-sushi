@@ -353,6 +353,8 @@ export function CheckoutModal() {
     distanceKm: number;
     deliveryPrice: number;
     isOutTown: boolean;
+    isOutOfRange?: boolean;
+    maxDeliveryKm?: number;
     precisionLevel?: 'city' | 'street' | 'house';
     cityName?: string;
     streetName?: string;
@@ -362,6 +364,11 @@ export function CheckoutModal() {
     message?: string;
   } | null>(null);
   const [isCalculatingDistance, setIsCalculatingDistance] = useState(false);
+
+  const isDeliveryOutOfRange =
+    !isPickup &&
+    selectedZone === 'suburb' &&
+    Boolean(distanceData?.isOutOfRange || (distanceData?.distanceKm && distanceData.distanceKm > 10));
 
   const customFee = (!isPickup && selectedZone === 'suburb')
     ? (distanceData?.deliveryPrice ?? storeSettings.suburb10kmFee)
@@ -585,6 +592,17 @@ export function CheckoutModal() {
     }
   }, [selectedZone, deliveryMethod]);
 
+  // Автоматичний прорахунок дистанції при ручному вводі міста за містом (debounce 550ms)
+  React.useEffect(() => {
+    if (deliveryMethod === 'pickup' || selectedZone !== 'suburb') return;
+    const trimmed = (watchCity || '').trim();
+    if (trimmed.length < 3) return;
+    const timer = setTimeout(() => {
+      calculateDistanceFee(trimmed, watchStreet, watchHouse);
+    }, 550);
+    return () => clearTimeout(timer);
+  }, [watchCity, deliveryMethod, selectedZone, calculateDistanceFee]);
+
   // Автоматичне перемикання на "Завтра", якщо час прийому замовлень на сьогодні вичерпано
   React.useEffect(() => {
     if (bounds.isTodayCutoffPassed) {
@@ -659,6 +677,33 @@ export function CheckoutModal() {
     // Якщо прийом замовлень на сьогодні завершено, забороняємо замовлення ASAP
     if (bounds.isTodayCutoffPassed && values.timingType === 'asap') {
       return;
+    }
+
+    // Блокуємо доставку курʼєром, якщо адреса за межами 10 км
+    if (values.deliveryMethod === 'delivery' && selectedZone === 'suburb') {
+      if (isDeliveryOutOfRange) {
+        return;
+      }
+      if (!distanceData && values.city && values.city.trim().length >= 2) {
+        try {
+          const checkRes = await fetch('/api/delivery/calculate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              city: values.city.trim(),
+              street: (values.street || '').trim(),
+              house: (values.house || '').trim(),
+            }),
+          });
+          if (checkRes.ok) {
+            const checkData = await checkRes.json();
+            setDistanceData(checkData);
+            if (checkData?.isOutOfRange || (checkData?.distanceKm && checkData.distanceKm > 10)) {
+              return;
+            }
+          }
+        } catch {}
+      }
     }
 
     setIsSubmitting(true);
@@ -1170,19 +1215,32 @@ export function CheckoutModal() {
                 </div>
               </div>
 
-              {/* Інформаційна плашка прорахунку доставки за місто */}
+              {/* Інформаційна плашка прорахунку доставки за місто або попередження про >10 км */}
               {selectedZone === 'suburb' && (
-                <div className="p-2.5 sm:p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs space-y-1.5 animate-in fade-in duration-200">
-                  <div className="flex items-center justify-between text-white font-bold">
-                    <div className="flex items-center gap-1.5 text-amber-400">
+                <div
+                  className={cn(
+                    'p-2.5 sm:p-3 rounded-xl border text-xs space-y-2 animate-in fade-in duration-200',
+                    isDeliveryOutOfRange
+                      ? 'bg-red-950/40 border-[#e50914] shadow-md shadow-red-950/30'
+                      : 'bg-amber-500/10 border-amber-500/30'
+                  )}
+                >
+                  <div className="flex items-center justify-between text-white font-bold gap-2">
+                    <div className={cn('flex items-center gap-1.5', isDeliveryOutOfRange ? 'text-[#ff4d58]' : 'text-amber-400')}>
                       {isCalculatingDistance ? (
-                        <Loader2 className="w-4 h-4 text-amber-400 animate-spin shrink-0" />
+                        <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                      ) : isDeliveryOutOfRange ? (
+                        <AlertCircle className="w-4 h-4 shrink-0" />
                       ) : (
-                        <Navigation className="w-4 h-4 text-amber-400 shrink-0" />
+                        <Navigation className="w-4 h-4 shrink-0" />
                       )}
                       <span className="text-xs sm:text-sm font-black">
                         {isCalculatingDistance
                           ? (locale === 'pl' ? 'Obliczanie trasy OSRM...' : 'Розрахунок маршруту по карті...')
+                          : isDeliveryOutOfRange
+                            ? (locale === 'pl'
+                                ? `Poza strefą dostawy (~${distanceData?.distanceKm} km)`
+                                : `Поза зоною доставки (~${distanceData?.distanceKm} км)`)
                           : distanceData
                             ? (distanceData.precisionLevel === 'city'
                                 ? (locale === 'pl'
@@ -1199,31 +1257,64 @@ export function CheckoutModal() {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-[10px] text-zinc-400 uppercase font-semibold">
-                          {locale === 'pl' ? 'Koszt:' : 'Вартість:'}
-                        </span>
-                        <span className="text-amber-300 font-black text-sm sm:text-base">
-                          {distanceData ? `${distanceData.deliveryPrice} zł` : `od ${storeSettings.suburb10kmFee} zł`}
-                        </span>
-                      </div>
+                    {!isDeliveryOutOfRange && (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-[10px] text-zinc-400 uppercase font-semibold">
+                            {locale === 'pl' ? 'Koszt:' : 'Вартість:'}
+                          </span>
+                          <span className="text-amber-300 font-black text-sm sm:text-base">
+                            {distanceData ? `${distanceData.deliveryPrice} zł` : `od ${storeSettings.suburb10kmFee} zł`}
+                          </span>
+                        </div>
 
-                      {watchCity && watchCity.trim().length >= 2 && (
-                        <button
-                          type="button"
-                          onClick={() => calculateDistanceFee()}
-                          disabled={isCalculatingDistance}
-                          className="px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[10px] font-bold border border-amber-500/40 transition-all cursor-pointer"
-                        >
-                          {locale === 'pl' ? 'Przelicz' : 'Розрахувати'}
-                        </button>
-                      )}
-                    </div>
+                        {watchCity && watchCity.trim().length >= 2 && (
+                          <button
+                            type="button"
+                            onClick={() => calculateDistanceFee()}
+                            disabled={isCalculatingDistance}
+                            className="px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[10px] font-bold border border-amber-500/40 transition-all cursor-pointer"
+                          >
+                            {locale === 'pl' ? 'Przelicz' : 'Розрахувати'}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
 
+                  {isDeliveryOutOfRange ? (
+                    <div className="space-y-2">
+                      <p className="text-[11px] text-red-200 leading-snug font-medium">
+                        {locale === 'pl'
+                          ? 'Dostawa kurierem obowiązuje wyłącznie w promieniu do 10 km od Świdnicy. Dla tej miejscowości dostępny jest tylko odbiór osobisty w lokalu.'
+                          : 'Доставка курʼєром діє лише в радіусі до 10 км від Свідниці. Для цієї адреси доступний лише самовивіз із закладу.'}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeliveryMethod('pickup');
+                          setValue('deliveryMethod', 'pickup');
+                        }}
+                        style={{
+                          clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                        }}
+                        className="w-full sm:w-auto px-3.5 py-1.5 bg-[#e50914] hover:bg-[#f4222d] text-white font-black text-[11px] uppercase tracking-wider transition-all cursor-pointer shadow-sm shadow-[#e50914]/30 flex items-center justify-center gap-1.5"
+                      >
+                        <Store className="w-3.5 h-3.5" />
+                        <span>
+                          {locale === 'pl'
+                            ? 'Zmień na odbiór osobisty'
+                            : 'Перемкнути на самовивіз'}
+                        </span>
+                      </button>
+                    </div>
+                  ) : (
                   <p className="text-[11px] text-zinc-300 leading-snug">
-                    {distanceData
+                    {distanceData?.isFallback
+                      ? (locale === 'pl'
+                          ? 'Nie znaleziono dokładnie tej miejscowości na mapie. Wybierz miejscowość z listy podpowiedzi lub wpisz ulicę.'
+                          : 'Не вдалося точно знайти населений пункт на карті. Оберіть зі списку підказок або уточніть вулицю.')
+                      : distanceData
                       ? (distanceData.precisionLevel === 'city'
                           ? (locale === 'pl'
                               ? `Wyliczono do centrum (${distanceData.cityName}). Wpisz ulicę oraz numer domu, aby doprecyzować trasę.`
@@ -1239,6 +1330,7 @@ export function CheckoutModal() {
                           ? 'Wpisz miejscowość poniżej — system natychmiast wyliczy dystans i cenę do centrum (od 9 zł + 1 zł/km).'
                           : 'Вкажіть населений пункт нижче — система одразу прорахує відстань і ціну до центру (від 9 zł + 1 zł/км).')}
                   </p>
+                  )}
                 </div>
               )}
 
@@ -1861,7 +1953,7 @@ export function CheckoutModal() {
 
             {(() => {
               const isBlockedByPause = storeSettings.isOrdersPaused && (scheduledDate !== 'tomorrow' || selectedTiming !== 'scheduled');
-              const isDisabled = isSubmitting || items.length === 0 || isBlockedByPause || (bounds.isTodayCutoffPassed && selectedTiming === 'asap');
+              const isDisabled = isSubmitting || items.length === 0 || isBlockedByPause || isDeliveryOutOfRange || (bounds.isTodayCutoffPassed && selectedTiming === 'asap');
 
               return (
                 <button
@@ -1875,6 +1967,8 @@ export function CheckoutModal() {
                 >
                   {isSubmitting ? (
                     <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : isDeliveryOutOfRange ? (
+                    <span>{locale === 'pl' ? 'Poza strefą (>10 km)' : 'Поза зоною (>10 км)'}</span>
                   ) : isBlockedByPause ? (
                     <span>{locale === 'pl' ? 'Tylko na jutro' : 'Тільки на завтра'}</span>
                   ) : storeSettings.isOrdersPaused && scheduledDate === 'tomorrow' ? (
