@@ -1810,6 +1810,11 @@ export function CheckoutModal() {
             <div className="space-y-0.5">
               <div className="flex items-baseline gap-2 flex-wrap">
                 <span className="text-xs text-zinc-400 font-medium">{t.cart.total}:</span>
+                {(birthdayDiscount > 0 || firstOrderDiscount > 0) && (
+                  <span className="text-xs text-zinc-500 line-through font-semibold">
+                    {formatPrice(baseTotalBeforePromo, locale)}
+                  </span>
+                )}
                 <span className="text-lg sm:text-xl font-black text-[#e50914]">{formatPrice(total, locale)}</span>
                 {isPickup && !hasDiscountedItem && !isBirthdayApplied && (
                   <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">
@@ -1818,7 +1823,7 @@ export function CheckoutModal() {
                 )}
                 {isBirthdayApplied && (
                   <span className="text-[10px] text-rose-300 font-bold bg-[#e50914]/20 border border-[#e50914]/40 px-1.5 py-0.5 rounded">
-                    🎂 -{birthdayPromo.discountPercent || 10}%
+                    -{birthdayPromo.discountPercent || 10}%
                   </span>
                 )}
                 {firstOrderDiscount > 0 && (
