@@ -217,6 +217,8 @@ export interface CustomerProfile {
   phone: string;
   email?: string;
   password?: string;
+  birthDate?: string; // YYYY-MM-DD
+  birthdayUsedYear?: number;
   defaultAddress?: OrderAddress;
   preferredLanguage?: 'pl' | 'uk';
   savedAt: string;

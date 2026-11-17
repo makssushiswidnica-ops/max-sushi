@@ -7,10 +7,12 @@ interface CustomerState {
   isOpen: boolean;
   activeTab: 'orders' | 'profile';
   isFirstOrderEligible: boolean;
+  isBirthdayUsedThisYear: boolean;
   setOpen: (open: boolean) => void;
   toggleOpen: () => void;
   setActiveTab: (tab: 'orders' | 'profile') => void;
   checkEligibility: (phone?: string) => Promise<boolean>;
+  checkBirthdayUsedThisYear: (phone?: string) => Promise<boolean>;
   registerCustomer: (params: { phone: string; name: string; password: string; email?: string }) => Promise<CustomerProfile>;
   loginUser: (identifier: string, password: string) => Promise<{ type: 'admin' | 'customer'; profile?: CustomerProfile }>;
   updateProfile: (data: Partial<CustomerProfile>) => Promise<void>;
@@ -92,11 +94,66 @@ export const checkPhoneHasOrders = async (phone: string): Promise<boolean> => {
   return false;
 };
 
+// Перевірка чи збігається день і місяць народження з сьогоднішньою датою
+export const isBirthdayToday = (birthDate?: string): boolean => {
+  if (!birthDate) return false;
+  const match = birthDate.match(/^\d{4}-(\d{2})-(\d{2})$/);
+  if (!match) return false;
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return match[1] === month && match[2] === day;
+};
+
+// Перевірка чи клієнт вже використовував знижку до Дня народження у поточному році
+export const checkPhoneUsedBirthdayThisYear = async (phone: string): Promise<boolean> => {
+  if (!phone) return false;
+  const digits = normalizePhone(phone).replace(/\D/g, '').slice(-9);
+  if (!digits || digits.length < 6) return false;
+  const currentYear = new Date().getFullYear();
+
+  if (typeof window !== 'undefined') {
+    try {
+      const localOrders: Order[] = JSON.parse(localStorage.getItem('max-sushi-orders') || '[]');
+      const usedLocal = localOrders.some((o) => {
+        if (o.status === 'cancelled') return false;
+        const oYear = new Date(o.createdAt).getFullYear();
+        if (oYear !== currentYear) return false;
+        const phoneMatch = normalizePhone(o.phone).replace(/\D/g, '').includes(digits);
+        const isBday = Boolean(o.isBirthday || o.birthdayDiscount || /URODZINY/i.test(o.comment || ''));
+        return phoneMatch && isBday;
+      });
+      if (usedLocal) return true;
+    } catch {}
+  }
+
+  if (isSupabaseConfigured) {
+    try {
+      const yearStart = `${currentYear}-01-01T00:00:00.000Z`;
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, comment, status, created_at')
+        .ilike('phone', buildPhoneIlikePattern(digits))
+        .neq('status', 'cancelled')
+        .gte('created_at', yearStart)
+        .ilike('comment', '%URODZINY%')
+        .limit(1);
+
+      if (!error && data && data.length > 0) {
+        return true;
+      }
+    } catch {}
+  }
+
+  return false;
+};
+
 export const useCustomerStore = create<CustomerState>((set, get) => ({
   customer: getInitialCustomer(),
   isOpen: false,
   activeTab: 'orders',
   isFirstOrderEligible: true,
+  isBirthdayUsedThisYear: false,
 
   setOpen: (open: boolean) => set({ isOpen: open }),
   toggleOpen: () => set((state) => ({ isOpen: !state.isOpen })),
@@ -112,6 +169,23 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     const eligible = !hasOrders;
     set({ isFirstOrderEligible: eligible });
     return eligible;
+  },
+
+  checkBirthdayUsedThisYear: async (phone?: string): Promise<boolean> => {
+    const currentCustomer = get().customer;
+    const currentYear = new Date().getFullYear();
+    if (currentCustomer?.birthdayUsedYear === currentYear) {
+      set({ isBirthdayUsedThisYear: true });
+      return true;
+    }
+    const targetPhone = phone || currentCustomer?.phone;
+    if (!targetPhone) {
+      set({ isBirthdayUsedThisYear: false });
+      return false;
+    }
+    const used = await checkPhoneUsedBirthdayThisYear(targetPhone);
+    set({ isBirthdayUsedThisYear: used });
+    return used;
   },
 
   // 1. РЕЄСТРАЦІЯ НОВОГО КЛІЄНТА
@@ -216,6 +290,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
 
     set({ customer: newProfile });
     get().checkEligibility(newProfile.phone);
+    get().checkBirthdayUsedThisYear(newProfile.phone);
     return newProfile;
   },
 
@@ -278,6 +353,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
       }
       set({ customer: customerMatch });
       get().checkEligibility(customerMatch.phone);
+      get().checkBirthdayUsedThisYear(customerMatch.phone);
       return { type: 'customer', profile: customerMatch };
     }
 
@@ -311,13 +387,24 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
               throw new Error('invalidPassword');
             }
 
+            const rawAddr = remoteUser.address && typeof remoteUser.address === 'object' ? { ...remoteUser.address } : undefined;
+            const extractedBirthDate = rawAddr?._birthDate as string | undefined;
+            const extractedBirthdayUsedYear = rawAddr?._birthdayUsedYear as number | undefined;
+            if (rawAddr) {
+              delete rawAddr._birthDate;
+              delete rawAddr._birthdayUsedYear;
+            }
+            const cleanDefaultAddress = rawAddr && Object.keys(rawAddr).length > 0 ? rawAddr : undefined;
+
             const restoredProfile: CustomerProfile = {
               id: remoteUser.id || `cust_${Date.now()}`,
               phone: remoteUser.phone,
               name: remoteUser.name,
               email: remoteUser.email || undefined,
               password: remoteUser.password || password,
-              defaultAddress: remoteUser.address || undefined,
+              birthDate: extractedBirthDate || undefined,
+              birthdayUsedYear: extractedBirthdayUsedYear || undefined,
+              defaultAddress: cleanDefaultAddress,
               preferredLanguage: remoteUser.language || 'pl',
               savedAt: remoteUser.updated_at || new Date().toISOString(),
             };
@@ -330,6 +417,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
             }
             set({ customer: restoredProfile });
             get().checkEligibility(restoredProfile.phone);
+            get().checkBirthdayUsedThisYear(restoredProfile.phone);
             return { type: 'customer', profile: restoredProfile };
           }
       } catch (e: any) {
@@ -399,13 +487,18 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
 
     if (isSupabaseConfigured && updated.phone) {
       try {
+        const packedAddress = {
+          ...(updated.defaultAddress || {}),
+          ...(updated.birthDate ? { _birthDate: updated.birthDate } : {}),
+          ...(updated.birthdayUsedYear ? { _birthdayUsedYear: updated.birthdayUsedYear } : {}),
+        };
         await supabase.from('customers').upsert(
           {
             phone: updated.phone,
             name: updated.name,
             email: updated.email,
             password: updated.password,
-            address: updated.defaultAddress,
+            address: Object.keys(packedAddress).length > 0 ? packedAddress : null,
             language: updated.preferredLanguage,
             updated_at: new Date().toISOString(),
           },
@@ -414,14 +507,17 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
       } catch (err) {}
     }
 
-    set({ customer: updated });
+    set({
+      customer: updated,
+      ...(updated.birthdayUsedYear === new Date().getFullYear() ? { isBirthdayUsedThisYear: true } : {}),
+    });
   },
 
   logout: () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('max-sushi-customer');
     }
-    set({ customer: null, activeTab: 'orders', isFirstOrderEligible: false });
+    set({ customer: null, activeTab: 'orders', isFirstOrderEligible: false, isBirthdayUsedThisYear: false });
   },
 
   fetchCustomerOrders: async (): Promise<Order[]> => {
@@ -498,12 +594,20 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
   },
 }));
 
-// Фонова перевірка права на знижку на перше замовлення для збереженого профілю
+// Фонова перевірка права на знижку на перше замовлення та ДР для збереженого профілю
 if (typeof window !== 'undefined') {
   const initCust = getInitialCustomer();
   if (initCust?.phone) {
     checkPhoneHasOrders(initCust.phone).then((hasOrders) => {
       useCustomerStore.setState({ isFirstOrderEligible: !hasOrders });
     });
+    const currentYear = new Date().getFullYear();
+    if (initCust.birthdayUsedYear === currentYear) {
+      useCustomerStore.setState({ isBirthdayUsedThisYear: true });
+    } else {
+      checkPhoneUsedBirthdayThisYear(initCust.phone).then((used) => {
+        useCustomerStore.setState({ isBirthdayUsedThisYear: used });
+      });
+    }
   }
 }

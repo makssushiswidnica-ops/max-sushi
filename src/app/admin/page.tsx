@@ -188,7 +188,7 @@ export default function AdminPage() {
   const [copiedPhoneId, setCopiedPhoneId] = useState<string | null>(null);
   const [copiedSql, setCopiedSql] = useState(false);
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
-  const [collapsedHistoryDays, setCollapsedHistoryDays] = useState<Set<string>>(new Set());
+  const [expandedHistoryDays, setExpandedHistoryDays] = useState<Set<string>>(new Set());
   const [statsPeriod, setStatsPeriod] = useState<'today' | '7days' | '30days' | 'all'>('7days');
 
   // Відстеження вже відомих замовлень, щоб перемикати на "Нові" ЛИШЕ один раз при надходженні нового
@@ -1422,9 +1422,9 @@ export default function AdminPage() {
     }));
   }, [orders]);
 
-  // Згортання / розгортання окремого дня в історії
+  // Згортання / розгортання окремого дня в історії (за замовчуванням усі дні згорнуті)
   const toggleHistoryDay = (dateKey: string) => {
-    setCollapsedHistoryDays((prev) => {
+    setExpandedHistoryDays((prev) => {
       const next = new Set(prev);
       if (next.has(dateKey)) {
         next.delete(dateKey);
@@ -2617,17 +2617,15 @@ export default function AdminPage() {
                 <FileText className="w-4 h-4 text-rose-400/90 hover:text-rose-300" />
               </button>
 
-              {/* Іконка видалення (прихована на кухні, у курʼєра та в доставлених) */}
-              {!(isKitchen || isInDelivery || isDelivered || orderStatusFilter === 'in_progress' || orderStatusFilter === 'in_delivery' || orderStatusFilter === 'delivered') && (
-                <button
-                  type="button"
-                  onClick={() => handleDeleteOrder(order.id)}
-                  title="Видалити замовлення"
-                  className="p-1.5 text-zinc-400 hover:text-rose-400 bg-white/5 hover:bg-rose-500/10 rounded-lg transition-all cursor-pointer active:scale-95 border border-white/5"
-                >
-                  <Trash2 className="w-4 h-4 text-zinc-400 hover:text-rose-400" />
-                </button>
-              )}
+              {/* Іконка видалення замовлення (доступна на всіх етапах) */}
+              <button
+                type="button"
+                onClick={() => handleDeleteOrder(order.id)}
+                title="Видалити замовлення"
+                className="p-1.5 text-zinc-400 hover:text-rose-400 bg-white/5 hover:bg-rose-500/10 rounded-lg transition-all cursor-pointer active:scale-95 border border-white/5"
+              >
+                <Trash2 className="w-4 h-4 text-zinc-400 hover:text-rose-400" />
+              </button>
             </div>
           </div>
         </div>
@@ -4637,7 +4635,7 @@ export default function AdminPage() {
               ) : (
                 <div className="space-y-4">
                   {historyByDays.map((dayGroup) => {
-                    const isCollapsed = collapsedHistoryDays.has(dayGroup.dateKey);
+                    const isCollapsed = !expandedHistoryDays.has(dayGroup.dateKey);
                     return (
                       <div key={dayGroup.dateKey} className="space-y-3">
                         {/* Плашка дня */}

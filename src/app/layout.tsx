@@ -50,11 +50,12 @@ export const metadata: Metadata = {
   description: 'Maks Sushi w Świdnicy: wyśmienite rolki, zestawy sushi i dania japońskie. Szybka dostawa pod Twoje drzwi lub odbiór przy ul. Parkowej 8. Zamów online!',
   icons: {
     icon: [
+      { url: '/icon.png', type: 'image/png', sizes: '512x512' },
       { url: '/favicon.ico', sizes: 'any' },
-      { url: '/icon.png', type: 'image/png' },
     ],
+    shortcut: ['/icon.png'],
     apple: [
-      { url: '/icon.png' },
+      { url: '/icon.png', sizes: '512x512' },
     ],
   },
   openGraph: {

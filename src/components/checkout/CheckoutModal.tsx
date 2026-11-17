@@ -28,7 +28,7 @@ import {
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
 import { useCartStore } from '@/store/useCartStore';
-import { useCustomerStore } from '@/store/useCustomerStore';
+import { useCustomerStore, isBirthdayToday, checkPhoneUsedBirthdayThisYear } from '@/store/useCustomerStore';
 import { useI18n } from '@/lib/i18nContext';
 import { createOrder } from '@/lib/supabase';
 import { brandTheme } from '@/config/theme';
@@ -377,9 +377,17 @@ export function CheckoutModal() {
   const deliveryFee = useCartStore((s) => s.getDeliveryFee)(isPickup, selectedZone, customFee);
   const rawTotal = useCartStore((s) => s.getTotal)(isPickup, selectedZone, customFee);
 
-  // Знижка на День народження (10% — не сумується із самовивозом -5% та іншими знижками)
+  // Знижка на День народження (10% — не сумується із самовивозом -5% та іншими знижками, 1 раз на рік)
+  const isBirthdayUsedThisYear = useCustomerStore((s) => s.isBirthdayUsedThisYear);
+  const checkBirthdayUsedThisYear = useCustomerStore((s) => s.checkBirthdayUsedThisYear);
+  const [phoneUsedBirthday, setPhoneUsedBirthday] = useState(false);
+  const isBirthdayBlocked = Boolean(
+    isBirthdayUsedThisYear ||
+      phoneUsedBirthday ||
+      customer?.birthdayUsedYear === new Date().getFullYear()
+  );
   const birthdayPromo = storeSettings.birthdayPromo ?? { enabled: true, discountPercent: 10 };
-  const isBirthdayApplied = Boolean(birthdayPromo.enabled && isBirthdayChecked);
+  const isBirthdayApplied = Boolean(birthdayPromo.enabled && isBirthdayChecked && !isBirthdayBlocked);
   const birthdayDiscountRate = (birthdayPromo.discountPercent || 10) / 100;
   const birthdayEligibleSubtotal = items.reduce(
     (sum, item) =>
@@ -633,12 +641,28 @@ export function CheckoutModal() {
     }
   }, [scheduledDate, bounds.tomorrowMinTimeString, bounds.todayMinTimeString, selectedScheduledTime]);
 
-  // Автоматичне автозаповнення контактів та адреси зі збереженого профілю клієнта
+  // Автоматичне автозаповнення контактів та адреси зі збереженого профілю клієнта + автоактивація ДР
   React.useEffect(() => {
     if (isCheckoutOpen) {
+      setPhoneUsedBirthday(false);
       if (customer) {
         if (customer.name) setValue('name', maskName(customer.name));
         if (customer.phone) setValue('phone', maskPhone(customer.phone));
+
+        const currentYear = new Date().getFullYear();
+        const usedInProfile = customer.birthdayUsedYear === currentYear;
+        checkBirthdayUsedThisYear(customer.phone).then((usedInOrders) => {
+          if (usedInProfile || usedInOrders) {
+            setIsBirthdayChecked(false);
+          } else if (
+            storeSettings.birthdayPromo?.enabled !== false &&
+            isBirthdayToday(customer.birthDate)
+          ) {
+            setIsBirthdayChecked(true);
+          } else {
+            setIsBirthdayChecked(false);
+          }
+        });
 
         // Автовибір зони зі збережених даних клієнта
         let clientZone: DeliveryZoneId = 'city';
@@ -661,12 +685,27 @@ export function CheckoutModal() {
         if (customer.defaultAddress?.floor) setValue('floor', maskFloor(customer.defaultAddress.floor));
         if (customer.defaultAddress?.entryCode) setValue('entryCode', maskEntryCode(customer.defaultAddress.entryCode));
       } else {
+        setIsBirthdayChecked(false);
         // За замовчуванням завжди Свідниця
         setSelectedZone('city');
         setValue('zone', 'city');
       }
     }
-  }, [isCheckoutOpen, customer, setValue]);
+  }, [isCheckoutOpen, customer, setValue, checkBirthdayUsedThisYear, storeSettings.birthdayPromo?.enabled]);
+
+  // Перевірка по введеному номеру телефону, чи вже була використана знижка ДР цього року
+  const watchPhoneVal = watch('phone');
+  React.useEffect(() => {
+    const digits = getRawPhoneDigits(watchPhoneVal || '');
+    if (digits.length === 9) {
+      checkPhoneUsedBirthdayThisYear(digits).then((used) => {
+        setPhoneUsedBirthday(used);
+        if (used) setIsBirthdayChecked(false);
+      });
+    } else {
+      setPhoneUsedBirthday(false);
+    }
+  }, [watchPhoneVal]);
 
   const onSubmit = async (values: CheckoutFormValues) => {
     // Якщо прийом замовлень призупинено в адмінці через перевантаження кухні — дозволено ТІЛЬКИ на завтра
@@ -771,6 +810,13 @@ export function CheckoutModal() {
         useCustomerStore.setState({ isFirstOrderEligible: false });
       }
 
+      // Якщо використано знижку ДР — фіксуємо це в профілі та знімаємо банер над хедером
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const currentYear = new Date().getFullYear();
+      if (isBirthdayApplied) {
+        useCustomerStore.setState({ isBirthdayUsedThisYear: true });
+      }
+
       // Запам'ятовуємо або оновлюємо дані клієнта та адресу для майбутніх замовлень
       try {
         const addressObj: OrderAddress | undefined = values.deliveryMethod === 'delivery' && values.street ? {
@@ -788,6 +834,12 @@ export function CheckoutModal() {
             name: values.name || customer.name,
             phone: values.phone || customer.phone,
             defaultAddress: addressObj,
+            ...(isBirthdayApplied
+              ? {
+                  birthDate: customer.birthDate || todayIso,
+                  birthdayUsedYear: currentYear,
+                }
+              : {}),
           });
         } else {
           // Якщо клієнт ще не був залогінений, зберігаємо профіль для миттєвого впізнання при наступному візиті
@@ -796,6 +848,12 @@ export function CheckoutModal() {
             name: values.name,
             phone: values.phone,
             defaultAddress: addressObj,
+            ...(isBirthdayApplied
+              ? {
+                  birthDate: todayIso,
+                  birthdayUsedYear: currentYear,
+                }
+              : {}),
             preferredLanguage: locale as 'pl' | 'uk',
             savedAt: new Date().toISOString(),
           };
@@ -1101,8 +1159,18 @@ export function CheckoutModal() {
             />
           </div>
 
-          {/* Чекбокс знижки на День народження (за замовчуванням неактивний) */}
+          {/* Чекбокс знижки на День народження (за замовчуванням неактивний, 1 раз на рік) */}
           {birthdayPromo.enabled !== false && (
+            isBirthdayBlocked ? (
+              <div className="flex items-center gap-2 p-2.5 rounded-xl border border-white/10 bg-[#14141c]/60 text-[11px] text-zinc-400">
+                <Cake className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                <span>
+                  {locale === 'pl'
+                    ? 'Rabat urodzinowy (-10%) został już wykorzystany w tym roku.'
+                    : 'Знижка до Дня народження (-10%) вже використана цього року.'}
+                </span>
+              </div>
+            ) : (
             <label
               htmlFor="birthday-discount-checkbox"
               className={cn(
@@ -1135,6 +1203,7 @@ export function CheckoutModal() {
                 </p>
               </div>
             </label>
+            )
           )}
 
           {/* Адреса доставки (тільки при доставці) */}

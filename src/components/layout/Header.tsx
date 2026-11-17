@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ShoppingBag, Phone, Clock, MapPin, User, Gift, Percent } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
-import { useCustomerStore, normalizePhone } from '@/store/useCustomerStore';
+import { useCustomerStore, normalizePhone, isBirthdayToday } from '@/store/useCustomerStore';
 import { useI18n } from '@/lib/i18nContext';
 import { brandTheme, getStoreStatus } from '@/config/theme';
 import { formatPrice, cn } from '@/lib/utils';
@@ -20,10 +20,12 @@ export function Header() {
   const menuProducts = useCartStore((s) => s.menuProducts);
   const giftPromo = useSettingsStore((s) => s.giftPromo);
   const firstOrderPromo = useSettingsStore((s) => s.firstOrderPromo);
+  const birthdayPromo = useSettingsStore((s) => s.birthdayPromo);
 
   const toggleCustomerDrawer = useCustomerStore((s) => s.toggleOpen);
   const customer = useCustomerStore((s) => s.customer);
   const isFirstOrderEligible = useCustomerStore((s) => s.isFirstOrderEligible);
+  const isBirthdayUsedThisYear = useCustomerStore((s) => s.isBirthdayUsedThisYear);
 
   const [mounted, setMounted] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -33,8 +35,17 @@ export function Header() {
   // Плашка про знижку на перше замовлення показується ЛИШЕ зареєстрованим користувачам, які ще не робили замовлень
   const showFirstOrderBanner = Boolean(customer && firstOrderPromo?.enabled && isFirstOrderEligible);
 
-  // Слайдер верхньої плашки: статус роботи / акція 1-го замовлення (для зареєстрованих) / акція ролу в подарунок
-  const [activeTopSlide, setActiveTopSlide] = useState<'status' | 'promo' | 'firstOrder'>('status');
+  // Плашка про знижку до Дня народження показується ЛИШЕ якщо сьогодні ДР і знижка ще не використана цього року
+  const showBirthdayBanner = Boolean(
+    customer &&
+      birthdayPromo?.enabled !== false &&
+      isBirthdayToday(customer.birthDate) &&
+      customer.birthdayUsedYear !== new Date().getFullYear() &&
+      !isBirthdayUsedThisYear
+  );
+
+  // Слайдер верхньої плашки: статус роботи / ДР / акція 1-го замовлення / акція ролу в подарунок
+  const [activeTopSlide, setActiveTopSlide] = useState<'status' | 'birthday' | 'promo' | 'firstOrder'>('status');
 
   const giftProduct = React.useMemo(() => {
     if (!giftPromo?.enabled || !giftPromo.productId) return null;
@@ -42,11 +53,12 @@ export function Header() {
   }, [giftPromo, menuProducts]);
 
   const availableSlides = React.useMemo(() => {
-    const list: Array<'status' | 'promo' | 'firstOrder'> = ['status'];
+    const list: Array<'status' | 'birthday' | 'promo' | 'firstOrder'> = ['status'];
+    if (showBirthdayBanner) list.push('birthday');
     if (showFirstOrderBanner) list.push('firstOrder');
     if (giftPromo?.enabled) list.push('promo');
     return list;
-  }, [showFirstOrderBanner, giftPromo?.enabled]);
+  }, [showBirthdayBanner, showFirstOrderBanner, giftPromo?.enabled]);
 
   useEffect(() => {
     if (!mounted || availableSlides.length <= 1) {
@@ -443,6 +455,22 @@ export function Header() {
                     {storeStatus.todayHours}
                   </span>
                 </div>
+              ) : activeTopSlide === 'birthday' ? (
+                <button
+                  key="birthday"
+                  type="button"
+                  onClick={() => {
+                    useCartStore.getState().setOpen(true);
+                  }}
+                  className="flex items-center gap-1.5 text-left min-w-0 truncate animate-in fade-in duration-300 cursor-pointer group"
+                >
+                  <span className="text-xs shrink-0">🎂</span>
+                  <span className="font-bold text-[#ff4d58] group-hover:text-rose-300 transition-colors truncate">
+                    {locale === 'pl'
+                      ? `Masz -${birthdayPromo?.discountPercent || 10}% rabatu urodzinowego!`
+                      : `Маєш -${birthdayPromo?.discountPercent || 10}% до Дня народження!`}
+                  </span>
+                </button>
               ) : activeTopSlide === 'firstOrder' ? (
                 <button
                   key="firstOrder"

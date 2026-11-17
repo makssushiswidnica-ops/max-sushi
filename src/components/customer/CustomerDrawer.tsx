@@ -106,6 +106,7 @@ export function CustomerDrawer() {
   // Поля профілю для редагування
   const [profileName, setProfileName] = useState('');
   const [profilePhone, setProfilePhone] = useState('');
+  const [profileBirthDate, setProfileBirthDate] = useState('');
   const [street, setStreet] = useState('');
   const [house, setHouse] = useState('');
   const [apartment, setApartment] = useState('');
@@ -179,6 +180,7 @@ export function CustomerDrawer() {
     if (customer) {
       setProfileName(customer.name || '');
       setProfilePhone(customer.phone || '');
+      setProfileBirthDate(customer.birthDate || '');
       setStreet(customer.defaultAddress?.street || '');
       setHouse(customer.defaultAddress?.house || '');
       setApartment(customer.defaultAddress?.apartment || '');
@@ -398,6 +400,7 @@ export function CustomerDrawer() {
     await updateProfile({
       name: cleanName,
       phone: cleanPhone,
+      birthDate: customer.birthDate || (profileBirthDate ? profileBirthDate : undefined),
       defaultAddress,
     });
 
@@ -1217,6 +1220,34 @@ export function CustomerDrawer() {
                       maxLength={11}
                       className="w-full mt-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs font-mono tracking-wider focus:border-[#e50914] outline-hidden"
                     />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-zinc-400 flex items-center justify-between gap-2">
+                      <span>{locale === 'pl' ? 'Data urodzenia (opcjonalnie)' : 'Дата народження (необовʼязково)'}</span>
+                      {customer.birthDate && (
+                        <span className="text-[10px] text-emerald-400 font-semibold">
+                          {locale === 'pl' ? 'Zapisana' : 'Збережено'}
+                        </span>
+                      )}
+                    </label>
+                    <input
+                      type="date"
+                      value={profileBirthDate}
+                      disabled={Boolean(customer.birthDate)}
+                      max={new Date().toISOString().slice(0, 10)}
+                      onChange={(e) => setProfileBirthDate(e.target.value)}
+                      className="w-full mt-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs font-mono focus:border-[#e50914] outline-hidden disabled:opacity-60 disabled:cursor-not-allowed [color-scheme:dark]"
+                    />
+                    <p className="text-[10px] text-zinc-500 mt-1 leading-tight">
+                      {customer.birthDate
+                        ? (locale === 'pl'
+                            ? 'Rabat urodzinowy (-10%) przysługuje raz w roku po okazaniu dokumentu.'
+                            : 'Знижка до Дня народження (-10%) діє раз на рік за наявності документа.')
+                        : (locale === 'pl'
+                            ? 'Wpisz datę urodzenia, aby otrzymać -10% rabatu w dzień urodzin (jednorazowo).'
+                            : 'Вкажіть дату народження, щоб отримати -10% знижки у свій день (1 раз на рік).')}
+                    </p>
                   </div>
                 </div>
               </div>
