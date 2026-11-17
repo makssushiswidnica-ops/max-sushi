@@ -307,7 +307,7 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
     if (updates.pieces !== undefined) payload.pieces = updates.pieces;
     if (updates.categoryId !== undefined) payload.category_id = updates.categoryId;
     if (updates.image !== undefined) payload.image = updates.image;
-    if (updates.badge !== undefined) payload.badge = updates.badge || null;
+    if ('badge' in updates) payload.badge = updates.badge || null;
     if (updates.ingredients !== undefined) payload.ingredients = updates.ingredients;
     if (
       updates.nutrition !== undefined ||
