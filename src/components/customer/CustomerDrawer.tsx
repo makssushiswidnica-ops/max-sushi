@@ -175,12 +175,47 @@ export function CustomerDrawer() {
     });
   };
 
+  // Форматування дати народження YYYY-MM-DD -> DD.MM.YYYY та маска вводу
+  const formatBirthDateDisplay = (iso?: string): string => {
+    if (!iso) return '';
+    const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return m ? `${m[3]}.${m[2]}.${m[1]}` : iso;
+  };
+
+  const maskBirthDateInput = (val: string): string => {
+    const digits = val.replace(/\D/g, '').slice(0, 8);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}.${digits.slice(2, 4)}.${digits.slice(4)}`;
+  };
+
+  const parseBirthDateToIso = (display: string): string | null => {
+    const m = display.trim().match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    if (!m) return null;
+    const day = Number(m[1]);
+    const month = Number(m[2]);
+    const year = Number(m[3]);
+    const currentYear = new Date().getFullYear();
+    if (year < 1915 || year > currentYear || month < 1 || month > 12 || day < 1 || day > 31) {
+      return null;
+    }
+    const testDate = new Date(year, month - 1, day);
+    if (
+      testDate.getFullYear() !== year ||
+      testDate.getMonth() !== month - 1 ||
+      testDate.getDate() !== day
+    ) {
+      return null;
+    }
+    return `${m[3]}-${m[2]}-${m[1]}`;
+  };
+
   // Синхронізація полів профілю при авторизації
   useEffect(() => {
     if (customer) {
       setProfileName(customer.name || '');
       setProfilePhone(customer.phone || '');
-      setProfileBirthDate(customer.birthDate || '');
+      setProfileBirthDate(formatBirthDateDisplay(customer.birthDate));
       setStreet(customer.defaultAddress?.street || '');
       setHouse(customer.defaultAddress?.house || '');
       setApartment(customer.defaultAddress?.apartment || '');
@@ -397,10 +432,24 @@ export function CustomerDrawer() {
       entryCode: entryCode ? maskEntryCode(entryCode) : undefined,
     };
 
+    let parsedBirthDate = customer.birthDate;
+    if (!parsedBirthDate && profileBirthDate.trim()) {
+      const iso = parseBirthDateToIso(profileBirthDate);
+      if (!iso) {
+        setAuthError(
+          locale === 'pl'
+            ? 'Podaj poprawną datę urodzenia w formacie DD.MM.RRRR'
+            : 'Введіть коректну дату народження у форматі ДД.ММ.РРРР'
+        );
+        return;
+      }
+      parsedBirthDate = iso;
+    }
+
     await updateProfile({
       name: cleanName,
       phone: cleanPhone,
-      birthDate: customer.birthDate || (profileBirthDate ? profileBirthDate : undefined),
+      birthDate: parsedBirthDate,
       defaultAddress,
     });
 
@@ -1232,12 +1281,14 @@ export function CustomerDrawer() {
                       )}
                     </label>
                     <input
-                      type="date"
+                      type="text"
+                      inputMode="numeric"
                       value={profileBirthDate}
                       disabled={Boolean(customer.birthDate)}
-                      max={new Date().toISOString().slice(0, 10)}
-                      onChange={(e) => setProfileBirthDate(e.target.value)}
-                      className="w-full mt-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs font-mono focus:border-[#e50914] outline-hidden disabled:opacity-60 disabled:cursor-not-allowed [color-scheme:dark]"
+                      placeholder={locale === 'pl' ? 'DD.MM.RRRR (np. 15.05.1995)' : 'ДД.ММ.РРРР (напр. 15.05.1995)'}
+                      maxLength={10}
+                      onChange={(e) => setProfileBirthDate(maskBirthDateInput(e.target.value))}
+                      className="w-full mt-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs font-mono tracking-wider placeholder:text-zinc-600 focus:border-[#e50914] outline-hidden disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                     <p className="text-[10px] text-zinc-500 mt-1 leading-tight">
                       {customer.birthDate
