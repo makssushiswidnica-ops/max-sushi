@@ -68,7 +68,8 @@ import {
   BellRing,
   Volume2,
   Percent,
-  Tag
+  Tag,
+  Download
 } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
@@ -279,6 +280,8 @@ export default function AdminPage() {
   const [activeLangTab, setActiveLangTab] = useState<'pl' | 'uk'>('pl');
   const [isTranslating, setIsTranslating] = useState(false);
   const modalFileInputRef = useRef<HTMLInputElement>(null);
+  const backupRestoreInputRef = useRef<HTMLInputElement>(null);
+  const [isBackupBusy, setIsBackupBusy] = useState(false);
 
   // Налаштування доставки та маркетингу
   const storeSettings = useSettingsStore();
@@ -599,6 +602,134 @@ export default function AdminPage() {
       console.warn('Failed to load menu:', err);
     } finally {
       setIsLoadingMenu(false);
+    }
+  };
+
+  // Експорт резервної копії меню або повної бази Supabase у JSON-файл
+  const handleDownloadBackup = async (mode: 'menu' | 'full') => {
+    setIsBackupBusy(true);
+    try {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      let payload: Record<string, any> = {
+        exportedAt: new Date().toISOString(),
+        mode,
+        categories,
+        products,
+      };
+
+      if (mode === 'full' && isSupabaseConfigured) {
+        const [catRes, prodRes, ordRes, custRes] = await Promise.all([
+          supabase.from('categories').select('*'),
+          supabase.from('products').select('*'),
+          supabase.from('orders').select('*'),
+          supabase.from('customers').select('*'),
+        ]);
+        payload = {
+          exportedAt: new Date().toISOString(),
+          mode: 'full',
+          categories: catRes.data || categories,
+          products: prodRes.data || products,
+          orders: ordRes.data || [],
+          customers: custRes.data || [],
+        };
+      } else if (mode === 'menu' && isSupabaseConfigured) {
+        const [catRes, prodRes] = await Promise.all([
+          supabase.from('categories').select('*'),
+          supabase.from('products').select('*'),
+        ]);
+        if (catRes.data?.length) payload.categories = catRes.data;
+        if (prodRes.data?.length) payload.products = prodRes.data;
+      }
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `maks-sushi-${mode}-backup-${todayStr}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast(mode === 'full' ? 'Повний бекап бази завантажено!' : 'Бекап меню завантажено!');
+    } catch (err) {
+      console.error('Backup export error:', err);
+      showToast('Помилка створення бекапу');
+    } finally {
+      setIsBackupBusy(false);
+    }
+  };
+
+  // Відновлення категорій та страв меню з JSON-бекапу
+  const handleRestoreMenuFromFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const backupCategories = Array.isArray(parsed?.categories) ? parsed.categories : [];
+      const backupProducts = Array.isArray(parsed?.products) ? parsed.products : [];
+
+      if (backupCategories.length === 0 && backupProducts.length === 0) {
+        showToast('Файл не містить категорій або страв меню');
+        return;
+      }
+
+      if (
+        !window.confirm(
+          `Відновити меню з бекапу? Буде відновлено ${backupCategories.length} категорій та ${backupProducts.length} страв.`
+        )
+      ) {
+        return;
+      }
+
+      setIsBackupBusy(true);
+      if (isSupabaseConfigured) {
+        if (backupCategories.length > 0) {
+          const catRows = backupCategories.map((c: any, idx: number) => ({
+            id: c.id,
+            name: c.name,
+            icon: c.icon || 'CircleDot',
+            image: c.image || '',
+            sort_order: c.sort_order ?? idx + 1,
+          }));
+          const { error: catErr } = await supabase.from('categories').upsert(catRows, { onConflict: 'id' });
+          if (catErr) throw new Error(catErr.message);
+        }
+
+        if (backupProducts.length > 0) {
+          const prodRows = backupProducts.map((p: any) => ({
+            id: p.id,
+            category_id: p.category_id ?? p.categoryId,
+            name: p.name,
+            description: p.description,
+            price: Number(p.price || 0),
+            weight: Number(p.weight || 0),
+            pieces: p.pieces ?? null,
+            image: p.image || '',
+            images: Array.isArray(p.images) ? p.images : [],
+            badge: p.badge ?? null,
+            ingredients: p.ingredients || { pl: [], uk: [] },
+            nutrition: {
+              ...(p.nutrition || { calories: 0, proteins: 0, fats: 0, carbs: 0 }),
+              ...(p.sku ? { sku: p.sku } : {}),
+              ...(p.discountPercent !== undefined ? { discountPercent: p.discountPercent } : {}),
+            },
+            is_available: p.is_available !== undefined ? Boolean(p.is_available) : p.isAvailable !== false,
+          }));
+          const { error: prodErr } = await supabase.from('products').upsert(prodRows, { onConflict: 'id' });
+          if (prodErr) throw new Error(prodErr.message);
+        }
+      }
+
+      await loadMenu();
+      showToast(`Відновлено ${backupCategories.length} категорій і ${backupProducts.length} страв!`);
+    } catch (err: any) {
+      console.error('Restore backup error:', err);
+      showToast(`Помилка відновлення: ${err?.message || 'некоректний файл'}`);
+    } finally {
+      setIsBackupBusy(false);
     }
   };
 
@@ -5764,6 +5895,75 @@ export default function AdminPage() {
                         {pushStatus === 'granted' ? '✓ Активно' : 'Увімкнути Push'}
                       </button>
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 5. Резервне копіювання та відновлення (Supabase Бекап) */}
+              <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4 lg:col-span-2">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-white/10 flex-wrap">
+                    <div className="flex items-center gap-2.5">
+                      <Database className="w-5 h-5 text-sky-400" />
+                      <h3 className="text-sm sm:text-base font-black text-white uppercase tracking-wider">
+                        Резервне копіювання та відновлення бази
+                      </h3>
+                    </div>
+                    <span className="text-[11px] text-zinc-400">
+                      Страв у базі: <strong className="text-white">{products.length}</strong> • Категорій: <strong className="text-white">{categories.length}</strong>
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    Збережіть локальну резервну копію меню або всієї бази даних (разом із замовленнями та клієнтами) у JSON-файл. У разі потреби меню можна миттєво відновити з файлу.
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                    <button
+                      type="button"
+                      disabled={isBackupBusy}
+                      onClick={() => handleDownloadBackup('menu')}
+                      style={{
+                        clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                      }}
+                      className="px-4 py-2 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shadow-sm"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Завантажити бекап меню (JSON)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isBackupBusy}
+                      onClick={() => handleDownloadBackup('full')}
+                      style={{
+                        clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                      }}
+                      className="px-4 py-2 bg-[#1b1b2a] hover:bg-[#252538] border border-white/15 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2"
+                    >
+                      <Database className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Повний бекап усієї бази (JSON)</span>
+                    </button>
+
+                    <input
+                      ref={backupRestoreInputRef}
+                      type="file"
+                      accept=".json,application/json"
+                      onChange={handleRestoreMenuFromFile}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      disabled={isBackupBusy}
+                      onClick={() => backupRestoreInputRef.current?.click()}
+                      style={{
+                        clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                      }}
+                      className="px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 disabled:opacity-50 text-emerald-300 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 ml-auto"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Відновити меню з файлу</span>
+                    </button>
                   </div>
                 </div>
               </div>

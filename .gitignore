@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local backups (contain customer/order PII)
+/backups
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
