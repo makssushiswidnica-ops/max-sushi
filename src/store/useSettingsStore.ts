@@ -42,6 +42,7 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   cityStandardFee: 5,     // Стандартна ціна по Свідниці якщо менше 150 zł (5 zł)
   suburb10kmFee: 9,       // За місто базова ставка (від 9 zł)
   isOrdersPaused: false,  // Прийом замовлень онлайн (активний / зупинено)
+  ordersAcceptanceMode: 'open', // 'open' | 'paused_today' | 'closed'
   giftPromo: {
     enabled: true,
     minAmount: 150,       // Подарунок від 150 zł

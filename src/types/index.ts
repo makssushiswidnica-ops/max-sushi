@@ -189,12 +189,15 @@ export interface EventCombosPromo {
   combos: PromoComboItem[];
 }
 
+export type OrdersAcceptanceMode = 'open' | 'paused_today' | 'closed';
+
 export interface StoreSettings {
   cityFreeThreshold: number;
   cityStandardFee: number;
   suburb10kmFee: number;
   suburb5kmFee?: number;
   isOrdersPaused?: boolean;
+  ordersAcceptanceMode?: OrdersAcceptanceMode;
   giftPromo: {
     enabled: boolean;
     minAmount: number;

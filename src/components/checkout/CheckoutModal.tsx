@@ -62,32 +62,55 @@ const NEARBY_TOWNS = [
   'Witoszów Górny',
   'Bystrzyca Dolna',
   'Bystrzyca Górna',
-  'Słotwina',
-  'Komorów',
-  'Mokrzeszów',
+  'Bojanice',
+  'Burkatów',
   'Boleścin',
   'Grodziszcze',
-  'Panków',
-  'Zawiszów',
-  'Jagodnik',
-  'Miłochów',
-  'Niegoszów',
+  'Krzczonów',
+  'Krzyżowa',
+  'Lubachów',
   'Lutomia Dolna',
   'Lutomia Górna',
-  'Burkatów',
+  'Lutomia Mała',
   'Makowice',
+  'Miłochów',
+  'Modliszów',
+  'Mokrzeszów',
+  'Niegoszów',
   'Opoczka',
-  'Jakubów',
-  'Wilków',
-  'Krzczonów',
-  'Gogołów',
-  'Wiśniowa',
+  'Panków',
+  'Pogorzała',
+  'Radziechów',
+  'Słotwina',
+  'Stachowice',
+  'Stachowiczki',
   'Sulisławice',
-  'Marcinowice',
+  'Wieruszów',
+  'Wilków',
+  'Wiśniowa',
+  'Zawiszów',
+  'Komorów',
+  'Gogołów',
+  'Jakubów',
+  'Bagieniec',
+  'Bolesławice',
+  'Czechy',
+  'Milikowice',
+  'Nowice',
+  'Nowy Jaworów',
+  'Pasieczna',
+  'Pastuchów',
+  'Piotrówek',
+  'Stary Jaworów',
+  'Tomkowa',
+  'Witków',
+  'Świebodzice',
   'Jaworzyna Śląska',
   'Żarów',
-  'Świebodzice',
   'Strzegom',
+  'Marcinowice',
+  'Dobromierz',
+  'Stanowice',
   'Dzierżoniów',
 ];
 
@@ -389,6 +412,7 @@ export function CheckoutModal() {
   }, [setIsCheckoutOpen]);
 
   const storeSettings = useSettingsStore();
+  const effectiveOrdersMode = storeSettings.ordersAcceptanceMode || (storeSettings.isOrdersPaused ? 'paused_today' : 'open');
   const isPickup = deliveryMethod === 'pickup';
   const subtotal = useCartStore((s) => s.getSubtotal)();
   const hasDiscountedItem = items.some(
@@ -401,6 +425,8 @@ export function CheckoutModal() {
     deliveryPrice: number;
     isOutTown: boolean;
     isOutOfRange?: boolean;
+    cityNotFound?: boolean;
+    streetNotFoundOnMap?: boolean;
     maxDeliveryKm?: number;
     precisionLevel?: 'city' | 'street' | 'house';
     cityName?: string;
@@ -415,7 +441,11 @@ export function CheckoutModal() {
   const isDeliveryOutOfRange =
     !isPickup &&
     selectedZone === 'suburb' &&
-    Boolean(distanceData?.isOutOfRange || (distanceData?.distanceKm && distanceData.distanceKm > 10));
+    Boolean(
+      distanceData?.cityNotFound ||
+      distanceData?.isOutOfRange ||
+      (distanceData?.distanceKm && distanceData.distanceKm > 10)
+    );
 
   const customFee = (!isPickup && selectedZone === 'suburb')
     ? (distanceData?.deliveryPrice ?? storeSettings.suburb10kmFee)
@@ -657,7 +687,7 @@ export function CheckoutModal() {
     }
   }, [selectedZone, deliveryMethod]);
 
-  // Автоматичний прорахунок дистанції при ручному вводі міста за містом (debounce 550ms)
+  // Автоматичний прорахунок дистанції при вводі міста, вулиці або будинку (debounce 550ms)
   React.useEffect(() => {
     if (deliveryMethod === 'pickup' || selectedZone !== 'suburb') return;
     const trimmed = (watchCity || '').trim();
@@ -666,7 +696,7 @@ export function CheckoutModal() {
       calculateDistanceFee(trimmed, watchStreet, watchHouse);
     }, 550);
     return () => clearTimeout(timer);
-  }, [watchCity, deliveryMethod, selectedZone, calculateDistanceFee]);
+  }, [watchCity, watchStreet, watchHouse, deliveryMethod, selectedZone, calculateDistanceFee]);
 
   // Автоматичне перемикання на "Завтра", якщо час прийому замовлень на сьогодні вичерпано
   React.useEffect(() => {
@@ -765,8 +795,13 @@ export function CheckoutModal() {
   }, [watchPhoneVal]);
 
   const onSubmit = async (values: CheckoutFormValues) => {
+    // Якщо заклад повністю зачинено (відпустка / аварія) — замовлення заборонені взагалі
+    if (effectiveOrdersMode === 'closed') {
+      return;
+    }
+
     // Якщо прийом замовлень призупинено в адмінці через перевантаження кухні — дозволено ТІЛЬКИ на завтра
-    if (storeSettings.isOrdersPaused && (scheduledDate !== 'tomorrow' || values.timingType !== 'scheduled')) {
+    if (effectiveOrdersMode === 'paused_today' && (scheduledDate !== 'tomorrow' || values.timingType !== 'scheduled')) {
       return;
     }
 
@@ -1147,7 +1182,26 @@ export function CheckoutModal() {
         /* Форма замовлення */
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5 sm:space-y-4 max-w-full">
           {/* Попередження, якщо прийом замовлень призупинено з адмінки */}
-          {storeSettings.isOrdersPaused && (
+          {effectiveOrdersMode === 'closed' ? (
+            <div className="p-3 sm:p-3.5 rounded-xl bg-red-950/40 border border-red-500/50 flex items-start justify-between gap-3 text-xs animate-in fade-in duration-200">
+              <div className="flex items-start gap-2.5 text-red-200">
+                <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <div className="font-bold text-white text-xs sm:text-sm">
+                    {locale === 'pl' ? 'Lokal tymczasowo zamknięty' : 'Заклад тимчасово зачинено'}
+                  </div>
+                  <p className="text-[11px] text-zinc-300 leading-snug">
+                    {locale === 'pl'
+                      ? 'Przyjmowanie zamówień online zostało wstrzymane (przerwa techniczna / urlop). Przepraszamy za utrudnienia i zapraszamy wkrótce! W razie pytań zadzwoń do lokalu:'
+                      : 'Прийом онлайн-замовлень тимчасово призупинено (технічна перерва / відпустка). Перепрошуємо за незручності та чекаємо вас незабаром! У разі запитань зателефонуйте:'}{' '}
+                    <a href={`tel:${brandTheme.contacts.phoneRaw}`} className="text-red-400 font-bold hover:underline">
+                      {brandTheme.contacts.phone}
+                    </a>
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : effectiveOrdersMode === 'paused_today' ? (
             <div className="p-3 sm:p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start justify-between gap-3 text-xs animate-in fade-in duration-200">
               <div className="flex items-start gap-2.5 text-amber-200">
                 <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
@@ -1184,7 +1238,7 @@ export function CheckoutModal() {
                 </button>
               )}
             </div>
-          )}
+          ) : null}
 
           {/* Вибір: Доставка чи Самовивіз у формі клинка */}
           <div>
@@ -1475,9 +1529,13 @@ export function CheckoutModal() {
                   {isDeliveryOutOfRange ? (
                     <div className="space-y-2">
                       <p className="text-[11px] text-red-200 leading-snug font-medium">
-                        {locale === 'pl'
-                          ? 'Dostawa kurierem obowiązuje wyłącznie w promieniu do 10 km od Świdnicy. Dla tej miejscowości dostępny jest tylko odbiór osobisty w lokalu.'
-                          : 'Доставка курʼєром діє лише в радіусі до 10 км від Свідниці. Для цієї адреси доступний лише самовивіз із закладу.'}
+                        {distanceData?.cityNotFound
+                          ? (locale === 'pl'
+                              ? 'Nie znaleziono podanej miejscowości w rejonie dostaw. Dostawa kurierem niemożliwa — dostępny wyłącznie odbiór osobisty w lokalu.'
+                              : 'Не вдалося знайти вказаний населений пункт на карті. Доставка курʼєром неможлива — доступний лише самовивіз із закладу.')
+                          : (locale === 'pl'
+                              ? `Dostawa kurierem obowiązuje w promieniu do 10 km od lokalu (~${distanceData?.distanceKm} km). Dla tej miejscowości dostępny jest wyłącznie odbiór osobisty.`
+                              : `Доставка курʼєром діє в радіусі до 10 км від закладу (~${distanceData?.distanceKm} км). Для цього населеного пункту доступний лише самовивіз.`)}
                       </p>
                       <button
                         type="button"
@@ -1500,7 +1558,11 @@ export function CheckoutModal() {
                     </div>
                   ) : (
                   <p className="text-[11px] text-zinc-300 leading-snug">
-                    {distanceData?.isFallback
+                    {distanceData?.streetNotFoundOnMap
+                      ? (locale === 'pl'
+                          ? `Wyliczono trasę do centrum (${distanceData.cityName}): ~${distanceData.distanceKm} km (${distanceData.deliveryPrice} zł). Kurier dowiezie pod podany adres.`
+                          : `Вартість розраховано до центру (${distanceData.cityName}): ~${distanceData.distanceKm} км (${distanceData.deliveryPrice} zł). Курʼєр доставить за вказаною адресою.`)
+                      : distanceData?.isFallback
                       ? (locale === 'pl'
                           ? 'Nie znaleziono dokładnie tej miejscowości na mapie. Wybierz miejscowość z listy podpowiedzi lub wpisz ulicę.'
                           : 'Не вдалося точно знайти населений пункт на карті. Оберіть зі списку підказок або уточніть вулицю.')
@@ -2142,8 +2204,9 @@ export function CheckoutModal() {
             </div>
 
             {(() => {
-              const isBlockedByPause = storeSettings.isOrdersPaused && (scheduledDate !== 'tomorrow' || selectedTiming !== 'scheduled');
-              const isDisabled = isSubmitting || items.length === 0 || isBlockedByPause || isDeliveryOutOfRange || (bounds.isTodayCutoffPassed && selectedTiming === 'asap');
+              const isBlockedByClosed = effectiveOrdersMode === 'closed';
+              const isBlockedByPause = effectiveOrdersMode === 'paused_today' && (scheduledDate !== 'tomorrow' || selectedTiming !== 'scheduled');
+              const isDisabled = isSubmitting || items.length === 0 || isBlockedByClosed || isBlockedByPause || isDeliveryOutOfRange || (bounds.isTodayCutoffPassed && selectedTiming === 'asap');
 
               return (
                 <button
@@ -2157,11 +2220,13 @@ export function CheckoutModal() {
                 >
                   {isSubmitting ? (
                     <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : isBlockedByClosed ? (
+                    <span>{locale === 'pl' ? 'Lokal zamknięty' : 'Заклад зачинено'}</span>
                   ) : isDeliveryOutOfRange ? (
                     <span>{locale === 'pl' ? 'Poza strefą (>10 km)' : 'Поза зоною (>10 км)'}</span>
                   ) : isBlockedByPause ? (
                     <span>{locale === 'pl' ? 'Tylko na jutro' : 'Тільки на завтра'}</span>
-                  ) : storeSettings.isOrdersPaused && scheduledDate === 'tomorrow' ? (
+                  ) : effectiveOrdersMode === 'paused_today' && scheduledDate === 'tomorrow' ? (
                     <span>{locale === 'pl' ? 'Złóż zamówienie na jutro' : 'Оформити на завтра'}</span>
                   ) : (
                     <span>{t.checkout.submitOrder}</span>

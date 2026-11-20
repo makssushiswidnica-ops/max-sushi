@@ -248,22 +248,109 @@ async function resolveTargetChatIds(token: string): Promise<string[]> {
   return discoverChatIdsFromUpdates(token);
 }
 
+async function sendTelegramMessageToChat(token: string, chatId: string, text: string): Promise<any> {
+  const maxAttempts = 3;
+  let lastResult: any = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const resp = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text,
+          parse_mode: 'HTML',
+          disable_web_page_preview: true,
+        }),
+        signal: AbortSignal.timeout(7000),
+      });
+
+      const data = await resp.json().catch(() => null);
+
+      if (data?.ok) {
+        return data;
+      }
+
+      // Якщо група оновилася до супергрупи (migrate_to_chat_id)
+      const migratedId = data?.parameters?.migrate_to_chat_id;
+      if (migratedId) {
+        console.log(`Telegram chat migrated from ${chatId} to ${migratedId}`);
+        const retryResp = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: migratedId,
+            text,
+            parse_mode: 'HTML',
+            disable_web_page_preview: true,
+          }),
+          signal: AbortSignal.timeout(7000),
+        });
+        const retryData = await retryResp.json().catch(() => null);
+        if (retryData?.ok) return retryData;
+      }
+
+      // Якщо старий ID більше недійсний, шукаємо актуальний ID супергрупи через getUpdates
+      if (!data?.ok && attempt === 1) {
+        const discoveredIds = await discoverChatIdsFromUpdates(token);
+        const fallbackId = discoveredIds.find((id) => id !== String(chatId) && id.startsWith('-100'));
+        if (fallbackId) {
+          const fallbackResp = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: fallbackId,
+              text,
+              parse_mode: 'HTML',
+              disable_web_page_preview: true,
+            }),
+            signal: AbortSignal.timeout(7000),
+          });
+          const fbData = await fallbackResp.json().catch(() => null);
+          if (fbData?.ok) return fbData;
+        }
+      }
+
+      lastResult = data;
+      console.warn(`Telegram send attempt ${attempt} for chat ${chatId} failed:`, data);
+    } catch (err: any) {
+      console.warn(`Telegram send attempt ${attempt} network error:`, err?.message || err);
+      lastResult = { ok: false, error: err?.message || 'Network error' };
+    }
+
+    if (attempt < maxAttempts) {
+      // Експоненційна пауза перед повторною спробою: 1.2с, потім 2.5с
+      await new Promise((r) => setTimeout(r, attempt * 1300));
+    }
+  }
+
+  return lastResult;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const now = Date.now();
     cleanupCaches(now);
 
-    // 1. Захист Rate Limit за IP-адресою
-    const clientIp =
-      req.headers.get('cf-connecting-ip') ||
-      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      'unknown';
+    const body = await req.json().catch(() => ({}));
+    const order: Order | undefined = body?.order;
+    const isForce = Boolean(body?.force);
+    const source = body?.source || 'client';
 
-    if (!checkRateLimit(clientIp, now)) {
-      return NextResponse.json(
-        { ok: false, error: 'Too many requests' },
-        { status: 429 }
-      );
+    // 1. Захист Rate Limit за IP-адресою (пропускаємо запити з адмінки та повторні форс-відправки)
+    if (!isForce && source !== 'admin-manual' && source !== 'admin-auto-safety-net') {
+      const clientIp =
+        req.headers.get('cf-connecting-ip') ||
+        req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+        'unknown';
+
+      if (!checkRateLimit(clientIp, now)) {
+        return NextResponse.json(
+          { ok: false, error: 'Too many requests' },
+          { status: 429 }
+        );
+      }
     }
 
     const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -274,8 +361,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const body = await req.json();
-    const order: Order | undefined = body?.order;
     if (
       !order ||
       !order.id ||
@@ -288,28 +373,36 @@ export async function POST(req: NextRequest) {
 
     const orderIdStr = String(order.id).trim();
 
-    // 2. Анти-дубль: не дозволяємо відправляти одне й те саме замовлення двічі
-    if (notifiedOrdersCache.has(orderIdStr)) {
+    // 2. Анти-дубль: якщо замовлення вже було успішно надіслано раніше і це не примусова відправка
+    if (!isForce && notifiedOrdersCache.has(orderIdStr)) {
       return NextResponse.json({ ok: true, skipped: 'Order already notified' });
     }
 
-    // 3. Перевірка, що замовлення реально створене в базі Supabase (захист від фейкових POST-запитів)
+    // 3. Перевірка наявності замовлення в базі Supabase з кількома спробами (захист від затримки реплікації)
     if (isSupabaseConfigured) {
-      const { data: dbOrder, error: dbErr } = await supabase
-        .from('orders')
-        .select('id')
-        .eq('id', orderIdStr)
-        .maybeSingle();
+      let dbOrder = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const { data: foundOrder } = await supabase
+          .from('orders')
+          .select('id')
+          .eq('id', orderIdStr)
+          .maybeSingle();
 
-      if (!dbErr && !dbOrder) {
-        return NextResponse.json(
-          { ok: false, error: 'Order not found in database' },
-          { status: 403 }
-        );
+        if (foundOrder) {
+          dbOrder = foundOrder;
+          break;
+        }
+        if (attempt < 3) {
+          await new Promise((r) => setTimeout(r, 600));
+        }
+      }
+
+      // Якщо замовлення ще не видно в базі через затримку, але це валідне замовлення клієнта —
+      // все одно відправляємо в Telegram, щоб кухня НЕ пропустила замовлення!
+      if (!dbOrder) {
+        console.warn(`Order ${orderIdStr} not yet confirmed in DB, proceeding with notification`);
       }
     }
-
-    notifiedOrdersCache.set(orderIdStr, now);
 
     const chatIds = await resolveTargetChatIds(token);
     if (chatIds.length === 0) {
@@ -324,61 +417,27 @@ export async function POST(req: NextRequest) {
 
     const text = formatTelegramOrderMessage(order);
 
+    // Відправляємо паралельно у всі цільові чати з надійними повторними спробами (до 3 спроб на чат)
     const results = await Promise.all(
       chatIds.map(async (chatId) => {
-        const resp = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: chatId,
-            text,
-            parse_mode: 'HTML',
-            disable_web_page_preview: true,
-          }),
-        });
-        const data = await resp.json();
-
-        // Якщо група автоматично оновилась до супергрупи (наприклад, після видачі прав адміна),
-        // автоматично відправляємо на новий ID супергрупи
-        const migratedId = data?.parameters?.migrate_to_chat_id;
-        if (!data?.ok && migratedId) {
-          const retryResp = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: migratedId,
-              text,
-              parse_mode: 'HTML',
-              disable_web_page_preview: true,
-            }),
-          });
-          return retryResp.json();
-        }
-
-        // Додатковий захист: якщо старий ID групи більше не дійсний, шукаємо актуальний ID через getUpdates
-        if (!data?.ok) {
-          const discoveredIds = await discoverChatIdsFromUpdates(token);
-          const fallbackId = discoveredIds.find((id) => id !== String(chatId) && id.startsWith('-100'));
-          if (fallbackId) {
-            const fallbackResp = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                chat_id: fallbackId,
-                text,
-                parse_mode: 'HTML',
-                disable_web_page_preview: true,
-              }),
-            });
-            return fallbackResp.json();
-          }
-        }
-
-        return data;
+        return sendTelegramMessageToChat(token, chatId, text);
       })
     );
 
-    return NextResponse.json({ ok: true, chatIds, results });
+    const hasSuccess = results.some((r: any) => r?.ok === true);
+
+    // ВАЖЛИВО: Фіксуємо замовлення як "відправлене" ТІЛЬКИ якщо воно дійсно успішно дійшло до Telegram!
+    // Якщо сталася помилка мережі, кеш не блокуватиме наступну повторну спробу!
+    if (hasSuccess) {
+      notifiedOrdersCache.set(orderIdStr, now);
+    }
+
+    return NextResponse.json({
+      ok: hasSuccess,
+      chatIds,
+      results,
+      retried: true,
+    });
   } catch (error: any) {
     console.error('Telegram notification error:', error);
     return NextResponse.json(

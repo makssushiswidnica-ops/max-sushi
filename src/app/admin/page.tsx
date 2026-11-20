@@ -87,6 +87,7 @@ import {
   getSauceChoiceLabel,
   PromoComboItem,
   EventCombosPromo,
+  OrdersAcceptanceMode,
 } from '@/types';
 import { DEFAULT_PRODUCT_ALLERGENS } from '@/lib/allergenData';
 import { ProductBadge } from '@/components/menu/ProductBadge';
@@ -202,6 +203,7 @@ export default function AdminPage() {
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
   const [expandedHistoryDays, setExpandedHistoryDays] = useState<Set<string>>(new Set());
   const [statsPeriod, setStatsPeriod] = useState<'today' | '7days' | '30days' | 'all'>('7days');
+  const [selectedChartBarDate, setSelectedChartBarDate] = useState<string | null>(null);
 
   // Відстеження вже відомих замовлень, щоб перемикати на "Нові" ЛИШЕ один раз при надходженні нового
   const knownOrderIdsRef = useRef<Set<string>>(new Set());
@@ -849,6 +851,9 @@ export default function AdminPage() {
               const parsed = JSON.parse(settingsRow.comment);
               if (typeof parsed.isOrdersPaused === 'boolean') {
                 updateSettings({ isOrdersPaused: parsed.isOrdersPaused });
+              }
+              if (parsed.ordersAcceptanceMode) {
+                updateSettings({ ordersAcceptanceMode: parsed.ordersAcceptanceMode });
               }
               if (typeof parsed.cityFreeThreshold === 'number') {
                 updateSettings({ cityFreeThreshold: parsed.cityFreeThreshold });
@@ -4658,39 +4663,92 @@ export default function AdminPage() {
 
                 {/* Рядок додаткових кнопок дій (на мобілці розміщуються під часом очікування, на ПК — в один рядок) */}
                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                  {/* Кнопка призупинення / відновлення прийому замовлень (кухня перевантажена) */}
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const next = !storeSettings.isOrdersPaused;
-                      updateSettings({ isOrdersPaused: next });
-                      await saveStoreSettings({ isOrdersPaused: next });
-                    }}
-                    style={{
-                      clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
-                    }}
-                    className={cn(
-                      'flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all cursor-pointer border shadow-md select-none active:scale-95 whitespace-nowrap',
-                      storeSettings.isOrdersPaused
-                        ? 'bg-red-600 hover:bg-red-500 text-white border-red-400 shadow-red-950/60 animate-pulse'
-                        : 'bg-[#151522] hover:bg-[#1e1e30] text-emerald-400 border-emerald-500/40 hover:border-emerald-500/70'
-                    )}
-                    title={
-                      storeSettings.isOrdersPaused
-                        ? 'Прийом замовлень зупинено! Натисніть, щоб відновити'
-                        : 'Кухня зашивається? Натисніть, щоб тимчасово призупинити онлайн-замовлення'
-                    }
-                  >
-                    <span
-                      className={cn(
-                        'w-2 h-2 rounded-full shrink-0',
-                        storeSettings.isOrdersPaused ? 'bg-white' : 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]'
-                      )}
-                    />
-                    <span>
-                      {storeSettings.isOrdersPaused ? 'Замовлення: ЗУПИНЕНО' : 'Прийом замовлень: Активний'}
-                    </span>
-                  </button>
+                  {/* 3 таби статусу прийому замовлень: Працюємо | На завтра | Закрито */}
+                  {(() => {
+                    const currentOrdersMode: OrdersAcceptanceMode =
+                      storeSettings.ordersAcceptanceMode || (storeSettings.isOrdersPaused ? 'paused_today' : 'open');
+
+                    const handleSetOrdersMode = async (mode: OrdersAcceptanceMode) => {
+                      const isPaused = mode !== 'open';
+                      updateSettings({ ordersAcceptanceMode: mode, isOrdersPaused: isPaused });
+                      await saveStoreSettings({ ordersAcceptanceMode: mode, isOrdersPaused: isPaused });
+                    };
+
+                    return (
+                      <div
+                        style={{
+                          clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                        }}
+                        className="w-full sm:w-auto inline-flex items-center p-0.5 bg-[#12121d] border border-white/10 shadow-md select-none shrink-0"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleSetOrdersMode('open')}
+                          title="Прийом замовлень активний у звичайному режимі (на сьогодні та за графіком)"
+                          className={cn(
+                            'flex-1 sm:flex-initial flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all cursor-pointer rounded-md whitespace-nowrap',
+                            currentOrdersMode === 'open'
+                              ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 shadow-sm shadow-emerald-950/60'
+                              : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5 border border-transparent'
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              'w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full shrink-0',
+                              currentOrdersMode === 'open'
+                                ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.9)] animate-pulse'
+                                : 'bg-zinc-600'
+                            )}
+                          />
+                          <span>Працюємо</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSetOrdersMode('paused_today')}
+                          title="Кухня завантажена: замовлення тільки на завтра. Опівночі автоматично повернеться в робочий режим."
+                          className={cn(
+                            'flex-1 sm:flex-initial flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all cursor-pointer rounded-md whitespace-nowrap',
+                            currentOrdersMode === 'paused_today'
+                              ? 'bg-amber-500/25 text-amber-300 border border-amber-500/60 shadow-sm shadow-amber-950/60 animate-pulse'
+                              : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5 border border-transparent'
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              'w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full shrink-0',
+                              currentOrdersMode === 'paused_today'
+                                ? 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.9)]'
+                                : 'bg-zinc-600'
+                            )}
+                          />
+                          <span>На завтра</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSetOrdersMode('closed')}
+                          title="Заклад повністю зачинено (відпустка / ремонт / аварія). Будь-які замовлення заблоковані. Не скидається опівночі!"
+                          className={cn(
+                            'flex-1 sm:flex-initial flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all cursor-pointer rounded-md whitespace-nowrap',
+                            currentOrdersMode === 'closed'
+                              ? 'bg-red-600 text-white border border-red-400 shadow-sm shadow-red-950/60 animate-pulse'
+                              : 'text-zinc-400 hover:text-rose-400 hover:bg-white/5 border border-transparent'
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              'w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full shrink-0',
+                              currentOrdersMode === 'closed'
+                                ? 'bg-white shadow-[0_0_6px_rgba(255,255,255,0.9)]'
+                                : 'bg-zinc-600'
+                            )}
+                          />
+                          <span>Закрито</span>
+                        </button>
+                      </div>
+                    );
+                  })()}
 
                   {/* Кнопка перегляду скасованих замовлень (якщо є) */}
                   {cancelledOrdersCount > 0 && (
@@ -5138,7 +5196,7 @@ export default function AdminPage() {
               {/* Ліва частина (2/3): Графік динаміки + Пікові години */}
               <div className="lg:col-span-2 space-y-6 flex flex-col justify-between w-full min-w-0 max-w-full">
                 {/* 1. Графік динаміки виручки по днях */}
-                <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-6 space-y-4 w-full min-w-0 max-w-full overflow-hidden">
+                <div className="bg-[#0f0f17] border border-white/10 rounded-2xl p-4 sm:p-6 space-y-3 w-full min-w-0 max-w-full">
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <h3 className="text-sm font-bold text-white uppercase tracking-wider">
@@ -5159,8 +5217,43 @@ export default function AdminPage() {
                     </span>
                   </div>
 
+                  {/* Інтерактивна плашка деталей обраного дня (зручно для мобільних при тапі та на десктопі) */}
+                  {(() => {
+                    const activeBar = statsData.chartBars.find((b) => b.dateStr === selectedChartBarDate);
+                    return (
+                      <div className="flex items-center justify-between gap-2 min-h-[30px]">
+                        {activeBar ? (
+                          <div className="inline-flex items-center flex-wrap gap-2 px-3 py-1 rounded-xl bg-white/10 border border-white/20 text-xs shadow-md animate-in fade-in duration-150">
+                            <span className="font-bold text-white flex items-center gap-1.5">
+                              {activeBar.isToday && <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />}
+                              <span>{activeBar.fullDateLabel}</span>
+                              {activeBar.isToday && <span className="text-amber-400 font-bold">(Сьогодні)</span>}
+                            </span>
+                            <span className="text-zinc-500">•</span>
+                            <span className="font-mono font-black text-emerald-400 text-xs sm:text-sm">{formatPrice(activeBar.revenue, 'pl')}</span>
+                            <span className="text-zinc-300 text-[11px] font-semibold">({activeBar.count} {activeBar.count === 1 ? 'замовлення' : 'замовлень'})</span>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-zinc-500 italic select-none">
+                            💡 Торкніться будь-якого стовпчика для перегляду деталей
+                          </span>
+                        )}
+
+                        {selectedChartBarDate && (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedChartBarDate(null)}
+                            className="text-[11px] text-zinc-400 hover:text-white underline cursor-pointer ml-auto shrink-0"
+                          >
+                            Скинути вибір
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   {/* Стовпчаста діаграма без скролу: адаптивні стовпці з акуратними відступами, що звужуються до тонких рисок */}
-                  <div className="pt-6 pb-2 w-full overflow-hidden">
+                  <div className="pt-10 sm:pt-12 pb-2 w-full">
                     <div className={cn(
                       'h-44 sm:h-52 flex items-end border-b border-white/10 pb-2 w-full',
                       statsData.chartBars.length <= 8
@@ -5179,12 +5272,14 @@ export default function AdminPage() {
                         const isManyBars = totalBars > 10;
                         const step = totalBars > 25 ? Math.ceil(totalBars / 6) : totalBars > 14 ? 3 : 1;
                         const showLabel = !isManyBars || idx === 0 || idx === totalBars - 1 || idx % step === 0;
+                        const isSelected = selectedChartBarDate === bar.dateStr;
 
                         return (
                           <div
                             key={bar.dateStr}
+                            onClick={() => setSelectedChartBarDate(isSelected ? null : bar.dateStr)}
                             className={cn(
-                              'flex flex-col items-center justify-end h-full group/bar relative min-w-0',
+                              'flex flex-col items-center justify-end h-full group/bar relative min-w-0 cursor-pointer select-none',
                               totalBars <= 8
                                 ? 'flex-1 max-w-[48px]'
                                 : totalBars <= 32
@@ -5192,9 +5287,16 @@ export default function AdminPage() {
                                   : 'flex-1 max-w-[6px] sm:max-w-[10px]'
                             )}
                           >
-                            {/* Спливаюча підказка (Tooltip) при наведенні */}
-                            <div className="absolute -top-12 z-30 opacity-0 group-hover/bar:opacity-100 transition-opacity pointer-events-none bg-black/95 text-white text-[10px] px-2.5 py-1.5 rounded-lg border border-white/20 whitespace-nowrap shadow-xl">
-                              <p className="font-bold flex items-center gap-1.5">
+                            {/* Спливаюча підказка (Tooltip) при наведенні або тапі */}
+                            <div
+                              className={cn(
+                                'absolute -top-11 sm:-top-12 left-1/2 -translate-x-1/2 z-30 transition-all duration-200 pointer-events-none bg-black/95 text-white text-[10px] px-2.5 py-1.5 rounded-lg border border-white/20 whitespace-nowrap shadow-2xl',
+                                isSelected
+                                  ? 'opacity-100 scale-100 z-40 ring-1 ring-white/30'
+                                  : 'opacity-0 scale-95 group-hover/bar:opacity-100 group-hover/bar:scale-100'
+                              )}
+                            >
+                              <p className="font-bold flex items-center justify-center gap-1.5">
                                 {bar.isToday && (
                                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block animate-pulse" />
                                 )}
@@ -5203,13 +5305,16 @@ export default function AdminPage() {
                                   <span className="text-amber-400 font-black">(Сьогодні)</span>
                                 )}
                               </p>
-                              <p className="text-emerald-400 font-mono">
+                              <p className="text-emerald-400 font-mono text-center">
                                 {formatPrice(bar.revenue, 'pl')} {bar.count > 0 ? `(${bar.count} зам.)` : '(0 зам.)'}
                               </p>
                             </div>
 
                             {/* Стовпчик */}
-                            <div className="w-full bg-white/5 rounded-t-sm sm:rounded-t-md overflow-hidden flex flex-col justify-end h-full">
+                            <div className={cn(
+                              'w-full bg-white/5 rounded-t-sm sm:rounded-t-md overflow-hidden flex flex-col justify-end h-full transition-all duration-200',
+                              isSelected && 'ring-2 ring-white/70 ring-offset-1 ring-offset-[#0f0f17] brightness-125'
+                            )}>
                               <div
                                 style={{ height: `${heightPercent}%` }}
                                 className={cn(
@@ -5228,16 +5333,16 @@ export default function AdminPage() {
                             {/* Дата та день тижня під стовпчиком (ховається для проміжних днів, коли стовпчиків багато) */}
                             <div className={cn(
                               'text-[10px] mt-2 font-mono text-center flex flex-col items-center leading-tight whitespace-nowrap',
-                              bar.isToday ? 'text-amber-300 font-bold' : 'text-zinc-500',
+                              bar.isToday ? 'text-amber-300 font-bold' : isSelected ? 'text-white font-bold' : 'text-zinc-500',
                               !showLabel && 'opacity-0 pointer-events-none select-none'
                             )}>
                               <span className={cn(
                                 'text-[8px] sm:text-[9px] uppercase tracking-wider font-sans font-semibold',
-                                bar.isToday ? 'text-amber-400 font-black' : 'text-zinc-400'
+                                bar.isToday ? 'text-amber-400 font-black' : isSelected ? 'text-zinc-200' : 'text-zinc-400'
                               )}>
                                 {bar.isToday ? 'Сьогодні' : bar.dayName}
                               </span>
-                              <span className={cn('text-[9px] sm:text-[10px]', bar.isToday && 'font-black text-amber-300')}>
+                              <span className={cn('text-[9px] sm:text-[10px]', (bar.isToday || isSelected) && 'font-black text-amber-300')}>
                                 {bar.label}
                               </span>
                             </div>

@@ -1,12 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
-import { Order, FirstOrderPromo, BirthdayPromo, EventCombosPromo } from '@/types';
+import { Order, FirstOrderPromo, BirthdayPromo, EventCombosPromo, OrdersAcceptanceMode } from '@/types';
 
 // Отримуємо змінні оточення для проєкту Maks Sushi на Supabase
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://czjqvocewhucknsrnese.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6anF2b2Nld2h1Y2tuc3JuZXNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNDE4NTYsImV4cCI6MjEwODkxNzg1Nn0.OTnqNg6TMY8-38KPuqaRzTvZIXC4AoSTPtr0GBhbCaQ';
 
 export const isSupabaseConfigured = Boolean(
-  supabaseUrl && 
+  supabaseUrl &&
   supabaseAnonKey &&
   !supabaseUrl.includes('demo-max-sushi')
 );
@@ -19,17 +19,52 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 /**
- * Відправляє миттєве сповіщення про нове замовлення в Telegram-групу (через серверний роут)
+ * Надійна відправка сповіщення про нове замовлення в Telegram-групу з автоматичними повторними спробами (retry)
+ * та прапорцем keepalive для гарантованої доставки навіть при закритті вкладки.
  */
-function notifyTelegramOrder(order: Order): void {
-  if (typeof window === 'undefined') return;
-  fetch('/api/telegram/notify', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ order }),
-  }).catch((err) => {
-    console.warn('Telegram notification notice:', err);
-  });
+export async function notifyTelegramOrder(
+  order: Order,
+  options?: { force?: boolean; source?: string; maxRetries?: number }
+): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+
+  const maxRetries = options?.maxRetries ?? 3;
+  const isForce = Boolean(options?.force);
+  const source = options?.source || 'client';
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch('/api/telegram/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order,
+          force: isForce,
+          source,
+          attempt,
+        }),
+        keepalive: true,
+      });
+
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data?.ok) {
+          return true;
+        }
+        console.warn(`Telegram notify attempt ${attempt} returned non-ok payload:`, data);
+      } else {
+        console.warn(`Telegram notify attempt ${attempt} HTTP status ${res.status}`);
+      }
+    } catch (err: any) {
+      console.warn(`Telegram notify attempt ${attempt} network error:`, err?.message || err);
+    }
+
+    if (attempt < maxRetries) {
+      await new Promise((r) => setTimeout(r, attempt * 1500));
+    }
+  }
+
+  return false;
 }
 
 /**
@@ -68,10 +103,10 @@ export async function createOrder(order: Order): Promise<{ success: boolean; ord
 
       if (error) {
         console.warn('Supabase full insert notice, attempting compatible insert:', error.message);
-        
+
         // Сумісний інсерт для таблиць, де ще не виконано ALTER TABLE
-        const timingNote = order.timingType === 'scheduled' && order.scheduledTime 
-          ? `[НА ЧАС: ${order.scheduledTime}] ` 
+        const timingNote = order.timingType === 'scheduled' && order.scheduledTime
+          ? `[НА ЧАС: ${order.scheduledTime}] `
           : '';
         const chopsticksNote = typeof order.personsCount === 'number'
           ? `[ПАЛИЧКИ: ${order.personsCount}] `
@@ -131,6 +166,7 @@ export async function createOrder(order: Order): Promise<{ success: boolean; ord
 
 export interface SyncedStoreSettings {
   isOrdersPaused?: boolean;
+  ordersAcceptanceMode?: OrdersAcceptanceMode;
   prepWaitTimeMinutes?: number;
   pausedAtDate?: string; // YYYY-MM-DD
   cityFreeThreshold?: number;
@@ -148,7 +184,8 @@ export interface SyncedStoreSettings {
 
 /**
  * Отримує глобальні системні налаштування магазину з Supabase (синхронізація між усіма пристроями)
- * Автоматично відновлює прийом замовлень по завершенню робочого дня або наступного ранку.
+ * Автоматично відновлює прийом замовлень по завершенню робочого дня або наступного ранку
+ * (тільки для режиму "пауза на сьогодні", але не при повному закритті / відпустці).
  */
 export async function fetchStoreSettings(): Promise<SyncedStoreSettings | null> {
   try {
@@ -164,7 +201,11 @@ export async function fetchStoreSettings(): Promise<SyncedStoreSettings | null> 
 
     // Автоматичне відновлення прийому замовлень по завершенню робочого дня:
     // Пт, Сб заклад працює до 22:00, інші дні до 21:00.
-    if (settings.isOrdersPaused) {
+    // Скидається ТІЛЬКИ режим "пауза на сьогодні" (paused_today). Повне закриття (closed) не скидається!
+    const isPausedToday = settings.ordersAcceptanceMode === 'paused_today' || 
+      (settings.isOrdersPaused && !settings.ordersAcceptanceMode);
+
+    if (isPausedToday) {
       const now = new Date();
       const todayStr = now.toISOString().slice(0, 10);
       const day = now.getDay();
@@ -174,9 +215,10 @@ export async function fetchStoreSettings(): Promise<SyncedStoreSettings | null> 
 
       if (isPastClosing || isNextDay) {
         settings.isOrdersPaused = false;
+        settings.ordersAcceptanceMode = 'open';
         settings.pausedAtDate = undefined;
         // Оновлюємо в базі без очікування
-        saveStoreSettings({ isOrdersPaused: false, pausedAtDate: undefined });
+        saveStoreSettings({ isOrdersPaused: false, ordersAcceptanceMode: 'open', pausedAtDate: undefined });
       }
     }
 
@@ -194,12 +236,24 @@ export async function saveStoreSettings(settings: Partial<SyncedStoreSettings>):
   try {
     if (!isSupabaseConfigured) return false;
     const current = await fetchStoreSettings() || {};
-    
-    // Якщо вмикаємо паузу, фіксуємо поточну дату
+
+    // Синхронізуємо прапорці паузи та дату
     const updates: Partial<SyncedStoreSettings> = { ...settings };
-    if (settings.isOrdersPaused === true) {
+    
+    if (settings.ordersAcceptanceMode === 'paused_today') {
+      updates.isOrdersPaused = true;
+      updates.pausedAtDate = new Date().toISOString().slice(0, 10);
+    } else if (settings.ordersAcceptanceMode === 'closed') {
+      updates.isOrdersPaused = true;
+      updates.pausedAtDate = undefined; // Повне закриття не прив'язується до дати і не скидається автоматично
+    } else if (settings.ordersAcceptanceMode === 'open') {
+      updates.isOrdersPaused = false;
+      updates.pausedAtDate = undefined;
+    } else if (settings.isOrdersPaused === true) {
+      updates.ordersAcceptanceMode = updates.ordersAcceptanceMode || 'paused_today';
       updates.pausedAtDate = new Date().toISOString().slice(0, 10);
     } else if (settings.isOrdersPaused === false) {
+      updates.ordersAcceptanceMode = 'open';
       updates.pausedAtDate = undefined;
     }
 

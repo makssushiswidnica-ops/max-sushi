@@ -44,6 +44,8 @@ export function CartDrawer() {
   const firstOrderPromo = useSettingsStore((s) => s.firstOrderPromo);
   const cityFreeThreshold = useSettingsStore((s) => s.cityFreeThreshold);
   const isOrdersPaused = useSettingsStore((s) => s.isOrdersPaused);
+  const ordersAcceptanceMode = useSettingsStore((s) => s.ordersAcceptanceMode);
+  const effectiveOrdersMode = ordersAcceptanceMode || (isOrdersPaused ? 'paused_today' : 'open');
   const customer = useCustomerStore((s) => s.customer);
   const isFirstOrderEligible = useCustomerStore((s) => s.isFirstOrderEligible);
   const toggleCustomerDrawer = useCustomerStore((s) => s.toggleOpen);
@@ -569,8 +571,28 @@ export function CartDrawer() {
               </div>
             </div>
 
-            {/* Головна кнопка оформлення замовлення або сповіщення про перевантажену кухню з можливістю замовити на завтра */}
-            {isOrdersPaused ? (
+            {/* Головна кнопка оформлення замовлення або сповіщення про статус прийому замовлень */}
+            {effectiveOrdersMode === 'closed' ? (
+              <div className="w-full p-3.5 rounded-xl bg-red-950/50 border border-red-500/60 text-center space-y-2.5 shadow-lg shadow-black/80">
+                <div className="flex items-center justify-center gap-1.5 text-xs sm:text-sm font-black text-red-400 uppercase tracking-wide">
+                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                  <span>{locale === 'pl' ? 'Lokal tymczasowo zamknięty' : 'Заклад тимчасово зачинено'}</span>
+                </div>
+                <p className="text-[11px] text-zinc-300 leading-snug">
+                  {locale === 'pl'
+                    ? 'Przyjmowanie zamówień online zostało wstrzymane (przerwa techniczna / urlop). Przepraszamy za utrudnienia i zapraszamy wkrótce!'
+                    : 'Прийом онлайн-замовлень тимчасово призупинено (технічна перерва / відпустка). Перепрошуємо за незручності та чекаємо вас незабаром!'}
+                </p>
+                <div className="pt-0.5">
+                  <a
+                    href={`tel:${brandTheme.contacts.phoneRaw}`}
+                    className="inline-flex items-center justify-center gap-1 text-[11px] font-bold text-zinc-400 hover:text-white transition-colors"
+                  >
+                    <span>{locale === 'pl' ? 'Zadzwoń do lokalu:' : 'Зателефонувати:'} {brandTheme.contacts.phone}</span>
+                  </a>
+                </div>
+              </div>
+            ) : effectiveOrdersMode === 'paused_today' ? (
               <div className="w-full p-3.5 rounded-xl bg-red-950/40 border border-red-500/40 text-center space-y-2.5 shadow-lg shadow-black/80">
                 <div className="flex items-center justify-center gap-1.5 text-xs sm:text-sm font-black text-red-400 uppercase tracking-wide">
                   <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />

@@ -88,6 +88,9 @@ export function Header() {
         if (typeof synced.isOrdersPaused === 'boolean') {
           settingsUpdates.isOrdersPaused = synced.isOrdersPaused;
         }
+        if (synced.ordersAcceptanceMode) {
+          settingsUpdates.ordersAcceptanceMode = synced.ordersAcceptanceMode;
+        }
         if (typeof synced.cityFreeThreshold === 'number') {
           settingsUpdates.cityFreeThreshold = synced.cityFreeThreshold;
         }
@@ -132,6 +135,9 @@ export function Header() {
                 const settingsUpdates: Record<string, any> = {};
                 if (typeof parsed.isOrdersPaused === 'boolean') {
                   settingsUpdates.isOrdersPaused = parsed.isOrdersPaused;
+                }
+                if (parsed.ordersAcceptanceMode) {
+                  settingsUpdates.ordersAcceptanceMode = parsed.ordersAcceptanceMode;
                 }
                 if (typeof parsed.cityFreeThreshold === 'number') {
                   settingsUpdates.cityFreeThreshold = parsed.cityFreeThreshold;
