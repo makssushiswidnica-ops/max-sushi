@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { CartItem, Product, Category, DeliveryZoneId, SelectedProductOptions } from '@/types';
 import { brandTheme } from '@/config/theme';
-import { getEffectivePrice, getItemUnitPrice } from '@/lib/utils';
+import { getEffectivePrice, getItemUnitPrice, isPromotionalProduct } from '@/lib/utils';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { products as defaultProducts } from '@/lib/mockData';
 
@@ -344,7 +344,7 @@ export const useCartStore = create<CartState>()(
             if (item.isGift) return sum;
             const unitPrice = getItemUnitPrice(item.product, item.selectedOptions);
             const lineTotal = unitPrice * item.quantity;
-            const hasPromoDiscount = (item.product.discountPercent || 0) > 0;
+            const hasPromoDiscount = isPromotionalProduct(item.product);
             const effectiveLineTotal = hasPromoDiscount
               ? lineTotal
               : lineTotal * (1 - pickupDiscountRate);

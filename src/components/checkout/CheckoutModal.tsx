@@ -39,7 +39,7 @@ import {
 import { useI18n } from '@/lib/i18nContext';
 import { createOrder } from '@/lib/supabase';
 import { brandTheme } from '@/config/theme';
-import { formatPrice, getItemUnitPrice, cn } from '@/lib/utils';
+import { formatPrice, getItemUnitPrice, isPromotionalProduct, cn } from '@/lib/utils';
 import { DeliveryMethod, PaymentMethod, Order, OrderAddress, DeliveryZoneId } from '@/types';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import {
@@ -392,7 +392,7 @@ export function CheckoutModal() {
   const isPickup = deliveryMethod === 'pickup';
   const subtotal = useCartStore((s) => s.getSubtotal)();
   const hasDiscountedItem = items.some(
-    (item) => !item.isGift && (item.product.discountPercent || 0) > 0
+    (item) => !item.isGift && isPromotionalProduct(item.product)
   );
 
   // Динамічний прорахунок кілометражу за місто через Nominatim + OSRM
@@ -424,7 +424,10 @@ export function CheckoutModal() {
   const deliveryFee = useCartStore((s) => s.getDeliveryFee)(isPickup, selectedZone, customFee);
   const rawTotal = useCartStore((s) => s.getTotal)(isPickup, selectedZone, customFee);
 
-  // Знижка на День народження (10% — не сумується із самовивозом -5% та іншими знижками, 1 раз на рік)
+  // Фактична економія від самовивозу (-5% тільки на звичайні позиції, не сумується з акціями та ДР)
+  const pickupDiscountAmount = isPickup ? Math.max(0, subtotal - rawTotal) : 0;
+
+  // Знижка на День народження (10% — не сумується із самовивозом -5% та акційними наборами/знижками, 1 раз на рік)
   const isBirthdayUsedThisYear = useCustomerStore((s) => s.isBirthdayUsedThisYear);
   const checkBirthdayUsedThisYear = useCustomerStore((s) => s.checkBirthdayUsedThisYear);
   const [phoneUsedBirthday, setPhoneUsedBirthday] = useState(false);
@@ -438,7 +441,7 @@ export function CheckoutModal() {
   const birthdayDiscountRate = (birthdayPromo.discountPercent || 10) / 100;
   const birthdayEligibleSubtotal = items.reduce(
     (sum, item) =>
-      item.isGift || (item.product.discountPercent || 0) > 0
+      item.isGift || isPromotionalProduct(item.product)
         ? sum
         : sum + getItemUnitPrice(item.product, item.selectedOptions) * item.quantity,
     0
@@ -447,12 +450,19 @@ export function CheckoutModal() {
     ? Math.round(birthdayEligibleSubtotal * birthdayDiscountRate)
     : 0;
 
-  // Знижка на 1-ше замовлення (10%) для зареєстрованих клієнтів (не сумується зі знижкою ДР)
+  // Знижка на 1-ше замовлення (10%) для зареєстрованих клієнтів (тільки на неакційні позиції, не сумується з ДР)
   const isFirstOrderEligible = useCustomerStore((s) => s.isFirstOrderEligible);
   const firstOrderPromo = storeSettings.firstOrderPromo;
   const isFirstOrderApplied = Boolean(!isBirthdayApplied && customer && firstOrderPromo?.enabled && isFirstOrderEligible);
   const firstOrderDiscountRate = (firstOrderPromo?.discountPercent || 10) / 100;
-  const firstOrderDiscount = isFirstOrderApplied ? Math.round(subtotal * firstOrderDiscountRate) : 0;
+  const firstOrderEligibleSubtotal = items.reduce(
+    (sum, item) =>
+      item.isGift || isPromotionalProduct(item.product)
+        ? sum
+        : sum + getItemUnitPrice(item.product, item.selectedOptions) * item.quantity,
+    0
+  );
+  const firstOrderDiscount = isFirstOrderApplied ? Math.round(firstOrderEligibleSubtotal * firstOrderDiscountRate) : 0;
 
   // Якщо активована знижка на ДР, то при самовивозі знижка -5% не застосовується — діє тільки -10% за ДР
   const baseTotalBeforePromo = isBirthdayApplied ? subtotal + deliveryFee : rawTotal;
@@ -978,9 +988,9 @@ export function CheckoutModal() {
               <span className="text-xs font-bold text-white">
                 {createdOrder.deliveryMethod === 'delivery'
                   ? t.checkout.delivery
-                  : (hasDiscountedItem || createdOrder.isBirthday)
-                  ? t.checkout.pickup
-                  : `${t.checkout.pickup} (-${brandTheme.delivery.pickupDiscountPercent}%)`}
+                  : (pickupDiscountAmount > 0)
+                  ? `${t.checkout.pickup} (-${brandTheme.delivery.pickupDiscountPercent}%)`
+                  : t.checkout.pickup}
               </span>
             </div>
 
@@ -1302,9 +1312,16 @@ export function CheckoutModal() {
                 </div>
                 <p className="text-[10.5px] sm:text-[11px] text-zinc-400 leading-snug">
                   {locale === 'pl'
-                    ? 'Rabat obowiązuje po okazaniu dokumentu potwierdzającego datę urodzenia przy odbiorze / u kuriera. Nie łączy się z innymi rabatami (np. -5% za odbiór osobisty).'
-                    : 'Знижка діє за наявності документа, що підтверджує дату народження, при отриманні / у курʼєра. Не сумується з іншими знижками (зокрема -5% за самовивіз).'}
+                    ? 'Rabat obowiązuje po okazaniu dokumentu potwierdzającego datę urodzenia przy odbiorze / u kuriera. Nie łączy się z zestawami promocyjnymi, innymi promocjami i rabatem za odbiór osobisty (-5%).'
+                    : 'Знижка діє за наявності документа, що підтверджує дату народження, при отриманні / у курʼєра. Не сумується з акційними наборами, іншими знижками та самовивозом (-5%).'}
                 </p>
+                {isBirthdayChecked && birthdayEligibleSubtotal === 0 && (
+                  <p className="text-[10.5px] font-semibold text-amber-400 pt-0.5">
+                    {locale === 'pl'
+                      ? 'Wszystkie pozycje w koszyku to zestawy lub produkty promocyjne (rabat urodzinowy nalicza się na pozycje standardowe).'
+                      : 'Усі позиції в кошику вже є акційними (знижка на день народження діє тільки на стандартні позиції меню).'}
+                  </p>
+                )}
               </div>
             </label>
             )
@@ -2081,9 +2098,9 @@ export function CheckoutModal() {
                   </span>
                 )}
                 <span className="text-lg sm:text-xl font-black text-[#e50914]">{formatPrice(total, locale)}</span>
-                {isPickup && !hasDiscountedItem && !isBirthdayApplied && (
+                {isPickup && pickupDiscountAmount > 0 && !isBirthdayApplied && (
                   <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                    {t.checkout.pickupDiscount}
+                    {t.checkout.pickupDiscount} (-{pickupDiscountAmount} zł)
                   </span>
                 )}
                 {isBirthdayApplied && (

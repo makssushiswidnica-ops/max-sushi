@@ -25,3 +25,22 @@ export function getItemUnitPrice(product: Product, options?: SelectedProductOpti
   return price;
 }
 
+/**
+ * Перевіряє, чи є товар або набір акційним (зі знижкою, спеціальною ціною, або комбо-набором).
+ * До таких позицій НЕ додаються інші відсоткові знижки:
+ * - знижка на самовивіз (-5%)
+ * - знижка на День народження (-10%)
+ * - знижка на перше замовлення (-10%)
+ */
+export function isPromotionalProduct(product?: Product | null): boolean {
+  if (!product) return false;
+  if ((product.discountPercent || 0) > 0) return true;
+  if ((product.comboDiscountPercent || 0) > 0) return true;
+  if (product.categoryId === 'event-promos') return true;
+  if (product.categoryId === 'promocje') return true;
+  if (typeof product.id === 'string' && product.id.startsWith('combo-')) return true;
+  if (product.badge === 'sale') return true;
+  return false;
+}
+
+
