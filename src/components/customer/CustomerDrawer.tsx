@@ -45,7 +45,7 @@ import {
   maskEntryCode 
 } from '@/lib/inputMasks';
 
-// Перевірка, чи з цього комп'ютера чи телефона вже колись виконувався логін / реєстрація або замовлення
+// Перевірка, чи з цього комп'ютера чи телефона вже колись виконувався логін або реєстрація
 const checkHadPreviousLogin = (): boolean => {
   if (typeof window === 'undefined') return false;
   try {
@@ -55,8 +55,6 @@ const checkHadPreviousLogin = (): boolean => {
     if (localStorage.getItem('max-sushi-customer')) return true;
     const db = JSON.parse(localStorage.getItem('max-sushi-customers-db') || '[]');
     if (Array.isArray(db) && db.length > 0) return true;
-    const orders = JSON.parse(localStorage.getItem('max-sushi-orders') || '[]');
-    if (Array.isArray(orders) && orders.length > 0) return true;
   } catch (e) {}
   return false;
 };
@@ -245,6 +243,38 @@ export function CustomerDrawer() {
     }
   }, [isOpen, customer, fetchCustomerOrders]);
 
+  const forcedAuthModeRef = useRef<'login' | 'register' | null>(null);
+
+  // Слухач відкриття вікна реєстрації / входу із заповненими даними з вікна успішного замовлення
+  useEffect(() => {
+    const handleOpenCustomerAuth = (e: Event) => {
+      const customEvent = e as CustomEvent<{
+        mode?: 'login' | 'register';
+        name?: string;
+        phone?: string;
+      }>;
+      const detail = customEvent.detail;
+      if (!detail) return;
+
+      setAuthError('');
+      setAdminNotice('');
+
+      if (detail.mode === 'register') {
+        forcedAuthModeRef.current = 'register';
+        setAuthMode('register');
+        if (detail.name) setRegName(maskName(detail.name));
+        if (detail.phone) setRegPhone(maskPhone(detail.phone));
+      } else if (detail.mode === 'login') {
+        forcedAuthModeRef.current = 'login';
+        setAuthMode('login');
+        if (detail.phone) setLoginIdentifier(maskPhone(detail.phone));
+      }
+    };
+
+    window.addEventListener('open-customer-auth', handleOpenCustomerAuth);
+    return () => window.removeEventListener('open-customer-auth', handleOpenCustomerAuth);
+  }, []);
+
   // Якщо користувач не залогінений, але з цього пристрою вже був логін — пропонуємо вікно входу замість реєстрації
   useEffect(() => {
     if (checkHadPreviousLogin()) {
@@ -260,6 +290,11 @@ export function CustomerDrawer() {
 
   useEffect(() => {
     if (isOpen && !customer) {
+      if (forcedAuthModeRef.current) {
+        setAuthMode(forcedAuthModeRef.current);
+        forcedAuthModeRef.current = null;
+        return;
+      }
       if (checkHadPreviousLogin()) {
         setAuthMode('login');
         try {

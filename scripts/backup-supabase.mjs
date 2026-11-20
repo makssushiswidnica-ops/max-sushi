@@ -53,7 +53,7 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
-const TABLES = ['categories', 'products', 'orders', 'customers'];
+const TABLES = ['categories', 'products', 'orders', 'customers', 'guests'];
 const BUCKETS = ['menu-images'];
 
 const today = new Date().toISOString().slice(0, 10);

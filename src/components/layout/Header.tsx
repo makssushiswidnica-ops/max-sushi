@@ -103,6 +103,9 @@ export function Header() {
         if (synced.birthdayPromo) {
           settingsUpdates.birthdayPromo = synced.birthdayPromo;
         }
+        if (synced.eventCombosPromo) {
+          settingsUpdates.eventCombosPromo = synced.eventCombosPromo;
+        }
         if (synced.giftPromo) {
           settingsUpdates.giftPromo = synced.giftPromo;
         }
@@ -144,6 +147,9 @@ export function Header() {
                 }
                 if (parsed.birthdayPromo) {
                   settingsUpdates.birthdayPromo = parsed.birthdayPromo;
+                }
+                if (parsed.eventCombosPromo) {
+                  settingsUpdates.eventCombosPromo = parsed.eventCombosPromo;
                 }
                 if (parsed.giftPromo) {
                   settingsUpdates.giftPromo = parsed.giftPromo;

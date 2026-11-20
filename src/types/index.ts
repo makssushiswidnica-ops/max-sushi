@@ -61,6 +61,15 @@ export const ALLERGENS: AllergenDef[] = [
   { key: 'molluscs', name: { pl: 'Mięczaki i produkty pochodne', uk: 'Молюски та продукти з них' }, short: { pl: 'Mięczaki', uk: 'Молюски' } },
 ];
 
+export interface ComboSubItem {
+  id: string;
+  name: LocalizedString;
+  image: string;
+  pieces?: number;
+  price: number;
+  sauce?: SauceChoiceKey;
+}
+
 export interface Product {
   id: string;
   sku?: string; // Артикул / номер страви на касі (PLU)
@@ -82,6 +91,10 @@ export interface Product {
   canBeTempura?: boolean; // Дозволена опція "У темпурі"
   tempuraPrice?: number;  // Ціна за темпуру (за замовчуванням 2 zł)
   allergens?: AllergenKey[]; // Список алергенів
+  comboItems?: ComboSubItem[]; // Окремі позиції всередині акційного набору
+  comboOriginalPrice?: number; // Повна сума набору без знижки
+  comboDiscountPercent?: number; // Відсоток знижки набору
+  comboEventName?: LocalizedString; // Назва акційної події з адмінки (напр. BLACK FRIDAY)
 }
 
 export interface Category {
@@ -154,6 +167,28 @@ export interface BirthdayPromo {
   discountPercent: number; // Наприклад 10%
 }
 
+export interface PromoComboSlot {
+  /** Список ID страв у цьому віконці. Якщо > 1, клієнт на сайті обирає одну з них ("на вибір") */
+  productIds: string[];
+}
+
+export interface PromoComboItem {
+  id: string;
+  /** Опціональна власна назва комбо (PL / UK). Якщо порожня — генерується зі страв */
+  title?: LocalizedString;
+  /** Від 2 до 5 позицій у наборі (1 + 1 ... до 5) */
+  slots: PromoComboSlot[];
+  /** Відсоток знижки на набір (наприклад 10 або 15) */
+  discountPercent: number;
+}
+
+export interface EventCombosPromo {
+  enabled: boolean;
+  /** Назва події / категорії в меню (наприклад "BLACK FRIDAY") */
+  eventName: LocalizedString;
+  combos: PromoComboItem[];
+}
+
 export interface StoreSettings {
   cityFreeThreshold: number;
   cityStandardFee: number;
@@ -167,6 +202,7 @@ export interface StoreSettings {
   };
   firstOrderPromo?: FirstOrderPromo;
   birthdayPromo?: BirthdayPromo;
+  eventCombosPromo?: EventCombosPromo;
   soundNotificationsEnabled: boolean;
 }
 
@@ -219,7 +255,19 @@ export interface CustomerProfile {
   password?: string;
   birthDate?: string; // YYYY-MM-DD
   birthdayUsedYear?: number;
+  hadGuestOrders?: boolean; // Чи мав замовлення як гість до реєстрації
   defaultAddress?: OrderAddress;
   preferredLanguage?: 'pl' | 'uk';
   savedAt: string;
+}
+
+export interface GuestProfile {
+  id: string;
+  phone: string;
+  name: string;
+  address?: OrderAddress;
+  ordersCount?: number;
+  lastOrderId?: string;
+  createdAt: string;
+  updatedAt: string;
 }

@@ -61,6 +61,14 @@ export function ProductModal() {
   const cardTouchStartX = useRef<number | null>(null);
   const cardTouchStartY = useRef<number | null>(null);
   const photoTouchStartX = useRef<number | null>(null);
+  const hasNavigatedInModalRef = useRef<boolean>(false);
+
+  // При відкритті модалки фіксуємо, що користувач ще не гортав сусідні страви
+  useEffect(() => {
+    if (!selectedProduct) {
+      hasNavigatedInModalRef.current = false;
+    }
+  }, [selectedProduct]);
 
   // Синхронізація актуальних страв та категорій лише якщо модалка відкрита, а стор ще порожній
   useEffect(() => {
@@ -95,6 +103,7 @@ export function ProductModal() {
   // Перемикання на попередню картку з бази даних
   const handlePrevCard = useCallback(() => {
     if (activeProducts.length === 0) return;
+    hasNavigatedInModalRef.current = true;
     const prevIndex = currentIndex > 0 ? currentIndex - 1 : activeProducts.length - 1;
     setSelectedProduct(activeProducts[prevIndex]);
     setModalQuantity(1);
@@ -105,6 +114,7 @@ export function ProductModal() {
   // Перемикання на наступну картку з бази даних
   const handleNextCard = useCallback(() => {
     if (activeProducts.length === 0) return;
+    hasNavigatedInModalRef.current = true;
     const nextIndex = currentIndex < activeProducts.length - 1 ? currentIndex + 1 : 0;
     setSelectedProduct(activeProducts[nextIndex]);
     setModalQuantity(1);
@@ -112,9 +122,9 @@ export function ProductModal() {
     setIsAdded(false);
   }, [currentIndex, activeProducts, setSelectedProduct]);
 
-  // Закриття модалки з синхронізацією категорії з поточної відкритої страви
+  // Закриття модалки з синхронізацією категорії (лише якщо користувач гортав страви всередині модалки)
   const handleClose = useCallback(() => {
-    if (selectedProduct?.categoryId) {
+    if (hasNavigatedInModalRef.current && selectedProduct?.categoryId) {
       window.dispatchEvent(
         new CustomEvent('sync-category-from-modal', {
           detail: {
@@ -127,6 +137,7 @@ export function ProductModal() {
         sessionStorage.setItem('maks_active_category', selectedProduct.categoryId);
       }
     }
+    hasNavigatedInModalRef.current = false;
     setSelectedProduct(null);
     setModalQuantity(1);
     setCurrentImageIndex(0);

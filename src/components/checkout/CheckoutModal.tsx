@@ -24,11 +24,18 @@ import {
   Loader2,
   Percent,
   Cake,
+  UserPlus,
+  LogIn,
 } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
 import { useCartStore } from '@/store/useCartStore';
-import { useCustomerStore, isBirthdayToday, checkPhoneUsedBirthdayThisYear } from '@/store/useCustomerStore';
+import {
+  useCustomerStore,
+  isBirthdayToday,
+  checkPhoneUsedBirthdayThisYear,
+  upsertGuestFromOrder,
+} from '@/store/useCustomerStore';
 import { useI18n } from '@/lib/i18nContext';
 import { createOrder } from '@/lib/supabase';
 import { brandTheme } from '@/config/theme';
@@ -340,6 +347,46 @@ export function CheckoutModal() {
   const [isBirthdayChecked, setIsBirthdayChecked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
+
+  // Тестовий перегляд вікна успіху гостя без створення реального замовлення в базі/Telegram
+  React.useEffect(() => {
+    const handlePreview = () => {
+      useCustomerStore.setState({ customer: null });
+      setCreatedOrder({
+        id: 'TEST-777',
+        name: 'Олександр (Гість)',
+        phone: '+48 730 000 000',
+        personsCount: 2,
+        deliveryMethod: 'delivery',
+        address: { city: 'Świdnica', street: 'Rynek', house: '1' },
+        paymentMethod: 'card_courier',
+        timingType: 'asap',
+        items: [],
+        subtotal: 135,
+        deliveryFee: 0,
+        total: 135,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      });
+      setIsCheckoutOpen(true);
+    };
+
+    (window as any).__showGuestSuccessPreview = handlePreview;
+    window.addEventListener('preview-guest-success', handlePreview);
+
+    // Автоматично відкриваємо, якщо в адресному рядку є параметр ?preview=guest-success
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('preview') === 'guest-success') {
+        setTimeout(handlePreview, 300);
+      }
+    }
+
+    return () => {
+      delete (window as any).__showGuestSuccessPreview;
+      window.removeEventListener('preview-guest-success', handlePreview);
+    };
+  }, [setIsCheckoutOpen]);
 
   const storeSettings = useSettingsStore();
   const isPickup = deliveryMethod === 'pickup';
@@ -842,24 +889,8 @@ export function CheckoutModal() {
               : {}),
           });
         } else {
-          // Якщо клієнт ще не був залогінений, зберігаємо профіль для миттєвого впізнання при наступному візиті
-          const autoProfile = {
-            id: `cust_${Date.now()}`,
-            name: values.name,
-            phone: values.phone,
-            defaultAddress: addressObj,
-            ...(isBirthdayApplied
-              ? {
-                  birthDate: todayIso,
-                  birthdayUsedYear: currentYear,
-                }
-              : {}),
-            preferredLanguage: locale as 'pl' | 'uk',
-            savedAt: new Date().toISOString(),
-          };
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('max-sushi-customer', JSON.stringify(autoProfile));
-          }
+          // Якщо клієнт замовляє без реєстрації — зберігаємо його в таблицю гостей (public.guests) за мобільним номером разом з ім'ям та адресою
+          await upsertGuestFromOrder(orderData);
         }
       } catch (e) {
         console.warn('Customer auto-save notice:', e);
@@ -997,6 +1028,79 @@ export function CheckoutModal() {
               <span className="text-[#e50914]">{formatPrice(createdOrder.total, locale)}</span>
             </div>
           </div>
+
+          {/* Лагідне запрошення до реєстрації / входу для гостей після замовлення */}
+          {!customer && (
+            <div
+              style={{
+                clipPath: 'polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)',
+              }}
+              className="max-w-md mx-auto p-4 sm:p-5 bg-gradient-to-br from-[#1b151c] via-[#151520] to-[#12121a] border border-[#e50914]/35 text-left space-y-3 shadow-lg shadow-black/50"
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#e50914]/15 border border-[#e50914]/40 flex items-center justify-center text-[#ff4d58] shrink-0 mt-0.5">
+                  <UserPlus className="w-4 h-4" />
+                </div>
+                <div className="space-y-1 min-w-0">
+                  <h4 className="text-xs sm:text-sm font-black text-white leading-snug">
+                    {locale === 'pl'
+                      ? 'Zapisz swój adres i historię zamówień!'
+                      : 'Збережіть свою адресу та історію замовлень!'}
+                  </h4>
+                  <p className="text-[11px] sm:text-xs text-zinc-300 leading-relaxed">
+                    {locale === 'pl'
+                      ? 'Zarejestruj się lub zaloguj — to pozwoli zachować Twój adres dostawy oraz historię zamówień na kolejne wizyty.'
+                      : 'Зареєструйтесь або увійдіть у кабінет — це дасть можливість зберегти вашу адресу доставки та історію замовлень для наступних разів.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5 pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const orderName = createdOrder.name;
+                    const orderPhone = createdOrder.phone;
+                    handleClose();
+                    window.dispatchEvent(
+                      new CustomEvent('open-customer-auth', {
+                        detail: { mode: 'register', name: orderName, phone: orderPhone },
+                      })
+                    );
+                    useCustomerStore.getState().setOpen(true);
+                  }}
+                  style={{
+                    clipPath: 'polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px)',
+                  }}
+                  className="py-2.5 px-3 bg-[#e50914] hover:bg-[#f4222d] text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shadow-[#e50914]/25 active:scale-95 select-none"
+                >
+                  <UserPlus className="w-3.5 h-3.5 shrink-0" />
+                  <span>{locale === 'pl' ? 'Rejestracja' : 'Зареєструватись'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const orderPhone = createdOrder.phone;
+                    handleClose();
+                    window.dispatchEvent(
+                      new CustomEvent('open-customer-auth', {
+                        detail: { mode: 'login', phone: orderPhone },
+                      })
+                    );
+                    useCustomerStore.getState().setOpen(true);
+                  }}
+                  style={{
+                    clipPath: 'polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px)',
+                  }}
+                  className="py-2.5 px-3 bg-white/10 hover:bg-white/15 border border-white/15 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 select-none"
+                >
+                  <LogIn className="w-3.5 h-3.5 shrink-0 text-zinc-300" />
+                  <span>{locale === 'pl' ? 'Zaloguj się' : 'Увійти'}</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="w-full max-w-md mx-auto space-y-2.5">
             <button

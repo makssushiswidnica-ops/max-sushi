@@ -72,11 +72,22 @@ import {
   Download
 } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
-import { useSettingsStore } from '@/store/useSettingsStore';
+import { useSettingsStore, DEFAULT_EVENT_COMBOS_PROMO } from '@/store/useSettingsStore';
+import { syncGuestsFromOrders } from '@/store/useCustomerStore';
 import { cn, formatPrice } from '@/lib/utils';
 import { supabase, isSupabaseConfigured, createOrder, saveStoreSettings, fetchStoreSettings } from '@/lib/supabase';
 import { brandTheme } from '@/config/theme';
-import { Category, Product, ProductBadge as ProductBadgeType, ALLERGENS, AllergenKey, SauceChoiceKey, getSauceChoiceLabel } from '@/types';
+import {
+  Category,
+  Product,
+  ProductBadge as ProductBadgeType,
+  ALLERGENS,
+  AllergenKey,
+  SauceChoiceKey,
+  getSauceChoiceLabel,
+  PromoComboItem,
+  EventCombosPromo,
+} from '@/types';
 import { DEFAULT_PRODUCT_ALLERGENS } from '@/lib/allergenData';
 import { ProductBadge } from '@/components/menu/ProductBadge';
 import { getProductZoom, ZOOM_PRESETS } from '@/lib/imageZoom';
@@ -301,6 +312,23 @@ export default function AdminPage() {
   const [mktBirthdayEnabled, setMktBirthdayEnabled] = useState<boolean>(storeSettings.birthdayPromo?.enabled ?? true);
   const [mktBirthdayDiscount, setMktBirthdayDiscount] = useState<number>(storeSettings.birthdayPromo?.discountPercent ?? 10);
 
+  // Акційні комбо-набори до подій (напр. BLACK FRIDAY)
+  const [mktEventEnabled, setMktEventEnabled] = useState<boolean>(
+    storeSettings.eventCombosPromo?.enabled ?? DEFAULT_EVENT_COMBOS_PROMO.enabled
+  );
+  const [isMktEventExpanded, setIsMktEventExpanded] = useState<boolean>(false);
+  const [mktEventNamePl, setMktEventNamePl] = useState<string>(
+    storeSettings.eventCombosPromo?.eventName?.pl ?? DEFAULT_EVENT_COMBOS_PROMO.eventName.pl
+  );
+  const [mktEventNameUk, setMktEventNameUk] = useState<string>(
+    storeSettings.eventCombosPromo?.eventName?.uk ?? DEFAULT_EVENT_COMBOS_PROMO.eventName.uk
+  );
+  const [mktEventCombos, setMktEventCombos] = useState<PromoComboItem[]>(
+    storeSettings.eventCombosPromo?.combos?.length
+      ? storeSettings.eventCombosPromo.combos
+      : DEFAULT_EVENT_COMBOS_PROMO.combos
+  );
+
   const [mktSoundEnabled, setMktSoundEnabled] = useState<boolean>(storeSettings.soundNotificationsEnabled);
   const [pushStatus, setPushStatus] = useState<string>('default');
   const [unreadOrderCount, setUnreadOrderCount] = useState<number>(0);
@@ -384,8 +412,33 @@ export default function AdminPage() {
       setMktFirstOrderEnabled(storeSettings.firstOrderPromo.enabled ?? true);
       setMktFirstOrderDiscount(storeSettings.firstOrderPromo.discountPercent ?? 10);
     }
+    if (storeSettings.birthdayPromo) {
+      setMktBirthdayEnabled(storeSettings.birthdayPromo.enabled ?? true);
+      setMktBirthdayDiscount(storeSettings.birthdayPromo.discountPercent ?? 10);
+    }
     setMktSoundEnabled(storeSettings.soundNotificationsEnabled);
-  }, [storeSettings]);
+  }, [
+    storeSettings.cityFreeThreshold,
+    storeSettings.cityStandardFee,
+    storeSettings.suburb10kmFee,
+    storeSettings.giftPromo,
+    storeSettings.firstOrderPromo,
+    storeSettings.birthdayPromo,
+    storeSettings.soundNotificationsEnabled,
+  ]);
+
+  useEffect(() => {
+    if (storeSettings.eventCombosPromo) {
+      setMktEventEnabled(Boolean(storeSettings.eventCombosPromo.enabled));
+      if (storeSettings.eventCombosPromo.eventName?.pl) {
+        setMktEventNamePl(storeSettings.eventCombosPromo.eventName.pl);
+        setMktEventNameUk(storeSettings.eventCombosPromo.eventName.pl);
+      }
+      if (Array.isArray(storeSettings.eventCombosPromo.combos) && storeSettings.eventCombosPromo.combos.length > 0) {
+        setMktEventCombos(storeSettings.eventCombosPromo.combos);
+      }
+    }
+  }, [storeSettings.eventCombosPromo]);
 
   // Створення нової категорії
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
@@ -618,11 +671,12 @@ export default function AdminPage() {
       };
 
       if (mode === 'full' && isSupabaseConfigured) {
-        const [catRes, prodRes, ordRes, custRes] = await Promise.all([
+        const [catRes, prodRes, ordRes, custRes, guestRes] = await Promise.all([
           supabase.from('categories').select('*'),
           supabase.from('products').select('*'),
           supabase.from('orders').select('*'),
           supabase.from('customers').select('*'),
+          supabase.from('guests').select('*'),
         ]);
         payload = {
           exportedAt: new Date().toISOString(),
@@ -631,6 +685,7 @@ export default function AdminPage() {
           products: prodRes.data || products,
           orders: ordRes.data || [],
           customers: custRes.data || [],
+          guests: guestRes.data || [],
         };
       } else if (mode === 'menu' && isSupabaseConfigured) {
         const [catRes, prodRes] = await Promise.all([
@@ -672,12 +727,14 @@ export default function AdminPage() {
       const backupProducts = Array.isArray(parsed?.products) ? parsed.products : [];
       const backupOrders = Array.isArray(parsed?.orders) ? parsed.orders : [];
       const backupCustomers = Array.isArray(parsed?.customers) ? parsed.customers : [];
+      const backupGuests = Array.isArray(parsed?.guests) ? parsed.guests : [];
 
       if (
         backupCategories.length === 0 &&
         backupProducts.length === 0 &&
         backupOrders.length === 0 &&
-        backupCustomers.length === 0
+        backupCustomers.length === 0 &&
+        backupGuests.length === 0
       ) {
         showToast('Файл не містить даних для відновлення');
         return;
@@ -688,6 +745,7 @@ export default function AdminPage() {
         backupProducts.length ? `${backupProducts.length} страв` : null,
         backupOrders.length ? `${backupOrders.length} замовлень` : null,
         backupCustomers.length ? `${backupCustomers.length} клієнтів` : null,
+        backupGuests.length ? `${backupGuests.length} гостей` : null,
       ].filter(Boolean);
 
       if (!window.confirm(`Відновити з бекапу: ${parts.join(', ')}?`)) {
@@ -735,6 +793,10 @@ export default function AdminPage() {
         if (backupCustomers.length > 0) {
           const { error: custErr } = await supabase.from('customers').upsert(backupCustomers, { onConflict: 'phone' });
           if (custErr) throw new Error(custErr.message);
+        }
+
+        if (backupGuests.length > 0) {
+          await supabase.from('guests').upsert(backupGuests, { onConflict: 'phone' });
         }
 
         if (backupOrders.length > 0) {
@@ -812,6 +874,19 @@ export default function AdminPage() {
                 updateSettings({ birthdayPromo: parsed.birthdayPromo });
                 setMktBirthdayEnabled(parsed.birthdayPromo.enabled ?? true);
                 setMktBirthdayDiscount(parsed.birthdayPromo.discountPercent ?? 10);
+              }
+              if (parsed.eventCombosPromo) {
+                updateSettings({ eventCombosPromo: parsed.eventCombosPromo });
+                setMktEventEnabled(Boolean(parsed.eventCombosPromo.enabled));
+                if (parsed.eventCombosPromo.eventName?.pl) {
+                  setMktEventNamePl(parsed.eventCombosPromo.eventName.pl);
+                }
+                if (parsed.eventCombosPromo.eventName?.uk) {
+                  setMktEventNameUk(parsed.eventCombosPromo.eventName.uk);
+                }
+                if (Array.isArray(parsed.eventCombosPromo.combos) && parsed.eventCombosPromo.combos.length > 0) {
+                  setMktEventCombos(parsed.eventCombosPromo.combos);
+                }
               }
             } catch { }
           }
@@ -915,6 +990,8 @@ export default function AdminPage() {
         if (loaded.some((o) => o.status === 'pending')) {
           setOrderStatusFilter('pending');
         }
+        // Автоматично синхронізуємо всіх незареєстрованих клієнтів із таблиці orders у таблицю guests
+        syncGuestsFromOrders();
       } else {
         const hasBrandNewPendingOrder = loaded.some(
           (o) => o.status === 'pending' && !knownOrderIdsRef.current.has(o.id)
@@ -5422,6 +5499,509 @@ export default function AdminPage() {
         {/* 4. РОЗДІЛ: МАРКЕТИНГ & ДОСТАВКА */}
         {activeTab === 'marketing' && (
           <div className="space-y-5 sm:space-y-6 w-full min-w-0 max-w-full">
+            {/* 0. ГОЛОВНИЙ БЛОК: КОНСТРУКТОР АКЦІЙНИХ КОМБО-НАБОРІВ ДО ПОДІЙ (1+1 ... до 5) */}
+            <div className="bg-[#0f0f17] border border-[#e50914]/35 rounded-2xl p-4 sm:p-6 space-y-5 shadow-[0_10px_35px_rgba(229,9,20,0.08)]">
+              {/* Шапка конструктора + Кнопка згортання/розгортання + Тумблер ВКЛ / ВИКЛ */}
+              <div
+                className={cn(
+                  'flex flex-col sm:flex-row sm:items-center justify-between gap-3',
+                  isMktEventExpanded && 'pb-3.5 border-b border-white/10'
+                )}
+              >
+                <div className="flex items-center gap-2.5">
+                  <h3 className="text-sm sm:text-lg font-black text-white uppercase tracking-wider">
+                    Акційні Комбо-Набори до Подій (Конструктор 1+1)
+                  </h3>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 self-start sm:self-center shrink-0">
+                  {/* Стильна самурайська кнопка розгортання / згортання конструктора наборів */}
+                  <button
+                    type="button"
+                    onClick={() => setIsMktEventExpanded((prev) => !prev)}
+                    style={{
+                      clipPath: 'polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px)',
+                    }}
+                    className={cn(
+                      'order-2 sm:order-1 group flex items-center gap-2 px-3 py-1.5 border text-xs font-extrabold uppercase tracking-wider transition-all duration-200 cursor-pointer select-none active:scale-95',
+                      isMktEventExpanded
+                        ? 'bg-[#e50914] border-[#ff4d58] text-white shadow-md shadow-[#e50914]/35'
+                        : 'bg-gradient-to-r from-[#e50914]/15 via-[#17131d] to-[#141422] hover:from-[#e50914]/25 border-[#e50914]/45 hover:border-[#e50914] text-zinc-100 shadow-sm shadow-[#e50914]/15'
+                    )}
+                  >
+                    <LayoutGrid
+                      className={cn(
+                        'w-3.5 h-3.5 transition-transform duration-200',
+                        isMktEventExpanded ? 'text-white rotate-90' : 'text-[#ff4d58] group-hover:scale-110'
+                      )}
+                    />
+                    <span>
+                      {isMktEventExpanded ? 'Згорнути конструктор' : 'Налаштувати набори'}
+                    </span>
+                    <span
+                      className={cn(
+                        'px-1.5 py-0.2 rounded text-[10px] font-black',
+                        isMktEventExpanded
+                          ? 'bg-black/30 text-white'
+                          : 'bg-[#e50914]/25 text-[#ff4d58] border border-[#e50914]/40'
+                      )}
+                    >
+                      {mktEventCombos.length}
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        'w-3.5 h-3.5 transition-transform duration-200',
+                        isMktEventExpanded ? 'text-white rotate-180' : 'text-[#ff4d58]'
+                      )}
+                    />
+                  </button>
+
+                  {/* Компактний акуратний тумблер увімкнення/вимкнення події (як в інших блоках маркетингу) */}
+                  <div className="order-1 sm:order-2 flex items-center gap-2">
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={mktEventEnabled}
+                      onClick={async () => {
+                        const nextEnabled = !mktEventEnabled;
+                        setMktEventEnabled(nextEnabled);
+                        const universalName = mktEventNamePl.trim() || 'BLACK FRIDAY';
+                        const payload: EventCombosPromo = {
+                          enabled: nextEnabled,
+                          eventName: {
+                            pl: universalName,
+                            uk: universalName,
+                          },
+                          combos: mktEventCombos,
+                        };
+                        updateSettings({ eventCombosPromo: payload });
+                        await saveStoreSettings({ eventCombosPromo: payload });
+                        showToast(
+                          nextEnabled
+                            ? `Подію "${payload.eventName.pl}" увімкнено на сайті!`
+                            : 'Акційну подію вимкнено на сайті'
+                        );
+                      }}
+                      className={cn(
+                        'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-none border border-white/15',
+                        mktEventEnabled
+                          ? 'bg-emerald-500 shadow-sm shadow-emerald-500/40'
+                          : 'bg-zinc-700'
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform duration-200 ease-in-out',
+                          mktEventEnabled ? 'translate-x-4' : 'translate-x-0'
+                        )}
+                      />
+                    </button>
+                    <span className="text-xs font-bold text-zinc-300 select-none">
+                      {mktEventEnabled ? 'Увімкнено' : 'Вимкнено'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {isMktEventExpanded && (
+                <>
+                  {/* Єдине універсальне поле назви події */}
+              <div className="p-3.5 sm:p-4 bg-[#141420] border border-white/8 rounded-xl">
+                <label className="text-xs font-bold text-zinc-300 block mb-1.5">
+                  Назва події
+                </label>
+                <input
+                  type="text"
+                  value={mktEventNamePl}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setMktEventNamePl(val);
+                    setMktEventNameUk(val);
+                  }}
+                  placeholder="Наприклад: BLACK FRIDAY"
+                  className="w-full sm:max-w-md bg-[#1b1b2a] border border-white/15 focus:border-[#e50914] rounded-lg px-3.5 py-2 text-sm text-white font-black uppercase tracking-wider focus:outline-none"
+                />
+              </div>
+
+              {/* Список комбо-наборів (шаблон: 1 позиція + 1 позиція ... до 5 позицій) */}
+              <div className="space-y-4">
+                {mktEventCombos.map((combo, comboIdx) => {
+                  const slots = combo.slots || [];
+                  const allCurrentSlotsFilled = slots.every(
+                    (s) => Array.isArray(s.productIds) && Boolean(s.productIds[0])
+                  );
+                  const canAddMoreSlots = slots.length < 5 && allCurrentSlotsFilled;
+
+                  // Розрахунок вартості набору для прев'ю в адмінці
+                  const baseSum = slots.reduce((acc, s) => {
+                    const firstProdId = s.productIds?.[0];
+                    if (!firstProdId) return acc;
+                    const found = products.find((p) => p.id === firstProdId);
+                    return acc + (found?.price || 0);
+                  }, 0);
+                  const disc = Math.max(1, Math.min(90, Number(combo.discountPercent) || 10));
+                  const finalSum = Math.round(baseSum * (1 - disc / 100));
+                  const savedSum = Math.max(0, baseSum - finalSum);
+
+                  return (
+                    <div
+                      key={combo.id}
+                      className="p-3.5 sm:p-4 bg-[#141420] border border-white/10 hover:border-[#e50914]/40 rounded-2xl space-y-3.5 transition-all"
+                    >
+                      {/* Верхній рядок набору: Номер + Кнопки порядку + Інпут % знижки + Прев'ю ціни + Видалити набір */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          {/* Кнопки зміни послідовності (Вгору / Вниз) */}
+                          {mktEventCombos.length > 1 && (
+                            <div className="flex items-center gap-1 bg-[#0d0d15] p-1 rounded-lg border border-white/10">
+                              <button
+                                type="button"
+                                disabled={comboIdx === 0}
+                                onClick={() => {
+                                  if (comboIdx === 0) return;
+                                  setMktEventCombos((prev) => {
+                                    const next = [...prev];
+                                    const temp = next[comboIdx - 1];
+                                    next[comboIdx - 1] = next[comboIdx];
+                                    next[comboIdx] = temp;
+                                    return next;
+                                  });
+                                }}
+                                title="Перемістити набір вище"
+                                className="w-6 h-6 rounded bg-white/5 hover:bg-white/15 disabled:opacity-25 disabled:pointer-events-none text-zinc-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                              >
+                                <ChevronDown className="w-3.5 h-3.5 rotate-180" />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={comboIdx === mktEventCombos.length - 1}
+                                onClick={() => {
+                                  if (comboIdx >= mktEventCombos.length - 1) return;
+                                  setMktEventCombos((prev) => {
+                                    const next = [...prev];
+                                    const temp = next[comboIdx + 1];
+                                    next[comboIdx + 1] = next[comboIdx];
+                                    next[comboIdx] = temp;
+                                    return next;
+                                  });
+                                }}
+                                title="Перемістити набір нижче"
+                                className="w-6 h-6 rounded bg-white/5 hover:bg-white/15 disabled:opacity-25 disabled:pointer-events-none text-zinc-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                              >
+                                <ChevronDown className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+
+                          <span className="px-2.5 py-1 rounded-lg bg-[#e50914] text-white text-xs font-black uppercase tracking-wider shadow-sm shadow-[#e50914]/40">
+                            Набір #{comboIdx + 1}
+                          </span>
+                          <span className="text-xs font-bold text-zinc-300">
+                            Формат: <strong className="text-white">{slots.map(() => '1').join(' + ')}</strong> ({slots.length} поз.)
+                          </span>
+                          {baseSum > 0 && (
+                            <div className="flex items-center gap-1.5 text-xs bg-[#0d0d15] px-2.5 py-1 rounded-lg border border-white/10">
+                              <span className="text-zinc-400 line-through">{baseSum} zł</span>
+                              <span className="text-zinc-500">➔</span>
+                              <span className="text-emerald-400 font-black">{finalSum} zł</span>
+                              <span className="text-[11px] text-amber-400 font-bold">(-{savedSum} zł)</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          {/* Інпут відсотка знижки */}
+                          <div className="flex items-center gap-1.5 bg-[#0d0d15] px-2.5 py-1.5 rounded-xl border border-white/10">
+                            <span className="text-xs font-bold text-zinc-300">Знижка:</span>
+                            <input
+                              type="number"
+                              min="1"
+                              max="90"
+                              step="1"
+                              value={combo.discountPercent}
+                              onChange={(e) => {
+                                const val = Math.max(1, Math.min(90, Number(e.target.value) || 0));
+                                setMktEventCombos((prev) =>
+                                  prev.map((c) => (c.id === combo.id ? { ...c, discountPercent: val } : c))
+                                );
+                              }}
+                              className="w-14 bg-[#1b1b2a] border border-[#e50914]/50 focus:border-[#e50914] rounded-lg px-2 py-1 text-center text-xs sm:text-sm text-white font-black focus:outline-none"
+                            />
+                            <span className="text-xs font-black text-[#ff4d58]">%</span>
+                          </div>
+
+                          {/* Кнопка видалення комбо-набору */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (mktEventCombos.length <= 1) {
+                                showToast('Має залишитися хоча б 1 набір у події');
+                                return;
+                              }
+                              setMktEventCombos((prev) => prev.filter((c) => c.id !== combo.id));
+                            }}
+                            title="Видалити цей набір"
+                            className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/25 transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Ячейки вибору страв: 1 позиція + 1 позиція (+ ще до 5 позицій) */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 items-stretch">
+                        {slots.map((slot, slotIdx) => {
+                          const prodId = slot.productIds?.[0] || '';
+                          const selectedProd = prodId ? products.find((p) => p.id === prodId) : undefined;
+
+                          return (
+                            <div
+                              key={slotIdx}
+                              className={cn(
+                                'p-3 rounded-xl border flex flex-col justify-between gap-2.5 relative transition-all',
+                                selectedProd
+                                  ? 'bg-[#0f0f18] border-white/10'
+                                  : 'bg-[#171219] border-dashed border-[#e50914]/50'
+                              )}
+                            >
+                              <div className="space-y-2.5">
+                                {/* Шапка ячейки */}
+                                <div className="flex items-center justify-between gap-1.5">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="w-5 h-5 rounded-md bg-[#e50914]/20 border border-[#e50914]/50 text-[#ff4d58] text-[11px] font-black flex items-center justify-center">
+                                      {slotIdx + 1}
+                                    </span>
+                                    <span className="text-xs font-extrabold text-white">
+                                      Позиція #{slotIdx + 1}
+                                    </span>
+                                  </div>
+
+                                  {/* Видалення додаткової ячейки (доступно якщо ячейок > 2) */}
+                                  {slots.length > 2 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setMktEventCombos((prev) =>
+                                          prev.map((c) =>
+                                            c.id === combo.id
+                                              ? { ...c, slots: c.slots.filter((_, idx) => idx !== slotIdx) }
+                                              : c
+                                          )
+                                        );
+                                      }}
+                                      title="Прибрати цю ячейку з набору"
+                                      className="text-zinc-500 hover:text-red-400 p-0.5 cursor-pointer transition-colors"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+
+                                {/* Вміст ячейки: Обрана страва АБО селектор вибору нової страви */}
+                                {selectedProd ? (
+                                  <div className="space-y-2 bg-[#161624] p-2.5 rounded-lg border border-white/10">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      {selectedProd.image ? (
+                                        <img
+                                          src={selectedProd.image}
+                                          alt={selectedProd.name.uk || selectedProd.name.pl}
+                                          className="w-10 h-10 rounded-lg object-cover shrink-0 border border-white/10"
+                                        />
+                                      ) : (
+                                        <div className="w-10 h-10 rounded-lg bg-black/40 flex items-center justify-center text-sm shrink-0">
+                                          🍣
+                                        </div>
+                                      )}
+                                      <div className="min-w-0 flex-1">
+                                        <p className="text-xs font-bold text-white truncate">
+                                          {selectedProd.name.uk || selectedProd.name.pl}
+                                        </p>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                          {selectedProd.sku && (
+                                            <span className="text-[10px] font-bold text-zinc-400">
+                                              #{selectedProd.sku}
+                                            </span>
+                                          )}
+                                          <span className="text-xs font-black text-amber-400">
+                                            {selectedProd.price} zł
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Селект для швидкої заміни позиції */}
+                                    <select
+                                      value={prodId}
+                                      onChange={(e) => {
+                                        const newId = e.target.value;
+                                        setMktEventCombos((prev) =>
+                                          prev.map((c) => {
+                                            if (c.id !== combo.id) return c;
+                                            const nextSlots = c.slots.map((s, sIdx) =>
+                                              sIdx === slotIdx ? { productIds: newId ? [newId] : [] } : s
+                                            );
+                                            return { ...c, slots: nextSlots };
+                                          })
+                                        );
+                                      }}
+                                      className="w-full bg-[#0f0f18] border border-white/10 focus:border-[#e50914] rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-none cursor-pointer"
+                                    >
+                                      {products.map((p) => (
+                                        <option key={p.id} value={p.id}>
+                                          {p.name.uk || p.name.pl} (#{p.sku || '—'}) — {p.price} zł
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-2 bg-[#161624] p-2.5 rounded-lg border border-[#e50914]/30">
+                                    <p className="text-[11px] font-bold text-[#ff4d58]">
+                                      Оберіть страву з меню:
+                                    </p>
+                                    <select
+                                      value=""
+                                      onChange={(e) => {
+                                        const newId = e.target.value;
+                                        if (!newId) return;
+                                        setMktEventCombos((prev) =>
+                                          prev.map((c) => {
+                                            if (c.id !== combo.id) return c;
+                                            const nextSlots = c.slots.map((s, sIdx) =>
+                                              sIdx === slotIdx ? { productIds: [newId] } : s
+                                            );
+                                            return { ...c, slots: nextSlots };
+                                          })
+                                        );
+                                      }}
+                                      className="w-full bg-[#0f0f18] border border-[#e50914]/50 focus:border-[#e50914] rounded-md px-2 py-2 text-xs text-white focus:outline-none cursor-pointer"
+                                    >
+                                      <option value="">-- Оберіть позицію з меню --</option>
+                                      {products.map((p) => (
+                                        <option key={p.id} value={p.id}>
+                                          {p.name.uk || p.name.pl} (#{p.sku || '—'}) — {p.price} zł
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Кнопка видалення позиції з ячейки, щоб обрати нову (або прибрати додаткову ячейку) */}
+                              {selectedProd && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setMktEventCombos((prev) =>
+                                      prev.map((c) => {
+                                        if (c.id !== combo.id) return c;
+                                        const nextSlots = c.slots.map((s, sIdx) =>
+                                          sIdx === slotIdx ? { productIds: [] } : s
+                                        );
+                                        return { ...c, slots: nextSlots };
+                                      })
+                                    );
+                                  }}
+                                  className="w-full py-1.5 px-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 text-[11px] font-bold text-red-300 hover:text-red-200 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  <span>Видалити позицію</span>
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+
+                        {/* Кнопка-віконце "+ Додати ще 1 позицію (до 5)", коли попередні ячейки заповнені */}
+                        {canAddMoreSlots && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMktEventCombos((prev) =>
+                                prev.map((c) =>
+                                  c.id === combo.id
+                                    ? { ...c, slots: [...c.slots, { productIds: [] }] }
+                                    : c
+                                )
+                              );
+                            }}
+                            className="p-4 rounded-xl border-2 border-dashed border-white/15 hover:border-[#e50914] bg-[#0f0f18]/50 hover:bg-[#e50914]/10 transition-all cursor-pointer flex flex-col items-center justify-center gap-2 min-h-[140px] group"
+                          >
+                            <div className="w-9 h-9 rounded-full bg-[#e50914]/20 border border-[#e50914]/40 group-hover:bg-[#e50914] text-[#ff4d58] group-hover:text-white flex items-center justify-center transition-colors">
+                              <Plus className="w-5 h-5" />
+                            </div>
+                            <span className="text-xs font-black text-zinc-300 group-hover:text-white uppercase tracking-wider text-center">
+                              + Додати позицію #{slots.length + 1}
+                            </span>
+                            <span className="text-[10px] text-zinc-500 text-center">
+                              (до 5 позицій у наборі)
+                            </span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Нижня панель дій конструктора: Додати новий комбо-набір + Зберегти */}
+              <div className="pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newCombo: PromoComboItem = {
+                        id: `combo-${Date.now()}`,
+                        slots: [
+                          { productIds: [] },
+                          { productIds: [] },
+                        ],
+                        discountPercent: 15,
+                      };
+                      setMktEventCombos((prev) => [...prev, newCombo]);
+                    }}
+                    style={{
+                      clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
+                    }}
+                    className="px-4 py-2.5 bg-[#1b1b2a] hover:bg-[#252538] border border-white/15 hover:border-[#e50914] text-white font-black text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Plus className="w-4 h-4 text-[#e50914]" />
+                    <span>Додати новий набір (1 + 1)</span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const universalName = mktEventNamePl.trim() || 'BLACK FRIDAY';
+                    const payload: EventCombosPromo = {
+                      enabled: mktEventEnabled,
+                      eventName: {
+                        pl: universalName,
+                        uk: universalName,
+                      },
+                      combos: mktEventCombos,
+                    };
+                    updateSettings({ eventCombosPromo: payload });
+                    const ok = await saveStoreSettings({ eventCombosPromo: payload });
+                    showToast(
+                      ok
+                        ? `Акційні набори "${universalName}" успішно збережено!`
+                        : 'Збережено локально'
+                    );
+                  }}
+                  style={{
+                    clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
+                  }}
+                  className="w-full sm:w-auto px-6 py-2.5 bg-[#e50914] hover:bg-[#f4222d] text-white font-black text-xs sm:text-sm uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-[#e50914]/35 active:scale-98 flex items-center justify-center gap-2"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Зберегти акційні набори</span>
+                </button>
+              </div>
+                </>
+              )}
+            </div>
+
             {/* Верхній ряд: Зони доставки та Акція (однакової висоти) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-stretch">
               {/* 1. Блок тарифів та зон доставки */}

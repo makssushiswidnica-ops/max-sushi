@@ -108,6 +108,54 @@ interface CartState {
   getRemainingForFreeDelivery: () => number;
 }
 
+function readLatestPersistedItems(fallbackItems: CartItem[]): CartItem[] {
+  if (typeof window === 'undefined') return fallbackItems;
+  try {
+    const raw = localStorage.getItem('max-sushi-cart-storage');
+    if (!raw) return fallbackItems;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed?.state?.items)) {
+      return parsed.state.items;
+    }
+  } catch {
+    // ignore
+  }
+  return fallbackItems;
+}
+
+const safeCartLocalStorage = {
+  getItem: (name: string): string | null => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return localStorage.getItem(name);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (name: string, value: string): void => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(name, value);
+    } catch {
+      // Якщо LocalStorage переповнений старими історіями замовлень — очищуємо зайвий кеш і повторюємо запис кошика
+      try {
+        localStorage.removeItem('max-sushi-orders');
+        localStorage.setItem(name, value);
+      } catch {
+        // ignore
+      }
+    }
+  },
+  removeItem: (name: string): void => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.removeItem(name);
+    } catch {
+      // ignore
+    }
+  },
+};
+
 export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
@@ -116,22 +164,49 @@ export const useCartStore = create<CartState>()(
       selectedProduct: null,
       menuProducts: [],
       setMenuProducts: (products: Product[]) => {
-        set((state) => ({
-          menuProducts: products,
-          items: syncGiftItem(state.items, products),
-        }));
+        set((state) => {
+          const latestItems = readLatestPersistedItems(state.items);
+          return {
+            menuProducts: products,
+            items: syncGiftItem(latestItems, products),
+          };
+        });
       },
       menuCategories: [],
-      setMenuCategories: (categories: Category[]) => set({ menuCategories: categories }),
+      setMenuCategories: (categories: Category[]) =>
+        set((state) => ({
+          menuCategories: categories,
+          items: state.items.length > 0 ? state.items : readLatestPersistedItems(state.items),
+        })),
       isCheckoutOpen: false,
       personsCount: 1,
       isChopsticksSelected: false,
       activeCardId: null,
       setActiveCardId: (id: string | null) => set({ activeCardId: id }),
       isMenuOpen: false,
-      setIsMenuOpen: (open: boolean) => set({ isMenuOpen: open }),
+      setIsMenuOpen: (open: boolean) =>
+        set((state) =>
+          state.isMenuOpen === open
+            ? state
+            : {
+                isMenuOpen: open,
+                items: state.items.length > 0 ? state.items : readLatestPersistedItems(state.items),
+              }
+        ),
       prepWaitTimeMinutes: 40,
-      setPrepWaitTimeMinutes: (minutes: number) => set({ prepWaitTimeMinutes: Math.max(10, Math.min(minutes, 240)) }),
+      setPrepWaitTimeMinutes: (minutes: number) => {
+        const clamped = Math.max(10, Math.min(minutes, 240));
+        set((state) => {
+          const latestItems = readLatestPersistedItems(state.items);
+          if (state.prepWaitTimeMinutes === clamped && latestItems.length === state.items.length) {
+            return state;
+          }
+          return {
+            prepWaitTimeMinutes: clamped,
+            items: latestItems,
+          };
+        });
+      },
       isCompactView: true,
       setIsCompactView: (compact: boolean) => set({ isCompactView: compact }),
       toggleCompactView: () => set((state) => ({ isCompactView: !state.isCompactView })),
@@ -141,15 +216,17 @@ export const useCartStore = create<CartState>()(
           const targetSku = product.sku || (product as any).nutrition?.sku || state.menuProducts.find(p => p.id === product.id)?.sku || defaultProducts.find(p => p.id === product.id)?.sku;
           const safeProduct = targetSku && !product.sku ? { ...product, sku: targetSku } : product;
 
-          const rawItems = state.items.filter((i) => !i.isGift);
+          const baseItems = state.items.length > 0 ? state.items : readLatestPersistedItems(state.items);
+          const rawItems = baseItems.filter((i) => !i.isGift);
           const existingIndex = rawItems.findIndex(
             (item) => item.product.id === safeProduct.id && isSameProductOptions(item.selectedOptions, selectedOptions)
           );
 
           let updated: CartItem[];
           if (existingIndex > -1) {
-            updated = [...rawItems];
-            updated[existingIndex].quantity += quantity;
+            updated = rawItems.map((item, idx) =>
+              idx === existingIndex ? { ...item, quantity: item.quantity + quantity } : item
+            );
           } else {
             updated = [...rawItems, { product: safeProduct, quantity, selectedOptions }];
           }
@@ -286,7 +363,7 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: 'max-sushi-cart-storage',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => safeCartLocalStorage),
       // Зберігаємо в LocalStorage тільки елементи кошика, кількість приборів та час очікування
       partialize: (state) => ({
         items: state.items,
@@ -299,6 +376,7 @@ export const useCartStore = create<CartState>()(
       merge: (persistedState: any, currentState) => ({
         ...currentState,
         ...(persistedState || {}),
+        items: Array.isArray(persistedState?.items) ? persistedState.items : currentState.items,
         isCompactView: persistedState?.compactGridDefaultV2
           ? persistedState.isCompactView
           : true,
@@ -309,8 +387,27 @@ export const useCartStore = create<CartState>()(
 
 if (typeof window !== 'undefined') {
   window.addEventListener('store-settings-updated', () => {
-    useCartStore.setState((state) => ({
-      items: syncGiftItem(state.items, state.menuProducts),
-    }));
+    useCartStore.setState((state) => {
+      const latestItems = readLatestPersistedItems(state.items);
+      const nextItems = syncGiftItem(latestItems, state.menuProducts);
+      const sameLength = nextItems.length === state.items.length;
+      const sameIds =
+        sameLength &&
+        nextItems.every(
+          (item, idx) =>
+            item.product.id === state.items[idx]?.product.id &&
+            item.quantity === state.items[idx]?.quantity &&
+            Boolean(item.isGift) === Boolean(state.items[idx]?.isGift)
+        );
+      if (sameIds) return state;
+      return { items: nextItems };
+    });
+  });
+
+  // Синхронізація кошика між вкладками (щоб відкрита вкладка адмінки не перезаписувала кошик сайту своїм старим станом)
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'max-sushi-cart-storage') {
+      useCartStore.persist.rehydrate();
+    }
   });
 }

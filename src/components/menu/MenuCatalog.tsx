@@ -4,7 +4,7 @@ import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { categories as defaultCategories, products as defaultProducts } from '@/lib/mockData';
 import { fetchMenuData } from '@/lib/menuService';
-import { Category, Product } from '@/types';
+import { Category, Product, requiresSauceSelection } from '@/types';
 import { StickyNav } from '@/components/layout/StickyNav';
 import { useI18n } from '@/lib/i18nContext';
 import { useCartStore } from '@/store/useCartStore';
@@ -12,6 +12,7 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { ProductCard } from '@/components/menu/ProductCard';
 import { CompactProductCard } from '@/components/menu/CompactProductCard';
 import { CategorySection } from '@/components/menu/CategorySection';
+import { EventComboCard } from '@/components/menu/EventComboCard';
 
 // Допоміжна функція для центрування сітки, коли позицій у категорії менше 4
 // Класи для адаптивної сітки страв із центруванням неповного останнього ряду
@@ -26,6 +27,7 @@ export function MenuCatalog() {
   const setMenuCategories = useCartStore((s) => s.setMenuCategories);
   const isCompactView = useCartStore((s) => s.isCompactView);
   const giftPromo = useSettingsStore((s) => s.giftPromo);
+  const eventCombosPromo = useSettingsStore((s) => s.eventCombosPromo);
 
   // Динамічний стан меню з Supabase (з надійним резервним fallback на mockData)
   const [categoriesList, setCategoriesList] = useState<Category[]>(defaultCategories);
@@ -115,9 +117,53 @@ export function MenuCatalog() {
     []
   );
 
-  // Об'єднаний список категорій: якщо є новинки або промоції, додаємо ці вкладки в кінець списку
+  // Активні комбо-набори події (набори з обов'язковим вибором соусу автоматично ставляться в кінець)
+  const validEventCombos = useMemo(() => {
+    if (!eventCombosPromo?.enabled || !Array.isArray(eventCombosPromo.combos)) return [];
+    const filtered = eventCombosPromo.combos.filter((c) => {
+      if (!Array.isArray(c.slots) || c.slots.length < 2) return false;
+      const validSlots = c.slots.filter(
+        (s) => Array.isArray(s.productIds) && s.productIds.some((id) => productsList.some((p) => p.id === id))
+      );
+      return validSlots.length >= 2;
+    });
+
+    const comboHasSauce = (combo: (typeof filtered)[number]) =>
+      (combo.slots || []).some((slot) => {
+        const firstId = slot.productIds?.[0];
+        if (!firstId) return false;
+        const prod = productsList.find((p) => p.id === firstId);
+        return requiresSauceSelection(prod);
+      });
+
+    return [...filtered].sort((a, b) => Number(comboHasSauce(a)) - Number(comboHasSauce(b)));
+  }, [eventCombosPromo, productsList]);
+
+  const hasEventCombos = validEventCombos.length > 0;
+
+  const eventCategory: Category = useMemo(
+    () => ({
+      id: 'event-promos',
+      name: {
+        pl: eventCombosPromo?.eventName?.pl?.trim() || 'BLACK FRIDAY',
+        uk:
+          eventCombosPromo?.eventName?.uk?.trim() ||
+          eventCombosPromo?.eventName?.pl?.trim() ||
+          'BLACK FRIDAY',
+      },
+      icon: 'Flame',
+      image: '',
+    }),
+    [eventCombosPromo?.eventName]
+  );
+
+  // Об'єднаний список категорій: якщо подія увімкнена — ставимо її на 1-ше місце, новинки та промоції — у кінець
   const categoriesWithPromo = useMemo(() => {
-    const result = [...categoriesList];
+    const result: Category[] = [];
+    if (hasEventCombos) {
+      result.push(eventCategory);
+    }
+    result.push(...categoriesList);
     if (hasNewProducts) {
       result.push(newCategory);
     }
@@ -125,40 +171,31 @@ export function MenuCatalog() {
       result.push(promoCategory);
     }
     return result;
-  }, [hasNewProducts, newCategory, hasPromos, promoCategory, categoriesList]);
+  }, [hasEventCombos, eventCategory, hasNewProducts, newCategory, hasPromos, promoCategory, categoriesList]);
 
-  // За замовчуванням завжди відкривається перша звичайна категорія з каталогу
+  // За замовчуванням відкривається перша категорія (якщо подія активна — це 'event-promos')
   const [selectedCategory, setSelectedCategory] = useState<string>(
-    categoriesList[0]?.id || 'mini-maki'
+    categoriesWithPromo[0]?.id || 'mini-maki'
   );
+  const userManuallySelectedRef = useRef(false);
 
-  // Якщо обрано промоції або новинки, але вони закінчилися — автоматично перемикаємо на першу звичайну категорію
+  // Якщо подія активна і користувач ще вручну не перемикав категорію — відкриваємо подію першою
   useEffect(() => {
-    if (selectedCategory === 'promocje' && !hasPromos) {
+    if (hasEventCombos && !userManuallySelectedRef.current) {
+      setSelectedCategory('event-promos');
+    }
+  }, [hasEventCombos]);
+
+  // Якщо обрано подію, промоції або новинки, але вони вимкнені — автоматично перемикаємо на першу доступну категорію
+  useEffect(() => {
+    if (selectedCategory === 'event-promos' && !hasEventCombos) {
       setSelectedCategory(categoriesList[0]?.id || 'mini-maki');
+    } else if (selectedCategory === 'promocje' && !hasPromos) {
+      setSelectedCategory(categoriesWithPromo[0]?.id || 'mini-maki');
     } else if (selectedCategory === 'nowosci' && !hasNewProducts) {
-      setSelectedCategory(categoriesList[0]?.id || 'mini-maki');
+      setSelectedCategory(categoriesWithPromo[0]?.id || 'mini-maki');
     }
-  }, [selectedCategory, hasPromos, hasNewProducts, categoriesList]);
-
-  // Відновлюємо збережену користувачем категорію виключно після завершення гідрації на клієнті
-  useEffect(() => {
-    try {
-      const saved = sessionStorage.getItem('maks_active_category');
-      if (saved && saved !== selectedCategory && categoriesWithPromo.some((c) => c.id === saved)) {
-        setSelectedCategory(saved);
-      }
-    } catch {}
-  }, [categoriesWithPromo]);
-
-  // Запам'ятовуємо обрану категорію при переходах по сайту, кошику чи модалках
-  useEffect(() => {
-    if (selectedCategory && typeof window !== 'undefined') {
-      try {
-        sessionStorage.setItem('maks_active_category', selectedCategory);
-      } catch {}
-    }
-  }, [selectedCategory]);
+  }, [selectedCategory, hasEventCombos, hasPromos, hasNewProducts, categoriesList, categoriesWithPromo]);
   const [isAllCategories, setIsAllCategories] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState('');
   const catalogContentRef = useRef<HTMLDivElement>(null);
@@ -268,6 +305,7 @@ export function MenuCatalog() {
 
   // Перемикання сторінки категорії
   const handleSelectCategory = useCallback((catId: string) => {
+    userManuallySelectedRef.current = true;
     setIsAllCategories(false);
     setSelectedCategory(catId);
     setSearchQuery('');
@@ -320,6 +358,7 @@ export function MenuCatalog() {
   // Синхронізація активної категорії з модалки перегляду страв (якщо гортав страви і закрив)
   useEffect(() => {
     const handleSync = (e: Event) => {
+      if (selectedCategory === 'event-promos') return;
       const customEvent = e as CustomEvent<{ categoryId: string; productId?: string }>;
       if (customEvent.detail?.categoryId) {
         setIsAllCategories(false);
@@ -341,7 +380,7 @@ export function MenuCatalog() {
     };
     window.addEventListener('sync-category-from-modal', handleSync);
     return () => window.removeEventListener('sync-category-from-modal', handleSync);
-  }, [scrollToCatalogTop]);
+  }, [scrollToCatalogTop, selectedCategory]);
 
   const handleSearchChange = useCallback((query: string) => {
     setSearchQuery(query);
@@ -376,6 +415,7 @@ export function MenuCatalog() {
         categoriesList={categoriesWithPromo}
         promoCount={promoProducts.length}
         newCount={newProducts.length}
+        eventCombosCount={validEventCombos.length}
       />
 
       <div
@@ -457,6 +497,38 @@ export function MenuCatalog() {
             </div>
 
             {categoriesWithPromo.map((category) => {
+              if (category.id === 'event-promos') {
+                return (
+                  <div key={category.id} id={`category-${category.id}`} className="mb-10 sm:mb-14">
+                    <div className="flex items-center justify-between gap-3 mb-5 pb-2.5 border-b border-white/10">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-[#e50914] shadow-sm shadow-[#e50914]" />
+                        <h3 className="text-lg sm:text-2xl font-black uppercase tracking-wider text-white">
+                          {category.name[locale]}
+                        </h3>
+                      </div>
+                      <span className="text-xs font-bold text-zinc-400 bg-[#16161f] border border-white/10 px-3 py-1 rounded-xl">
+                        {validEventCombos.length} {locale === 'pl' ? 'zestawów' : 'наборів'}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-5 sm:gap-6 items-start">
+                      {validEventCombos.map((combo, idx) => (
+                        <div
+                          key={combo.id}
+                          className="w-full md:w-[calc(50%-12px)] xl:w-[calc((100%-48px)/3)] flex"
+                        >
+                          <EventComboCard
+                            combo={combo}
+                            comboIndex={idx}
+                            eventName={eventCategory.name}
+                            productsList={productsList}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }
               const categoryProducts = category.id === 'promocje'
                 ? promoProducts
                 : category.id === 'nowosci'
@@ -498,13 +570,31 @@ export function MenuCatalog() {
 
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-zinc-400 bg-[#16161f] border border-white/10 px-3 py-1 rounded-xl shrink-0">
-                  {currentCategoryProducts.length} {locale === 'pl' ? 'pozycji' : 'позицій'}
+                  {selectedCategory === 'event-promos'
+                    ? `${validEventCombos.length} ${locale === 'pl' ? 'zestawów' : 'наборів'}`
+                    : `${currentCategoryProducts.length} ${locale === 'pl' ? 'pozycji' : 'позицій'}`}
                 </span>
               </div>
             </div>
 
-            {/* Сітка товарів вибраної категорії: на телефонах залежить від isCompactView, на комп'ютерах завжди великі картки */}
-            {isCompactView ? (
+            {/* Якщо обрано акційну подію (напр. BLACK FRIDAY) — показуємо картки комбо-наборів */}
+            {selectedCategory === 'event-promos' ? (
+              <div className="flex flex-wrap justify-center gap-5 sm:gap-6 items-start">
+                {validEventCombos.map((combo, idx) => (
+                  <div
+                    key={combo.id}
+                    className="w-full md:w-[calc(50%-12px)] xl:w-[calc((100%-48px)/3)] flex"
+                  >
+                    <EventComboCard
+                      combo={combo}
+                      comboIndex={idx}
+                      eventName={eventCategory.name}
+                      productsList={productsList}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : isCompactView ? (
               <>
                 {/* Мобільний компактний перегляд (тільки для телефонів) */}
                 <div className={`${COMPACT_CONTAINER_CLASS} md:hidden`}>

@@ -17,6 +17,7 @@ interface StickyNavProps {
   categoriesList?: Category[];
   promoCount?: number;
   newCount?: number;
+  eventCombosCount?: number;
 }
 
 export function StickyNav({
@@ -27,6 +28,7 @@ export function StickyNav({
   categoriesList,
   promoCount,
   newCount,
+  eventCombosCount,
 }: StickyNavProps) {
   const categoriesData = categoriesList && categoriesList.length > 0 ? categoriesList : categories;
   const { locale } = useI18n();
@@ -74,7 +76,9 @@ export function StickyNav({
   const categoryCounts = React.useMemo(() => {
     const counts: Record<string, number> = {};
     for (const cat of categoriesData) {
-      if (cat.id === 'promocje') {
+      if (cat.id === 'event-promos') {
+        counts[cat.id] = eventCombosCount ?? 0;
+      } else if (cat.id === 'promocje') {
         counts[cat.id] = promoCount ?? 0;
       } else if (cat.id === 'nowosci') {
         counts[cat.id] = newCount ?? productsData.filter((p) => p.badge === 'new').length;
@@ -83,7 +87,7 @@ export function StickyNav({
       }
     }
     return counts;
-  }, [categoriesData, productsData, promoCount, newCount]);
+  }, [categoriesData, productsData, promoCount, newCount, eventCombosCount]);
 
   // Відкриття та фокус на інпуті
   const toggleSearch = () => {
@@ -364,7 +368,7 @@ export function StickyNav({
                 <div className="flex flex-col gap-1">
                   {categoriesData.map((cat) => {
                     const isActive = cat.id === activeCategory;
-                    const isSpecial = cat.id === 'promocje' || cat.id === 'nowosci';
+                    const isSpecial = cat.id === 'event-promos' || cat.id === 'promocje' || cat.id === 'nowosci';
                     const count = categoryCounts[cat.id] || 0;
                     return (
                       <button
@@ -428,33 +432,85 @@ export function StickyNav({
         {/* Розділювач біля кнопки меню (десктоп) */}
         <div className="h-6 w-[1px] bg-white/10 mx-2 shrink-0 hidden lg:block" />
 
-        {/* ДЕСКТОПНИЙ ВИГЛЯД: Усі категорії у 2 компактні рядки (hidden lg:flex) */}
-        <div className="hidden lg:flex flex-1 flex-wrap items-center justify-center gap-x-2 lg:gap-x-3.5 gap-y-1 sm:gap-y-1.5 py-1 px-1 min-w-0">
-          {categoriesData.map((category) => {
-            const isActive = category.id === activeCategory;
-            const isSpecial = category.id === 'promocje' || category.id === 'nowosci';
-            return (
-              <button
-                key={category.id}
-                type="button"
-                onClick={() => scrollToCategory(category.id)}
-                className={cn(
-                  'relative px-2.5 lg:px-3 py-1 text-xs lg:text-[13px] font-bold tracking-wide uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none flex items-center gap-1',
-                  isActive
-                    ? 'text-white font-black scale-105'
-                    : isSpecial
-                      ? 'text-[#ff4d58] hover:text-[#ff7880] font-black hover:scale-105 drop-shadow-[0_0_8px_rgba(229,9,20,0.4)]'
-                      : 'text-zinc-400 hover:text-white hover:scale-102'
-                )}
-              >
-                <span>{category.name[locale]}</span>
-                {isActive && (
-                  <span className="absolute bottom-0 left-1 right-1 h-[2px] rounded-full bg-gradient-to-r from-[#e50914] via-[#ff4d58] to-[#e50914] shadow-[0_0_10px_#e50914]" />
-                )}
-              </button>
-            );
-          })}
-        </div>
+        {/* ДЕСКТОПНИЙ ВИГЛЯД: Усі категорії завжди строго у 2 збалансовані рядки без переходу на 3-й ряд (hidden lg:flex) */}
+        {(() => {
+          // Оптимальний поділ категорій на 2 візуально рівні за довжиною тексту рядки
+          const weights = categoriesData.map((c) => (c.name[locale]?.length || 6) + 4);
+          const totalWeight = weights.reduce((a, b) => a + b, 0);
+          let bestSplit = Math.ceil(categoriesData.length / 2);
+          let minDiff = Infinity;
+          let runningWeight = 0;
+
+          for (let i = 1; i < categoriesData.length; i++) {
+            runningWeight += weights[i - 1];
+            const diff = Math.abs(totalWeight - 2 * runningWeight);
+            if (diff < minDiff) {
+              minDiff = diff;
+              bestSplit = i;
+            }
+          }
+
+          const desktopRows =
+            categoriesData.length <= 7
+              ? [categoriesData]
+              : [categoriesData.slice(0, bestSplit), categoriesData.slice(bestSplit)];
+
+          const isDense = categoriesData.length >= 15 || totalWeight > 195;
+          const isVeryDense = categoriesData.length >= 17 || totalWeight > 230;
+
+          return (
+            <div className="hidden lg:flex flex-1 flex-col items-center justify-center gap-y-1 py-1 px-1 min-w-0 overflow-hidden">
+              {desktopRows.map((row, rowIdx) => (
+                <div
+                  key={rowIdx}
+                  className={cn(
+                    'flex items-center justify-center flex-nowrap w-full min-w-0',
+                    isVeryDense
+                      ? 'gap-x-0.5 xl:gap-x-1.5'
+                      : isDense
+                        ? 'gap-x-1 xl:gap-x-2'
+                        : 'gap-x-2 xl:gap-x-3'
+                  )}
+                >
+                  {row.map((category) => {
+                    const isActive = category.id === activeCategory;
+                    const isSpecial =
+                      category.id === 'event-promos' ||
+                      category.id === 'promocje' ||
+                      category.id === 'nowosci';
+                    return (
+                      <button
+                        key={category.id}
+                        type="button"
+                        onClick={() => scrollToCategory(category.id)}
+                        className={cn(
+                          'relative py-1 font-bold tracking-wide uppercase whitespace-nowrap transition-all duration-200 cursor-pointer select-none flex items-center gap-1 shrink-0',
+                          isVeryDense
+                            ? 'px-1.5 xl:px-2 text-[10.5px] xl:text-xs'
+                            : isDense
+                              ? 'px-1.5 xl:px-2.5 text-[11px] xl:text-[12.5px]'
+                              : 'px-2.5 xl:px-3 text-xs xl:text-[13px]',
+                          isActive
+                            ? isSpecial
+                              ? 'text-[#ff4d58] font-black scale-105'
+                              : 'text-white font-black scale-105'
+                            : isSpecial
+                              ? 'text-[#ff4d58] hover:text-[#ff7880] font-black hover:scale-105 drop-shadow-[0_0_8px_rgba(229,9,20,0.4)]'
+                              : 'text-zinc-400 hover:text-white hover:scale-102'
+                        )}
+                      >
+                        <span>{category.name[locale]}</span>
+                        {isActive && (
+                          <span className="absolute bottom-0 left-1 right-1 h-[2px] rounded-full bg-gradient-to-r from-[#e50914] via-[#ff4d58] to-[#e50914] shadow-[0_0_10px_#e50914]" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* МОБІЛЬНИЙ ТА ПЛАНШЕТНИЙ ВИГЛЯД: Циклічна горизонтальна стрічка без ручного скролу (flex lg:hidden) */}
         <div className={cn(
@@ -473,7 +529,7 @@ export function StickyNav({
           >
             {cyclicItems.map(({ category, offset }) => {
               const isCenter = offset === 0;
-              const isSpecial = category.id === 'promocje' || category.id === 'nowosci';
+              const isSpecial = category.id === 'event-promos' || category.id === 'promocje' || category.id === 'nowosci';
               return (
                 <button
                   key={`${category.id}-${offset}`}
@@ -482,7 +538,9 @@ export function StickyNav({
                   className={cn(
                     'relative px-3 py-1.5 text-sm font-bold whitespace-nowrap transition-all duration-300 ease-out cursor-pointer shrink-0 select-none active:scale-95',
                     isCenter
-                      ? 'text-white scale-105'
+                      ? isSpecial
+                        ? 'text-[#ff4d58] font-black scale-105'
+                        : 'text-white scale-105'
                       : isSpecial
                         ? 'text-[#ff4d58] opacity-95 scale-100 font-black'
                         : 'text-zinc-500 opacity-60 scale-100'

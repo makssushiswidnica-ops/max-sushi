@@ -1,6 +1,110 @@
 import { create } from 'zustand';
-import { CustomerProfile, Order, OrderAddress } from '@/types';
+import { CustomerProfile, GuestProfile, Order, OrderAddress } from '@/types';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+
+// Початкова база незареєстрованих гостей, які вже робили реальні замовлення (з таблиці orders)
+export const INITIAL_KNOWN_GUESTS: GuestProfile[] = [
+  {
+    id: 'guest_721363530',
+    phone: '721363530',
+    name: 'Viktoriia',
+    address: {
+      city: 'Świdnica',
+      zone: 'city',
+      floor: '1',
+      house: '29/1a',
+      street: 'Ul.Długa',
+      apartment: '1',
+      entryCode: '11',
+    },
+    ordersCount: 1,
+    lastOrderId: 'MS-582430',
+    createdAt: '2026-11-19T15:20:52.260Z',
+    updatedAt: '2026-11-19T15:20:52.260Z',
+  },
+  {
+    id: 'guest_731321704',
+    phone: '731321704',
+    name: 'Milana ch',
+    address: {
+      city: 'Świdnica',
+      zone: 'city',
+      floor: '1',
+      house: '24',
+      street: 'Wałbrzyska',
+    },
+    ordersCount: 1,
+    lastOrderId: 'MS-407889',
+    createdAt: '2026-11-19T13:28:05.736Z',
+    updatedAt: '2026-11-19T13:28:05.736Z',
+  },
+  {
+    id: 'guest_576470955',
+    phone: '576470955',
+    name: 'Yelizaveta Mosina',
+    address: {
+      city: 'Świdnica',
+      zone: 'city',
+      floor: '1',
+      house: '9',
+      street: 'Zamkowa',
+      apartment: '7',
+    },
+    ordersCount: 1,
+    lastOrderId: 'MS-859834',
+    createdAt: '2026-11-18T18:55:38.474Z',
+    updatedAt: '2026-11-18T18:55:38.474Z',
+  },
+  {
+    id: 'guest_605056180',
+    phone: '605056180',
+    name: 'Виктория Турченко',
+    address: {
+      city: 'Świdnica',
+      zone: 'city',
+      house: '25',
+      street: 'ul. Saperów',
+      apartment: '17',
+    },
+    ordersCount: 1,
+    lastOrderId: 'MS-500652',
+    createdAt: '2026-11-18T14:31:50.824Z',
+    updatedAt: '2026-11-18T14:31:50.824Z',
+  },
+  {
+    id: 'guest_722298426',
+    phone: '722298426',
+    name: 'Alina Marchenko',
+    address: {
+      city: 'Świdnica',
+      zone: 'city',
+      house: '9',
+      street: 'Zamkowa',
+    },
+    ordersCount: 1,
+    lastOrderId: 'MS-411826',
+    createdAt: '2026-11-17T13:56:10.114Z',
+    updatedAt: '2026-11-17T13:56:10.114Z',
+  },
+  {
+    id: 'guest_692989602',
+    phone: '692989602',
+    name: 'Анна Харченко',
+    address: {
+      city: 'Świdnica',
+      zone: 'city',
+      floor: '4',
+      house: '21',
+      street: 'Bogusza Stęczyńskiego',
+      apartment: '20',
+      entryCode: '20',
+    },
+    ordersCount: 1,
+    lastOrderId: 'MS-556541',
+    createdAt: '2026-11-17T10:06:33.695Z',
+    updatedAt: '2026-11-17T10:06:33.695Z',
+  },
+];
 
 interface CustomerState {
   customer: CustomerProfile | null;
@@ -58,36 +162,301 @@ const buildPhoneIlikePattern = (digits: string): string => {
   return `%${clean}%`;
 };
 
-// Перевірка чи має номер телефону попередні замовлення (для акції 10% на перше замовлення)
-export const checkPhoneHasOrders = async (phone: string): Promise<boolean> => {
-  if (!phone) return false;
-  const digits = normalizePhone(phone).slice(-9);
-  if (!digits || digits.length < 6) return false;
-
-  // 1. Перевірка локальних замовлень у браузері
+// Завантаження локального реєстру гостей (об'єднаного з INITIAL_KNOWN_GUESTS)
+export const getStoredGuestsDb = (): GuestProfile[] => {
+  const map = new Map<string, GuestProfile>();
+  for (const g of INITIAL_KNOWN_GUESTS) {
+    const p9 = normalizePhone(g.phone).replace(/\D/g, '').slice(-9);
+    if (p9) map.set(p9, g);
+  }
   if (typeof window !== 'undefined') {
     try {
-      const localOrders: Order[] = JSON.parse(localStorage.getItem('max-sushi-orders') || '[]');
-      const hasLocal = localOrders.some((o) => normalizePhone(o.phone).includes(digits) && o.status !== 'cancelled');
-      if (hasLocal) return true;
+      const raw = localStorage.getItem('max-sushi-guests-db');
+      if (raw) {
+        const parsed: GuestProfile[] = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          for (const g of parsed) {
+            const p9 = normalizePhone(g.phone || '').replace(/\D/g, '').slice(-9);
+            if (p9) {
+              const prev = map.get(p9);
+              map.set(p9, {
+                ...prev,
+                ...g,
+                phone: p9,
+                address: g.address?.street ? g.address : prev?.address,
+              });
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+  return Array.from(map.values());
+};
+
+// Пошук гостя за номером телефону в таблиці public.guests, локальній базі гостей або таблиці orders
+export const findGuestByPhone = async (phone: string): Promise<GuestProfile | null> => {
+  if (!phone) return null;
+  const digits = normalizePhone(phone).replace(/\D/g, '').slice(-9);
+  if (!digits || digits.length < 6) return null;
+
+  // 1. Перевірка в таблиці public.guests у Supabase
+  if (isSupabaseConfigured) {
+    try {
+      const { data, error } = await supabase
+        .from('guests')
+        .select('*')
+        .ilike('phone', buildPhoneIlikePattern(digits))
+        .limit(1);
+
+      if (!error && data && data.length > 0) {
+        const row = data[0];
+        return {
+          id: row.id || `guest_${digits}`,
+          phone: digits,
+          name: row.name || 'Гість',
+          address: row.address || undefined,
+          ordersCount: Number(row.orders_count || 1),
+          lastOrderId: row.last_order_id || undefined,
+          createdAt: row.created_at || new Date().toISOString(),
+          updatedAt: row.updated_at || new Date().toISOString(),
+        };
+      }
     } catch {}
   }
 
-  // 2. Перевірка в Supabase
+  // 2. Перевірка в локальному реєстрі гостей (включно з INITIAL_KNOWN_GUESTS)
+  const localGuests = getStoredGuestsDb();
+  const localFound = localGuests.find(
+    (g) => normalizePhone(g.phone).replace(/\D/g, '').slice(-9) === digits
+  );
+  if (localFound) return localFound;
+
+  // 3. Перевірка в таблиці orders у Supabase (якщо гість робив замовлення, але ще не перенесений)
   if (isSupabaseConfigured) {
     try {
       const { data, error } = await supabase
         .from('orders')
-        .select('id, status')
-        .ilike('phone', `%${digits}%`)
+        .select('id, customer_name, phone, address, status, created_at')
+        .ilike('phone', buildPhoneIlikePattern(digits))
         .neq('status', 'cancelled')
-        .limit(1);
+        .order('created_at', { ascending: false })
+        .limit(5);
 
       if (!error && data && data.length > 0) {
+        const validOrders = data.filter((o: any) => o.id !== '__settings__');
+        if (validOrders.length > 0) {
+          const withAddr = validOrders.find((o: any) => o.address && o.address.street) || validOrders[0];
+          return {
+            id: `guest_${digits}`,
+            phone: digits,
+            name: (withAddr.customer_name || 'Гість').trim(),
+            address: withAddr.address || undefined,
+            ordersCount: validOrders.length,
+            lastOrderId: validOrders[0].id,
+            createdAt: validOrders[validOrders.length - 1].created_at || new Date().toISOString(),
+            updatedAt: validOrders[0].created_at || new Date().toISOString(),
+          };
+        }
+      }
+    } catch {}
+  }
+
+  return null;
+};
+
+// Збереження / оновлення гостя в таблиці public.guests після оформлення замовлення без реєстрації
+export const upsertGuestFromOrder = async (order: Order): Promise<void> => {
+  if (!order?.phone) return;
+  const digits = normalizePhone(order.phone).replace(/\D/g, '').slice(-9);
+  if (digits.length < 9) return;
+
+  const cleanName = (order.name || 'Гість').trim();
+  const nowIso = new Date().toISOString();
+
+  // Зберігаємо в локальну базу гостей
+  const localGuests = getStoredGuestsDb();
+  const existingLocal = localGuests.find(
+    (g) => normalizePhone(g.phone).replace(/\D/g, '').slice(-9) === digits
+  );
+  const mergedAddress = order.address?.street ? order.address : existingLocal?.address;
+  const nextCount = (existingLocal?.ordersCount || 0) + 1;
+
+  const guestProfile: GuestProfile = {
+    id: `guest_${digits}`,
+    phone: digits,
+    name: cleanName || existingLocal?.name || 'Гість',
+    address: mergedAddress,
+    ordersCount: nextCount,
+    lastOrderId: order.id,
+    createdAt: existingLocal?.createdAt || order.createdAt || nowIso,
+    updatedAt: nowIso,
+  };
+
+  if (typeof window !== 'undefined') {
+    try {
+      const updatedList = localGuests.filter(
+        (g) => normalizePhone(g.phone).replace(/\D/g, '').slice(-9) !== digits
+      );
+      updatedList.push(guestProfile);
+      localStorage.setItem('max-sushi-guests-db', JSON.stringify(updatedList));
+    } catch {}
+  }
+
+  // Зберігаємо в таблицю public.guests у Supabase (якщо клієнт ще не зареєстрований у public.customers)
+  if (isSupabaseConfigured) {
+    try {
+      const { data: existingCust } = await supabase
+        .from('customers')
+        .select('id')
+        .ilike('phone', buildPhoneIlikePattern(digits))
+        .limit(1);
+
+      if (existingCust && existingCust.length > 0) {
+        return;
+      }
+
+      await supabase.from('guests').upsert(
+        {
+          id: guestProfile.id,
+          phone: guestProfile.phone,
+          name: guestProfile.name,
+          address: guestProfile.address || null,
+          orders_count: guestProfile.ordersCount || 1,
+          last_order_id: guestProfile.lastOrderId || null,
+          created_at: guestProfile.createdAt,
+          updated_at: nowIso,
+        },
+        { onConflict: 'phone' }
+      );
+    } catch {}
+  }
+};
+
+// Автоматична перевірка таблиці orders та синхронізація всіх незареєстрованих клієнтів у таблицю public.guests
+export const syncGuestsFromOrders = async (): Promise<GuestProfile[]> => {
+  const guestsMap = new Map<string, GuestProfile>();
+  for (const g of getStoredGuestsDb()) {
+    const p9 = normalizePhone(g.phone).replace(/\D/g, '').slice(-9);
+    if (p9) guestsMap.set(p9, g);
+  }
+
+  if (!isSupabaseConfigured) {
+    return Array.from(guestsMap.values());
+  }
+
+  try {
+    const [ordersRes, customersRes] = await Promise.all([
+      supabase
+        .from('orders')
+        .select('id, customer_name, phone, address, status, created_at')
+        .order('created_at', { ascending: true }),
+      supabase.from('customers').select('phone'),
+    ]);
+
+    const registeredPhones = new Set<string>();
+    for (const c of customersRes.data || []) {
+      const p9 = normalizePhone(c.phone || '').replace(/\D/g, '').slice(-9);
+      if (p9.length === 9) registeredPhones.add(p9);
+    }
+
+    // Виключаємо тих, хто вже зареєструвався
+    for (const regPhone of registeredPhones) {
+      guestsMap.delete(regPhone);
+    }
+
+    for (const ord of ordersRes.data || []) {
+      if (!ord || ord.id === '__settings__' || ord.status === 'cancelled') continue;
+      const p9 = normalizePhone(ord.phone || '').replace(/\D/g, '').slice(-9);
+      if (p9.length !== 9 || registeredPhones.has(p9)) continue;
+
+      const prev = guestsMap.get(p9);
+      const nextAddress = ord.address && ord.address.street ? ord.address : prev?.address;
+      guestsMap.set(p9, {
+        id: `guest_${p9}`,
+        phone: p9,
+        name: (ord.customer_name || prev?.name || 'Гість').trim(),
+        address: nextAddress,
+        ordersCount: (prev?.ordersCount || 0) + 1,
+        lastOrderId: ord.id || prev?.lastOrderId,
+        createdAt: prev?.createdAt || ord.created_at || new Date().toISOString(),
+        updatedAt: ord.created_at || new Date().toISOString(),
+      });
+    }
+
+    const syncedList = Array.from(guestsMap.values());
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('max-sushi-guests-db', JSON.stringify(syncedList));
+      } catch {}
+    }
+
+    if (syncedList.length > 0) {
+      const rows = syncedList.map((g) => ({
+        id: g.id,
+        phone: g.phone,
+        name: g.name,
+        address: g.address || null,
+        orders_count: g.ordersCount || 1,
+        last_order_id: g.lastOrderId || null,
+        created_at: g.createdAt,
+        updated_at: g.updatedAt,
+      }));
+      await supabase.from('guests').upsert(rows, { onConflict: 'phone' });
+    }
+
+    return syncedList;
+  } catch {
+    return Array.from(guestsMap.values());
+  }
+};
+
+// Перевірка чи має номер телефону попередні замовлення або чи є він у таблиці гостей (для акції 10% на перше замовлення)
+export const checkPhoneHasOrders = async (phone: string): Promise<boolean> => {
+  if (!phone) return false;
+  const digits = normalizePhone(phone).replace(/\D/g, '').slice(-9);
+  if (!digits || digits.length < 6) return false;
+
+  // 1. Перевірка в локальній базі гостей (включно з INITIAL_KNOWN_GUESTS із таблиці orders)
+  const localGuests = getStoredGuestsDb();
+  if (localGuests.some((g) => normalizePhone(g.phone).replace(/\D/g, '').slice(-9) === digits)) {
+    return true;
+  }
+
+  // 2. Перевірка локальних замовлень у браузері
+  if (typeof window !== 'undefined') {
+    try {
+      const localOrders: Order[] = JSON.parse(localStorage.getItem('max-sushi-orders') || '[]');
+      const hasLocal = localOrders.some(
+        (o) => normalizePhone(o.phone).replace(/\D/g, '').includes(digits) && o.status !== 'cancelled'
+      );
+      if (hasLocal) return true;
+    } catch {}
+  }
+
+  // 3. Перевірка в Supabase: спочатку таблиця public.guests, потім public.orders
+  if (isSupabaseConfigured) {
+    try {
+      const phonePattern = buildPhoneIlikePattern(digits);
+      const [guestRes, orderRes] = await Promise.all([
+        supabase.from('guests').select('id').ilike('phone', phonePattern).limit(1),
+        supabase
+          .from('orders')
+          .select('id, status')
+          .ilike('phone', phonePattern)
+          .neq('status', 'cancelled')
+          .limit(1),
+      ]);
+
+      if (!guestRes.error && guestRes.data && guestRes.data.length > 0) {
+        return true;
+      }
+      if (!orderRes.error && orderRes.data && orderRes.data.some((o: any) => o.id !== '__settings__')) {
         return true;
       }
     } catch (e) {
-      console.warn('Notice checking customer orders in Supabase:', e);
+      console.warn('Notice checking customer/guest orders in Supabase:', e);
     }
   }
 
@@ -160,7 +529,12 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
   setActiveTab: (tab) => set({ activeTab: tab }),
 
   checkEligibility: async (phone?: string): Promise<boolean> => {
-    const targetPhone = phone || get().customer?.phone;
+    const currentCustomer = get().customer;
+    if (currentCustomer?.hadGuestOrders) {
+      set({ isFirstOrderEligible: false });
+      return false;
+    }
+    const targetPhone = phone || currentCustomer?.phone;
     if (!targetPhone) {
       set({ isFirstOrderEligible: false });
       return false;
@@ -232,13 +606,23 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
       }
     }
 
-    // Спробуємо підтягнути збережену адресу з попередніх замовлень
-    let defaultAddress: OrderAddress | undefined = undefined;
-    if (typeof window !== 'undefined') {
+    // Перевіряємо таблицю гостей (public.guests) та замовлень:
+    // Якщо клієнт вже замовляв раніше як гість — підтягуємо його адресу, а акція -10% на 1-ше замовлення стає недоступною
+    const [guestRecord, hasPriorOrders] = await Promise.all([
+      findGuestByPhone(cleanPhone),
+      checkPhoneHasOrders(cleanPhone),
+    ]);
+    const wasGuestBefore = Boolean(guestRecord || hasPriorOrders);
+
+    let defaultAddress: OrderAddress | undefined = guestRecord?.address?.street
+      ? guestRecord.address
+      : undefined;
+
+    if (!defaultAddress && typeof window !== 'undefined') {
       try {
         const localOrders: Order[] = JSON.parse(localStorage.getItem('max-sushi-orders') || '[]');
         const matchingLocal = localOrders.find(
-          (o) => normalizePhone(o.phone) === normalizePhone(cleanPhone)
+          (o) => normalizePhone(o.phone).replace(/\D/g, '').slice(-9) === last9
         );
         if (matchingLocal?.address?.street) {
           defaultAddress = matchingLocal.address;
@@ -252,6 +636,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
       name: cleanName,
       email: cleanEmail,
       password: password,
+      hadGuestOrders: wasGuestBefore || undefined,
       defaultAddress,
       preferredLanguage: 'pl',
       savedAt: new Date().toISOString(),
@@ -269,6 +654,10 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     // Зберігаємо безпосередньо в базі даних Supabase (таблиця customers)
     if (isSupabaseConfigured) {
       try {
+        const packedAddress = {
+          ...(defaultAddress || {}),
+          ...(wasGuestBefore ? { _hadGuestOrders: true } : {}),
+        };
         await supabase.from('customers').upsert(
           {
             id: newProfile.id,
@@ -276,7 +665,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
             name: cleanName,
             email: cleanEmail,
             password: password,
-            address: defaultAddress,
+            address: Object.keys(packedAddress).length > 0 ? packedAddress : null,
             language: 'pl',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -288,8 +677,13 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
       }
     }
 
-    set({ customer: newProfile });
-    get().checkEligibility(newProfile.phone);
+    set({
+      customer: newProfile,
+      isFirstOrderEligible: !wasGuestBefore,
+    });
+    if (!wasGuestBefore) {
+      get().checkEligibility(newProfile.phone);
+    }
     get().checkBirthdayUsedThisYear(newProfile.phone);
     return newProfile;
   },
@@ -390,9 +784,11 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
             const rawAddr = remoteUser.address && typeof remoteUser.address === 'object' ? { ...remoteUser.address } : undefined;
             const extractedBirthDate = rawAddr?._birthDate as string | undefined;
             const extractedBirthdayUsedYear = rawAddr?._birthdayUsedYear as number | undefined;
+            const extractedHadGuestOrders = Boolean(rawAddr?._hadGuestOrders);
             if (rawAddr) {
               delete rawAddr._birthDate;
               delete rawAddr._birthdayUsedYear;
+              delete rawAddr._hadGuestOrders;
             }
             const cleanDefaultAddress = rawAddr && Object.keys(rawAddr).length > 0 ? rawAddr : undefined;
 
@@ -404,6 +800,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
               password: remoteUser.password || password,
               birthDate: extractedBirthDate || undefined,
               birthdayUsedYear: extractedBirthdayUsedYear || undefined,
+              hadGuestOrders: extractedHadGuestOrders || undefined,
               defaultAddress: cleanDefaultAddress,
               preferredLanguage: remoteUser.language || 'pl',
               savedAt: remoteUser.updated_at || new Date().toISOString(),
@@ -491,6 +888,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
           ...(updated.defaultAddress || {}),
           ...(updated.birthDate ? { _birthDate: updated.birthDate } : {}),
           ...(updated.birthdayUsedYear ? { _birthdayUsedYear: updated.birthdayUsedYear } : {}),
+          ...(updated.hadGuestOrders ? { _hadGuestOrders: true } : {}),
         };
         await supabase.from('customers').upsert(
           {

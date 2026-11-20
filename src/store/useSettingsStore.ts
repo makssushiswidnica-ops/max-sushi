@@ -1,6 +1,41 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { StoreSettings, DeliveryZoneId } from '@/types';
+import { StoreSettings, DeliveryZoneId, EventCombosPromo } from '@/types';
+
+export const DEFAULT_EVENT_COMBOS_PROMO: EventCombosPromo = {
+  enabled: true,
+  eventName: {
+    pl: 'BLACK FRIDAY',
+    uk: 'BLACK FRIDAY',
+  },
+  combos: [
+    {
+      id: 'combo-bf-1',
+      slots: [
+        { productIds: ['lux-filadelfia-losos'] },
+        { productIds: ['lux-filadelfia-losos'] },
+      ],
+      discountPercent: 10,
+    },
+    {
+      id: 'combo-bf-2',
+      slots: [
+        { productIds: ['miso-zupa'] },
+        { productIds: ['futomaki-losos'] },
+      ],
+      discountPercent: 15,
+    },
+    {
+      id: 'combo-bf-3',
+      slots: [
+        { productIds: ['duze-spring-rolls'] },
+        { productIds: ['gyoza-z-miesem'] },
+        { productIds: ['krewetki-tempurze'] },
+      ],
+      discountPercent: 15,
+    },
+  ],
+};
 
 export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   cityFreeThreshold: 150, // Поріг безкоштовної доставки по Свідниці (150 zł)
@@ -20,6 +55,7 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
     enabled: true,
     discountPercent: 10,  // Знижка 10% у день народження (за наявності документа)
   },
+  eventCombosPromo: DEFAULT_EVENT_COMBOS_PROMO,
   soundNotificationsEnabled: true,
 };
 
@@ -68,8 +104,27 @@ export const useSettingsStore = create<SettingsStoreState>()(
     }),
     {
       name: 'max-sushi-store-settings',
+      version: 2,
+      migrate: (persistedState: any, version: number) => {
+        if (version < 2) {
+          return {
+            ...DEFAULT_STORE_SETTINGS,
+            ...(persistedState || {}),
+            eventCombosPromo: DEFAULT_EVENT_COMBOS_PROMO,
+          };
+        }
+        return persistedState;
+      },
       storage: createJSONStorage(() => localStorage),
     }
   )
 );
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'max-sushi-store-settings') {
+      useSettingsStore.persist.rehydrate();
+    }
+  });
+}
 
