@@ -447,8 +447,17 @@ export function CheckoutModal() {
       (distanceData?.distanceKm && distanceData.distanceKm > 10)
     );
 
+  const suburbExtraKm =
+    distanceData && !distanceData.isFallback && typeof distanceData.distanceKm === 'number'
+      ? Math.max(0, Math.ceil(distanceData.distanceKm - 4.5))
+      : 0;
+
+  const effectiveSuburbDeliveryPrice = distanceData
+    ? storeSettings.suburb10kmFee + suburbExtraKm
+    : storeSettings.suburb10kmFee;
+
   const customFee = (!isPickup && selectedZone === 'suburb')
-    ? (distanceData?.deliveryPrice ?? storeSettings.suburb10kmFee)
+    ? effectiveSuburbDeliveryPrice
     : undefined;
 
   const deliveryFee = useCartStore((s) => s.getDeliveryFee)(isPickup, selectedZone, customFee);
@@ -622,6 +631,8 @@ export function CheckoutModal() {
       return;
     }
 
+    const latestSettings = useSettingsStore.getState();
+
     setIsCalculatingDistance(true);
     try {
       const res = await fetch('/api/delivery/calculate', {
@@ -631,9 +642,9 @@ export function CheckoutModal() {
           city: currentCity.trim(),
           street: (currentStreet || '').trim(),
           house: (currentHouse || '').trim(),
-          baseSuburbFee: storeSettings.suburb10kmFee,
-          cityFee: storeSettings.cityStandardFee,
-          cityFreeThreshold: storeSettings.cityFreeThreshold,
+          baseSuburbFee: latestSettings.suburb10kmFee,
+          cityFee: latestSettings.cityStandardFee,
+          cityFreeThreshold: latestSettings.cityFreeThreshold,
         }),
       });
       if (res.ok) {
@@ -645,7 +656,7 @@ export function CheckoutModal() {
     } finally {
       setIsCalculatingDistance(false);
     }
-  }, [watch]);
+  }, [watch, storeSettings.suburb10kmFee, storeSettings.cityStandardFee, storeSettings.cityFreeThreshold]);
 
   // Підказки та автокомпліт населених пунктів Свідницького повіту
   const [isCitySuggestionsOpen, setIsCitySuggestionsOpen] = useState(false);
@@ -820,6 +831,7 @@ export function CheckoutModal() {
       }
       if (!distanceData && values.city && values.city.trim().length >= 2) {
         try {
+          const latestSettings = useSettingsStore.getState();
           const checkRes = await fetch('/api/delivery/calculate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -827,9 +839,9 @@ export function CheckoutModal() {
               city: values.city.trim(),
               street: (values.street || '').trim(),
               house: (values.house || '').trim(),
-              baseSuburbFee: storeSettings.suburb10kmFee,
-              cityFee: storeSettings.cityStandardFee,
-              cityFreeThreshold: storeSettings.cityFreeThreshold,
+              baseSuburbFee: latestSettings.suburb10kmFee,
+              cityFee: latestSettings.cityStandardFee,
+              cityFreeThreshold: latestSettings.cityFreeThreshold,
             }),
           });
           if (checkRes.ok) {
@@ -1457,8 +1469,8 @@ export function CheckoutModal() {
                       {selectedZone === 'suburb' && <span className="w-2 h-2 rounded-full bg-[#e50914] shadow-sm shadow-[#e50914]" />}
                     </div>
                     <div className="text-[10px] sm:text-[11px] text-zinc-400 mt-0.5 leading-tight">
-                      {distanceData?.deliveryPrice
-                        ? `${distanceData.deliveryPrice} zł (~${distanceData.distanceKm} km)`
+                      {distanceData && !isDeliveryOutOfRange
+                        ? `${effectiveSuburbDeliveryPrice} zł (~${distanceData.distanceKm} km)`
                         : `${storeSettings.suburb10kmFee} zł (+1 zł/km)`}
                     </div>
                   </button>
@@ -1514,7 +1526,7 @@ export function CheckoutModal() {
                             {locale === 'pl' ? 'Koszt:' : 'Вартість:'}
                           </span>
                           <span className="text-amber-300 font-black text-sm sm:text-base">
-                            {distanceData ? `${distanceData.deliveryPrice} zł` : `od ${storeSettings.suburb10kmFee} zł`}
+                            {distanceData ? `${effectiveSuburbDeliveryPrice} zł` : `od ${storeSettings.suburb10kmFee} zł`}
                           </span>
                         </div>
 
@@ -1566,8 +1578,8 @@ export function CheckoutModal() {
                   <p className="text-[11px] text-zinc-300 leading-snug">
                     {distanceData?.streetNotFoundOnMap
                       ? (locale === 'pl'
-                          ? `Wyliczono trasę do centrum (${distanceData.cityName}): ~${distanceData.distanceKm} km (${distanceData.deliveryPrice} zł). Kurier dowiezie pod podany adres.`
-                          : `Вартість розраховано до центру (${distanceData.cityName}): ~${distanceData.distanceKm} км (${distanceData.deliveryPrice} zł). Курʼєр доставить за вказаною адресою.`)
+                          ? `Wyliczono trasę do centrum (${distanceData.cityName}): ~${distanceData.distanceKm} km (${effectiveSuburbDeliveryPrice} zł). Kurier dowiezie pod podany adres.`
+                          : `Вартість розраховано до центру (${distanceData.cityName}): ~${distanceData.distanceKm} км (${effectiveSuburbDeliveryPrice} zł). Курʼєр доставить за вказаною адресою.`)
                       : distanceData?.isFallback
                       ? (locale === 'pl'
                           ? 'Nie znaleziono dokładnie tej miejscowości na mapie. Wybierz miejscowość z listy podpowiedzi lub wpisz ulicę.'
@@ -1582,11 +1594,11 @@ export function CheckoutModal() {
                               ? `Wyliczono do początku ulicy. Wpisz numer domu dla ostatecznej wyceny.`
                               : `Розраховано до початку вулиці. Вкажіть номер будинку для фінальної ціни.`)
                           : (locale === 'pl'
-                              ? `Dokładna trasa pod wskazany dom (9 zł baza + ${Math.max(0, Math.ceil(distanceData.distanceKm - 4.5))} zł za dodatkowe km).`
-                              : `Точний маршрут за адресою (9 zł база + ${Math.max(0, Math.ceil(distanceData.distanceKm - 4.5))} zł за км понад 4.5 км).`))
+                              ? `Dokładna trasa pod wskazany dom (${storeSettings.suburb10kmFee} zł baza + ${suburbExtraKm} zł za dodatkowe km).`
+                              : `Точний маршрут за адресою (${storeSettings.suburb10kmFee} zł база + ${suburbExtraKm} zł за км понад 4.5 км).`))
                       : (locale === 'pl'
-                          ? 'Wpisz miejscowość poniżej — system natychmiast wyliczy dystans i cenę do centrum (od 9 zł + 1 zł/km).'
-                          : 'Вкажіть населений пункт нижче — система одразу прорахує відстань і ціну до центру (від 9 zł + 1 zł/км).')}
+                          ? `Wpisz miejscowość poniżej — system natychmiast wyliczy dystans i cenę do centrum (od ${storeSettings.suburb10kmFee} zł + 1 zł/km).`
+                          : `Вкажіть населений пункт нижче — система одразу прорахує відстань і ціну до центру (від ${storeSettings.suburb10kmFee} zł + 1 zł/км).`)}
                   </p>
                   )}
                 </div>

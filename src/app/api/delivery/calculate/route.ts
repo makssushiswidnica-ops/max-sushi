@@ -146,34 +146,49 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const { street, house, city, address, zoneIsSuburb, baseSuburbFee, cityFee, cityFreeThreshold } = body;
 
-    // Отримуємо актуальні тарифи доставки з переданих параметрів або безпосередньо з Supabase
-    let suburbBasePrice = typeof baseSuburbFee === 'number' && baseSuburbFee >= 0 ? baseSuburbFee : null;
-    let cityStandardPrice = typeof cityFee === 'number' && cityFee >= 0 ? cityFee : null;
-    let freeThreshold = typeof cityFreeThreshold === 'number' && cityFreeThreshold >= 0 ? cityFreeThreshold : null;
+    // Отримуємо актуальні тарифи доставки з переданих параметрів та безпосередньо з Supabase
+    let clientSuburbPrice = typeof baseSuburbFee === 'number' && baseSuburbFee >= 0 ? baseSuburbFee : null;
+    let clientCityPrice = typeof cityFee === 'number' && cityFee >= 0 ? cityFee : null;
+    let clientFreeThreshold = typeof cityFreeThreshold === 'number' && cityFreeThreshold >= 0 ? cityFreeThreshold : null;
 
-    if (suburbBasePrice === null || cityStandardPrice === null || freeThreshold === null) {
-      try {
-        const storeSettings = await fetchStoreSettings();
-        if (storeSettings) {
-          if (suburbBasePrice === null && typeof storeSettings.suburb10kmFee === 'number') {
-            suburbBasePrice = storeSettings.suburb10kmFee;
-          }
-          if (cityStandardPrice === null && typeof storeSettings.cityStandardFee === 'number') {
-            cityStandardPrice = storeSettings.cityStandardFee;
-          }
-          if (freeThreshold === null && typeof storeSettings.cityFreeThreshold === 'number') {
-            freeThreshold = storeSettings.cityFreeThreshold;
-          }
+    let dbSuburbPrice: number | null = null;
+    let dbCityPrice: number | null = null;
+    let dbFreeThreshold: number | null = null;
+
+    try {
+      const storeSettings = await fetchStoreSettings();
+      if (storeSettings) {
+        if (typeof storeSettings.suburb10kmFee === 'number') {
+          dbSuburbPrice = storeSettings.suburb10kmFee;
         }
-      } catch (e) {
-        console.warn('Failed to load store settings in delivery calculate route:', e);
+        if (typeof storeSettings.cityStandardFee === 'number') {
+          dbCityPrice = storeSettings.cityStandardFee;
+        }
+        if (typeof storeSettings.cityFreeThreshold === 'number') {
+          dbFreeThreshold = storeSettings.cityFreeThreshold;
+        }
       }
+    } catch (e) {
+      console.warn('Failed to load store settings in delivery calculate route:', e);
     }
 
-    const finalSuburbBasePrice = suburbBasePrice ?? 9;
+    // Якщо клієнт ще не встиг гідруватися і передав дефолтні 9 zł, а в БД вже стоїть інша ціна — беремо з БД.
+    // Якщо клієнт передав оновлену ціну (відмінну від дефолтних 9 zł) — беремо її.
+    const finalSuburbBasePrice =
+      clientSuburbPrice !== null && clientSuburbPrice !== 9
+        ? clientSuburbPrice
+        : (dbSuburbPrice ?? clientSuburbPrice ?? 9);
     fallbackSuburbBasePrice = finalSuburbBasePrice;
-    const finalCityStandardPrice = cityStandardPrice ?? 5;
-    const finalFreeThreshold = freeThreshold ?? 150;
+
+    const finalCityStandardPrice =
+      clientCityPrice !== null && clientCityPrice !== 5
+        ? clientCityPrice
+        : (dbCityPrice ?? clientCityPrice ?? 5);
+
+    const finalFreeThreshold =
+      clientFreeThreshold !== null && clientFreeThreshold !== 150
+        ? clientFreeThreshold
+        : (dbFreeThreshold ?? clientFreeThreshold ?? 150);
 
     const rawCity = (city || '').trim();
     const cityNorm = normalizeKey(rawCity);
