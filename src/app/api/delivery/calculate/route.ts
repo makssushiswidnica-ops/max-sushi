@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { fetchStoreSettings } from '@/lib/supabase';
 
 // Точні координати Maks Sushi: ul. Parkowa 8, 58-100 Świdnica
 const RESTAURANT_COORDS = { lat: 50.8433, lon: 16.4882 };
@@ -82,9 +83,9 @@ function haversineDistanceKm(lat1: number, lon1: number, lat2: number, lon2: num
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return Number((R * c * 1.3).toFixed(1)); // 1.3 реальний коефіцієнт звивистості автодоріг
 }
@@ -140,9 +141,39 @@ async function runGeocode(parts: string[]): Promise<{ lat: number; lon: number; 
 }
 
 export async function POST(req: Request) {
+  let fallbackSuburbBasePrice = 9;
   try {
     const body = await req.json().catch(() => ({}));
-    const { street, house, city, address, zoneIsSuburb } = body;
+    const { street, house, city, address, zoneIsSuburb, baseSuburbFee, cityFee, cityFreeThreshold } = body;
+
+    // Отримуємо актуальні тарифи доставки з переданих параметрів або безпосередньо з Supabase
+    let suburbBasePrice = typeof baseSuburbFee === 'number' && baseSuburbFee >= 0 ? baseSuburbFee : null;
+    let cityStandardPrice = typeof cityFee === 'number' && cityFee >= 0 ? cityFee : null;
+    let freeThreshold = typeof cityFreeThreshold === 'number' && cityFreeThreshold >= 0 ? cityFreeThreshold : null;
+
+    if (suburbBasePrice === null || cityStandardPrice === null || freeThreshold === null) {
+      try {
+        const storeSettings = await fetchStoreSettings();
+        if (storeSettings) {
+          if (suburbBasePrice === null && typeof storeSettings.suburb10kmFee === 'number') {
+            suburbBasePrice = storeSettings.suburb10kmFee;
+          }
+          if (cityStandardPrice === null && typeof storeSettings.cityStandardFee === 'number') {
+            cityStandardPrice = storeSettings.cityStandardFee;
+          }
+          if (freeThreshold === null && typeof storeSettings.cityFreeThreshold === 'number') {
+            freeThreshold = storeSettings.cityFreeThreshold;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load store settings in delivery calculate route:', e);
+      }
+    }
+
+    const finalSuburbBasePrice = suburbBasePrice ?? 9;
+    fallbackSuburbBasePrice = finalSuburbBasePrice;
+    const finalCityStandardPrice = cityStandardPrice ?? 5;
+    const finalFreeThreshold = freeThreshold ?? 150;
 
     const rawCity = (city || '').trim();
     const cityNorm = normalizeKey(rawCity);
@@ -159,13 +190,13 @@ export async function POST(req: Request) {
     if (isSwidnica && !zoneIsSuburb) {
       return NextResponse.json({
         distanceKm: 0,
-        deliveryPrice: 5,
+        deliveryPrice: finalCityStandardPrice,
         isOutTown: false,
         isOutOfRange: false,
         maxDeliveryKm: MAX_DELIVERY_KM,
         precisionLevel: 'city',
         cityName: 'Świdnica',
-        message: 'Стандартна доставка по Свідниці (5 zł, від 150 zł безкоштовно)',
+        message: `Стандартна доставка по Свідниці (${finalCityStandardPrice} zł, від ${finalFreeThreshold} zł безкоштовно)`,
       });
     }
 
@@ -204,7 +235,7 @@ export async function POST(req: Request) {
     // Розраховуємо відстань та вартість доставки ДО ЦЕНТРУ знайденого населеного пункту
     const centerDistanceKm = await getOsrmDrivingDistanceKm(RESTAURANT_COORDS, cityCoords);
     const centerExtraKm = Math.max(0, Math.ceil(centerDistanceKm - TOWN_RADIUS_KM));
-    const centerDeliveryPrice = 9 + centerExtraKm * 1;
+    const centerDeliveryPrice = finalSuburbBasePrice + centerExtraKm * 1;
     const centerIsOutOfRange = centerDistanceKm > MAX_DELIVERY_KM;
 
     // 2. КРОК 2: Якщо вказано вулицю або будинок — пробуємо знайти точну адресу на карті цього села
@@ -222,7 +253,7 @@ export async function POST(req: Request) {
           lon: exactGeo.lon,
         });
         const exactExtraKm = Math.max(0, Math.ceil(exactDistanceKm - TOWN_RADIUS_KM));
-        const exactDeliveryPrice = 9 + exactExtraKm * 1;
+        const exactDeliveryPrice = finalSuburbBasePrice + exactExtraKm * 1;
         const isOutOfRange = exactDistanceKm > MAX_DELIVERY_KM;
 
         return NextResponse.json({
@@ -275,7 +306,7 @@ export async function POST(req: Request) {
     console.error('Delivery calculation API error:', error);
     return NextResponse.json({
       distanceKm: 5.0,
-      deliveryPrice: 9,
+      deliveryPrice: fallbackSuburbBasePrice,
       isOutTown: true,
       isOutOfRange: false,
       precisionLevel: 'city',

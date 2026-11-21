@@ -202,7 +202,7 @@ export async function fetchStoreSettings(): Promise<SyncedStoreSettings | null> 
     // Автоматичне відновлення прийому замовлень по завершенню робочого дня:
     // Пт, Сб заклад працює до 22:00, інші дні до 21:00.
     // Скидається ТІЛЬКИ режим "пауза на сьогодні" (paused_today). Повне закриття (closed) не скидається!
-    const isPausedToday = settings.ordersAcceptanceMode === 'paused_today' || 
+    const isPausedToday = settings.ordersAcceptanceMode === 'paused_today' ||
       (settings.isOrdersPaused && !settings.ordersAcceptanceMode);
 
     if (isPausedToday) {
@@ -239,7 +239,7 @@ export async function saveStoreSettings(settings: Partial<SyncedStoreSettings>):
 
     // Синхронізуємо прапорці паузи та дату
     const updates: Partial<SyncedStoreSettings> = { ...settings };
-    
+
     if (settings.ordersAcceptanceMode === 'paused_today') {
       updates.isOrdersPaused = true;
       updates.pausedAtDate = new Date().toISOString().slice(0, 10);
@@ -258,6 +258,22 @@ export async function saveStoreSettings(settings: Partial<SyncedStoreSettings>):
     }
 
     const merged = { ...current, ...updates };
+
+    // Спершу оновлюємо існуючий рядок '__settings__' через UPDATE, щоб уникнути конфліктів RLS на INSERT
+    const { error: updateError, data: updateData } = await supabase
+      .from('orders')
+      .update({
+        comment: JSON.stringify(merged),
+        status: 'system',
+      })
+      .eq('id', '__settings__')
+      .select('id');
+
+    if (!updateError && updateData && updateData.length > 0) {
+      return true;
+    }
+
+    // Якщо рядка ще не було створено — виконуємо upsert
     const { error } = await supabase.from('orders').upsert({
       id: '__settings__',
       customer_name: '__SYSTEM_SETTINGS__',

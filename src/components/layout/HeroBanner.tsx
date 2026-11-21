@@ -5,21 +5,49 @@ import Image from 'next/image';
 import { useI18n } from '@/lib/i18nContext';
 import { useSettingsStore } from '@/store/useSettingsStore';
 
-export function HeroBanner({ initialFreeThreshold }: { initialFreeThreshold?: number }) {
+export function HeroBanner({
+  initialFreeThreshold,
+  initialDeliverySettings,
+}: {
+  initialFreeThreshold?: number;
+  initialDeliverySettings?: {
+    cityFreeThreshold?: number;
+    cityStandardFee?: number;
+    suburb10kmFee?: number;
+  };
+}) {
   const { locale } = useI18n();
   const [mounted, setMounted] = useState(false);
   const cityFreeThreshold = useSettingsStore((s) => s.cityFreeThreshold);
 
   useEffect(() => {
     setMounted(true);
-    if (typeof initialFreeThreshold === 'number') {
-      useSettingsStore.getState().updateSettings({ cityFreeThreshold: initialFreeThreshold });
+    const updates: Record<string, any> = {};
+    if (typeof initialDeliverySettings?.cityFreeThreshold === 'number') {
+      updates.cityFreeThreshold = initialDeliverySettings.cityFreeThreshold;
+    } else if (typeof initialFreeThreshold === 'number') {
+      updates.cityFreeThreshold = initialFreeThreshold;
     }
-  }, [initialFreeThreshold]);
+    if (typeof initialDeliverySettings?.cityStandardFee === 'number') {
+      updates.cityStandardFee = initialDeliverySettings.cityStandardFee;
+    }
+    if (typeof initialDeliverySettings?.suburb10kmFee === 'number') {
+      updates.suburb10kmFee = initialDeliverySettings.suburb10kmFee;
+    }
+    if (Object.keys(updates).length > 0) {
+      useSettingsStore.getState().updateSettings(updates);
+    }
+  }, [initialFreeThreshold, initialDeliverySettings]);
+
+  const effectiveThreshold =
+    cityFreeThreshold ||
+    initialDeliverySettings?.cityFreeThreshold ||
+    initialFreeThreshold ||
+    150;
 
   const displayThreshold = mounted
-    ? (cityFreeThreshold || initialFreeThreshold || 150)
-    : (initialFreeThreshold ?? 150);
+    ? effectiveThreshold
+    : (initialDeliverySettings?.cityFreeThreshold ?? initialFreeThreshold ?? 150);
 
   const scrollToMenu = () => {
     // Скидаємо каталог до початкової першої категорії (Міні Макі)

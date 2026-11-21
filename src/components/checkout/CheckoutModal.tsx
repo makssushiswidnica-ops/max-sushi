@@ -631,6 +631,9 @@ export function CheckoutModal() {
           city: currentCity.trim(),
           street: (currentStreet || '').trim(),
           house: (currentHouse || '').trim(),
+          baseSuburbFee: storeSettings.suburb10kmFee,
+          cityFee: storeSettings.cityStandardFee,
+          cityFreeThreshold: storeSettings.cityFreeThreshold,
         }),
       });
       if (res.ok) {
@@ -824,6 +827,9 @@ export function CheckoutModal() {
               city: values.city.trim(),
               street: (values.street || '').trim(),
               house: (values.house || '').trim(),
+              baseSuburbFee: storeSettings.suburb10kmFee,
+              cityFee: storeSettings.cityStandardFee,
+              cityFreeThreshold: storeSettings.cityFreeThreshold,
             }),
           });
           if (checkRes.ok) {
