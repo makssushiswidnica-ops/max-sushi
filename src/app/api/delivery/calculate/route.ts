@@ -147,9 +147,9 @@ export async function POST(req: Request) {
     const { street, house, city, address, zoneIsSuburb, baseSuburbFee, cityFee, cityFreeThreshold } = body;
 
     // Отримуємо актуальні тарифи доставки з переданих параметрів та безпосередньо з Supabase
-    let clientSuburbPrice = typeof baseSuburbFee === 'number' && baseSuburbFee >= 0 ? baseSuburbFee : null;
-    let clientCityPrice = typeof cityFee === 'number' && cityFee >= 0 ? cityFee : null;
-    let clientFreeThreshold = typeof cityFreeThreshold === 'number' && cityFreeThreshold >= 0 ? cityFreeThreshold : null;
+    const clientSuburbPrice = typeof baseSuburbFee === 'number' && baseSuburbFee >= 0 ? baseSuburbFee : null;
+    const clientCityPrice = typeof cityFee === 'number' && cityFee >= 0 ? cityFee : null;
+    const clientFreeThreshold = typeof cityFreeThreshold === 'number' && cityFreeThreshold >= 0 ? cityFreeThreshold : null;
 
     let dbSuburbPrice: number | null = null;
     let dbCityPrice: number | null = null;
@@ -317,8 +317,9 @@ export async function POST(req: Request) {
       formattedAddress: cityDisplayName,
       isFallback: false,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Delivery calculation API error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Помилка прорахунку';
     return NextResponse.json({
       distanceKm: 5.0,
       deliveryPrice: fallbackSuburbBasePrice,
@@ -326,7 +327,7 @@ export async function POST(req: Request) {
       isOutOfRange: false,
       precisionLevel: 'city',
       isFallback: true,
-      error: error?.message || 'Помилка прорахунку',
+      error: errorMessage,
     });
   }
 }

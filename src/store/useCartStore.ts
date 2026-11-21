@@ -233,6 +233,9 @@ export const useCartStore = create<CartState>()(
 
           return { items: syncGiftItem(updated, state.menuProducts) };
         });
+        if (typeof window !== 'undefined' && quantity > 0) {
+          window.dispatchEvent(new CustomEvent('max-sushi-cart-item-added'));
+        }
       },
 
       removeItem: (productId: string, selectedOptions?: SelectedProductOptions) => {
@@ -250,6 +253,15 @@ export const useCartStore = create<CartState>()(
       },
 
       updateQuantity: (productId: string, quantity: number, selectedOptions?: SelectedProductOptions) => {
+        const prevQty =
+          get().items.find(
+            (item) =>
+              !item.isGift &&
+              item.product.id === productId &&
+              (selectedOptions === undefined || isSameProductOptions(item.selectedOptions, selectedOptions))
+          )?.quantity ?? 0;
+        const isIncreasing = quantity > prevQty;
+
         set((state) => {
           const rawItems = state.items.filter((i) => !i.isGift);
           let updated: CartItem[];
@@ -283,6 +295,9 @@ export const useCartStore = create<CartState>()(
             ...(synced.length === 0 ? { isChopsticksSelected: false, personsCount: 1 } : {}),
           };
         });
+        if (typeof window !== 'undefined' && isIncreasing) {
+          window.dispatchEvent(new CustomEvent('max-sushi-cart-item-added'));
+        }
       },
 
       clearCart: () => {

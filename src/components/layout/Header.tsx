@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ShoppingBag, Phone, Clock, MapPin, User, Gift, Percent } from 'lucide-react';
+import { ShoppingBag, Phone, Clock, MapPin, User, Gift, Percent, AlertCircle, X } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useCustomerStore, normalizePhone, isBirthdayToday } from '@/store/useCustomerStore';
@@ -21,6 +21,16 @@ export function Header() {
   const giftPromo = useSettingsStore((s) => s.giftPromo);
   const firstOrderPromo = useSettingsStore((s) => s.firstOrderPromo);
   const birthdayPromo = useSettingsStore((s) => s.birthdayPromo);
+  const isOrdersPaused = useSettingsStore((s) => s.isOrdersPaused);
+  const ordersAcceptanceMode = useSettingsStore((s) => s.ordersAcceptanceMode);
+  const effectiveOrdersMode = ordersAcceptanceMode || (isOrdersPaused ? 'paused_today' : 'open');
+
+  // Сповіщення-тост при додаванні товару (або якщо адмін увімкнув паузу під час збору кошика)
+  const [ordersModeToast, setOrdersModeToast] = useState<'paused_today' | 'closed' | null>(null);
+  const [mobilePausedStep, setMobilePausedStep] = useState<0 | 1>(0);
+  const notifiedForModeRef = React.useRef<'paused_today' | 'closed' | null>(null);
+  const prevOrdersModeRef = React.useRef<'open' | 'paused_today' | 'closed'>('open');
+  const settingsHydratedRef = React.useRef(false);
 
   const toggleCustomerDrawer = useCustomerStore((s) => s.toggleOpen);
   const customer = useCustomerStore((s) => s.customer);
@@ -31,6 +41,18 @@ export function Header() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [hasNewAdminOrder, setHasNewAdminOrder] = useState(false);
   const [customerOrderStatus, setCustomerOrderStatus] = useState<'pending' | 'kitchen' | 'in_delivery' | null>(null);
+
+  // На мобільному чергуємо 2 короткі фрази ("Кухня переповнена." <-> "Замовлення на завтра.") кожні 2.8 сек
+  useEffect(() => {
+    if (!mounted || effectiveOrdersMode !== 'paused_today') {
+      setMobilePausedStep(0);
+      return;
+    }
+    const timer = setInterval(() => {
+      setMobilePausedStep((prev) => (prev === 0 ? 1 : 0));
+    }, 2800);
+    return () => clearInterval(timer);
+  }, [mounted, effectiveOrdersMode]);
 
   // Плашка про знижку на перше замовлення показується ЛИШЕ зареєстрованим користувачам, які ще не робили замовлень
   const showFirstOrderBanner = Boolean(customer && firstOrderPromo?.enabled && isFirstOrderEligible);
@@ -53,12 +75,67 @@ export function Header() {
   }, [giftPromo, menuProducts]);
 
   const availableSlides = React.useMemo(() => {
+    // Якщо кухня перевантажена або заклад зачинено — завжди фіксуємо статус, щоб клієнт одразу бачив попередження
+    if (effectiveOrdersMode !== 'open') {
+      return ['status'] as Array<'status' | 'birthday' | 'promo' | 'firstOrder'>;
+    }
     const list: Array<'status' | 'birthday' | 'promo' | 'firstOrder'> = ['status'];
     if (showBirthdayBanner) list.push('birthday');
     if (showFirstOrderBanner) list.push('firstOrder');
     if (giftPromo?.enabled) list.push('promo');
     return list;
-  }, [showBirthdayBanner, showFirstOrderBanner, giftPromo?.enabled]);
+  }, [effectiveOrdersMode, showBirthdayBanner, showFirstOrderBanner, giftPromo?.enabled]);
+
+  // Відстеження додавання товару в кошик та живої зміни режиму прийому замовлень адміном
+  useEffect(() => {
+    const handleCartItemAdded = () => {
+      const s = useSettingsStore.getState();
+      const currentMode = s.ordersAcceptanceMode || (s.isOrdersPaused ? 'paused_today' : 'open');
+      if (currentMode === 'paused_today' || currentMode === 'closed') {
+        if (notifiedForModeRef.current !== currentMode) {
+          notifiedForModeRef.current = currentMode;
+          setOrdersModeToast(currentMode);
+        }
+      }
+    };
+
+    window.addEventListener('max-sushi-cart-item-added', handleCartItemAdded);
+    return () => window.removeEventListener('max-sushi-cart-item-added', handleCartItemAdded);
+  }, []);
+
+  // Якщо адмін увімкнув паузу/закриття під час того, як у клієнта вже є товари в кошику — одразу показуємо тост;
+  // якщо адмін повернув режим "open" — скидаємо прапорець і ховаємо тост.
+  useEffect(() => {
+    if (!mounted) return;
+    const prevMode = prevOrdersModeRef.current;
+    prevOrdersModeRef.current = effectiveOrdersMode;
+
+    if (effectiveOrdersMode === 'open') {
+      notifiedForModeRef.current = null;
+      setOrdersModeToast(null);
+      return;
+    }
+
+    const hasItemsInCart = items.some((i) => !i.isGift);
+    if (
+      settingsHydratedRef.current &&
+      prevMode !== effectiveOrdersMode &&
+      hasItemsInCart &&
+      notifiedForModeRef.current !== effectiveOrdersMode
+    ) {
+      notifiedForModeRef.current = effectiveOrdersMode;
+      setOrdersModeToast(effectiveOrdersMode);
+    }
+  }, [effectiveOrdersMode, items, mounted]);
+
+  // Автоматичне приховування тосту через 6 секунд
+  useEffect(() => {
+    if (!ordersModeToast) return;
+    const timer = setTimeout(() => {
+      setOrdersModeToast(null);
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [ordersModeToast]);
 
   useEffect(() => {
     if (!mounted || availableSlides.length <= 1) {
@@ -90,6 +167,8 @@ export function Header() {
         }
         if (synced.ordersAcceptanceMode) {
           settingsUpdates.ordersAcceptanceMode = synced.ordersAcceptanceMode;
+        } else if (typeof synced.isOrdersPaused === 'boolean') {
+          settingsUpdates.ordersAcceptanceMode = synced.isOrdersPaused ? 'paused_today' : 'open';
         }
         if (typeof synced.cityFreeThreshold === 'number') {
           settingsUpdates.cityFreeThreshold = synced.cityFreeThreshold;
@@ -119,6 +198,7 @@ export function Header() {
           useCartStore.getState().setPrepWaitTimeMinutes(synced.prepWaitTimeMinutes);
         }
       }
+      settingsHydratedRef.current = true;
     });
 
     if (isSupabaseConfigured) {
@@ -447,26 +527,67 @@ export function Header() {
           <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2">
             <div className="flex items-center gap-3 sm:gap-5 min-w-0 flex-1 overflow-hidden">
               {activeTopSlide === 'status' ? (
-                <div key="status" className="flex items-center gap-1.5 min-w-0 truncate animate-in fade-in duration-300">
-                  <span className="relative flex h-2 w-2 shrink-0">
-                    {storeStatus.isOpen ? (
-                      <>
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                      </>
-                    ) : (
+                mounted && effectiveOrdersMode === 'paused_today' ? (
+                  <div key="status-paused" className="flex items-center gap-1.5 min-w-0 truncate animate-in fade-in duration-300">
+                    <span className="relative flex h-2 w-2 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                    )}
-                  </span>
-                  <span className={cn('truncate', storeStatus.isOpen ? 'text-emerald-400 font-semibold' : 'text-amber-400 font-semibold')}>
-                    {storeStatus.text}
-                  </span>
-                  <span className="text-zinc-500 hidden xs:inline">•</span>
-                  <span className="hidden xs:flex items-center gap-1 shrink-0">
-                    <Clock className="w-3.5 h-3.5 text-zinc-500" />
-                    {storeStatus.todayHours}
-                  </span>
-                </div>
+                    </span>
+                    {/* На телефоні: 2 короткі повідомлення по черзі, щоб гарантовано вміщалися без обрізання */}
+                    <span
+                      key={`mob-paused-${mobilePausedStep}`}
+                      className="inline sm:hidden truncate text-amber-300 font-bold text-[11px] animate-in fade-in duration-300"
+                    >
+                      {mobilePausedStep === 0
+                        ? (locale === 'pl' ? 'Kuchnia przeciążona.' : 'Кухня переповнена.')
+                        : (locale === 'pl' ? 'Zamówienia na jutro.' : 'Замовлення на завтра.')}
+                    </span>
+                    {/* На ПК та планшетах: повний рядок */}
+                    <span className="hidden sm:inline truncate text-amber-300 font-bold text-xs">
+                      {locale === 'pl'
+                        ? 'Kuchnia przeciążona. Zamówienia na jutro.'
+                        : 'Кухня перевантажена. Замовлення на завтра.'}
+                    </span>
+                  </div>
+                ) : mounted && effectiveOrdersMode === 'closed' ? (
+                  <div key="status-closed" className="flex items-center gap-1.5 min-w-0 truncate animate-in fade-in duration-300">
+                    <span className="relative flex h-2 w-2 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                    </span>
+                    <span className="truncate text-[#ff4d58] font-bold text-[10px] xs:text-[11px] sm:text-xs tracking-tight">
+                      <span className="inline sm:hidden">
+                        {locale === 'pl' ? 'Lokal tymczasowo zamknięty.' : 'Заклад тимчасово зачинено.'}
+                      </span>
+                      <span className="hidden sm:inline">
+                        {locale === 'pl'
+                          ? 'Lokal tymczasowo zamknięty. Przyjmowanie zamówień wstrzymane.'
+                          : 'Заклад тимчасово зачинено. Прийом замовлень призупинено.'}
+                      </span>
+                    </span>
+                  </div>
+                ) : (
+                  <div key="status" className="flex items-center gap-1.5 min-w-0 truncate animate-in fade-in duration-300">
+                    <span className="relative flex h-2 w-2 shrink-0">
+                      {storeStatus.isOpen ? (
+                        <>
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </>
+                      ) : (
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                      )}
+                    </span>
+                    <span className={cn('truncate', storeStatus.isOpen ? 'text-emerald-400 font-semibold' : 'text-amber-400 font-semibold')}>
+                      {storeStatus.text}
+                    </span>
+                    <span className="text-zinc-500 hidden xs:inline">•</span>
+                    <span className="hidden xs:flex items-center gap-1 shrink-0">
+                      <Clock className="w-3.5 h-3.5 text-zinc-500" />
+                      {storeStatus.todayHours}
+                    </span>
+                  </div>
+                )
               ) : activeTopSlide === 'birthday' ? (
                 <button
                   key="birthday"
@@ -653,6 +774,61 @@ export function Header() {
           </div>
         </div>
       </header>
+
+      {/* Неагресивне спливаюче сповіщення (Тост): на телефоні під хедером, на ПК — по центру екрана */}
+      {mounted && ordersModeToast && (
+        <div className="fixed top-[92px] sm:top-1/2 left-1/2 -translate-x-1/2 sm:-translate-y-1/2 z-50 w-[calc(100%-24px)] max-w-md sm:max-w-lg animate-in fade-in zoom-in-95 duration-200 pointer-events-auto">
+          <div
+            className={cn(
+              'p-3 sm:p-5 rounded-2xl border backdrop-blur-md shadow-2xl sm:shadow-[0_0_60px_rgba(0,0,0,0.95)] shadow-black/90 flex items-start gap-2.5 sm:gap-3.5',
+              ordersModeToast === 'closed'
+                ? 'bg-[#1a0d10]/95 border-red-500/60 text-red-100'
+                : 'bg-[#17130a]/95 border-amber-500/60 text-amber-100'
+            )}
+          >
+            <div
+              className={cn(
+                'w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border',
+                ordersModeToast === 'closed'
+                  ? 'bg-red-500/20 border-red-500/40 text-red-400'
+                  : 'bg-amber-500/20 border-amber-500/40 text-amber-400'
+              )}
+            >
+              {ordersModeToast === 'closed' ? (
+                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+              ) : (
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+              )}
+            </div>
+
+            <div className="flex-1 min-w-0 space-y-0.5 sm:space-y-1">
+              <div className="text-xs sm:text-base font-black text-white leading-snug">
+                {ordersModeToast === 'closed'
+                  ? (locale === 'pl' ? 'Lokal tymczasowo zamknięty' : 'Заклад тимчасово зачинено')
+                  : (locale === 'pl' ? 'Kuchnia przeciążona. Zamówienia na jutro.' : 'Кухня перевантажена. Замовлення на завтра.')}
+              </div>
+              <p className="text-[11px] sm:text-sm text-zinc-300 leading-snug">
+                {ordersModeToast === 'closed'
+                  ? (locale === 'pl'
+                      ? 'Przyjmowanie zamówień online jest obecnie wstrzymane. Przepraszamy za utrudnienia!'
+                      : 'Прийом онлайн-замовлень зараз тимчасово призупинено. Перепрошуємо за незручності!')
+                  : (locale === 'pl'
+                      ? 'Na dzisiaj nie przyjmujemy już zamówień, ale możesz spokojnie zebrać koszyk i zamówić na jutro!'
+                      : 'На сьогодні замовлення вже не приймаються, але ви можете спокійно зібрати кошик і оформити на завтра!')}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setOrdersModeToast(null)}
+              aria-label={locale === 'pl' ? 'Zamknij' : 'Закрити'}
+              className="p-1 sm:p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+            >
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
